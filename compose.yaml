@@ -1,0 +1,13 @@
+﻿services:
+  hostlistic_server:
+    image: hostlistic_server
+    build:
+      context: .
+      dockerfile: Hostlistic_Server/Dockerfile
+
+  identityservice:
+    image: identityservice
+    build:
+      context: .
+      dockerfile: Services/IdentityService/Dockerfile
+

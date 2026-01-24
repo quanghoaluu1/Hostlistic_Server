@@ -1,0 +1,47 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{324D3B85-09C8-4DB3-AF3B-CF1B0AD15536}"
+	ProjectSection(SolutionItems) = preProject
+		compose.yaml = compose.yaml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Services", "Services", "{5F4703D9-A50E-4C4C-976D-8A3656383414}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "IdentityService", "IdentityService", "{20EB89FD-63F4-4918-80D8-D52E85A53A92}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "EventService", "EventService", "{FB4C77CD-B49D-4C5D-B354-2CB43200D944}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "BookingService", "BookingService", "{2F60BFEB-23E4-497C-96C5-095DBCB98B97}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "AIService", "AIService", "{33086F0B-0C7B-4CC3-96C9-3701C36A0A65}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "NotificationService", "NotificationService", "{25846FDD-4B09-4ED0-A8C2-EE55D5D9F4C9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ApiGateway", "ApiGateway\ApiGateway.csproj", "{1E59468F-BC58-49D8-B1AE-B7356923D658}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IdentityService_Api", "Services\IdentityService\IdentityService_Api\IdentityService_Api.csproj", "{B8AAB032-AA99-4482-B5E4-662F32CD12B1}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1E59468F-BC58-49D8-B1AE-B7356923D658}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1E59468F-BC58-49D8-B1AE-B7356923D658}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1E59468F-BC58-49D8-B1AE-B7356923D658}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1E59468F-BC58-49D8-B1AE-B7356923D658}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B8AAB032-AA99-4482-B5E4-662F32CD12B1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B8AAB032-AA99-4482-B5E4-662F32CD12B1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B8AAB032-AA99-4482-B5E4-662F32CD12B1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B8AAB032-AA99-4482-B5E4-662F32CD12B1}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{20EB89FD-63F4-4918-80D8-D52E85A53A92} = {5F4703D9-A50E-4C4C-976D-8A3656383414}
+		{FB4C77CD-B49D-4C5D-B354-2CB43200D944} = {5F4703D9-A50E-4C4C-976D-8A3656383414}
+		{2F60BFEB-23E4-497C-96C5-095DBCB98B97} = {5F4703D9-A50E-4C4C-976D-8A3656383414}
+		{33086F0B-0C7B-4CC3-96C9-3701C36A0A65} = {5F4703D9-A50E-4C4C-976D-8A3656383414}
+		{25846FDD-4B09-4ED0-A8C2-EE55D5D9F4C9} = {5F4703D9-A50E-4C4C-976D-8A3656383414}
+		{B8AAB032-AA99-4482-B5E4-662F32CD12B1} = {20EB89FD-63F4-4918-80D8-D52E85A53A92}
+	EndGlobalSection
+EndGlobal
