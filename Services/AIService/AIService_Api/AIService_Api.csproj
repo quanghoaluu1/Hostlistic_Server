@@ -8,6 +8,14 @@
 
     <ItemGroup>
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.1"/>
+        <PackageReference Include="Scalar.AspNetCore" Version="2.12.22" />
+
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\AIService_Domain\AIService_Domain.csproj" />
+        <ProjectReference Include="..\AIService_Application\AIService_Application.csproj" />
+        <ProjectReference Include="..\AIService_Infrastructure\AIService_Infrastructure.csproj" />
     </ItemGroup>
 
 </Project>

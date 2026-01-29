@@ -8,6 +8,14 @@
 
     <ItemGroup>
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.1"/>
+        <PackageReference Include="Scalar.AspNetCore" Version="2.12.22" />
+
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\EventService_Domain\EventService_Domain.csproj" />
+        <ProjectReference Include="..\EventService_Application\EventService_Application.csproj" />
+        <ProjectReference Include="..\EventService_Infrastructure\EventService_Infrastructure.csproj" />
     </ItemGroup>
 
 </Project>
