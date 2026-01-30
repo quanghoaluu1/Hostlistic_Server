@@ -11,7 +11,7 @@ public class Event : BaseClass
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; }
     public string Location { get; set; } = string.Empty;
-    public Guid? EventType { get; set; }
+    public Guid? EventTypeId { get; set; }
     public string CoverImageUrl { get; set; } = string.Empty;
     public int TotalCapacity { get; set; }
     public bool IsPublic { get; set; } = true;

@@ -10,5 +10,5 @@ public class Talent
     public string? Organization { get; set; } = string.Empty;
     public string? Email { get; set; } = string.Empty;
     
-    public ICollection<Talent> Talents { get; set; } = new List<Talent>();
+    public ICollection<Lineup> Lineups { get; set; } = new List<Lineup>();
 }

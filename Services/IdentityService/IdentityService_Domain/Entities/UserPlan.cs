@@ -2,6 +2,7 @@
 
 public class UserPlan
 {
+    public Guid Id { get; set; }
     public Guid UserId { get; set; }
     public Guid SubscriptionPlanId { get; set; }
     public DateTime StartDate { get; set; }

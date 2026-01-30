@@ -6,5 +6,5 @@ public class OrderDetail
     public Guid OrderId { get; set; }
     public Guid TicketTypeId { get; set; }
     public int Quantity { get; set; }
-    public float UnitPrice { get; set; }
+    public decimal UnitPrice { get; set; }
 }
