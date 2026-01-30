@@ -1,0 +1,59 @@
+using Common;
+using IdentityService_Application.DTOs;
+using IdentityService_Application.Interfaces;
+using Microsoft.AspNetCore.Mvc;
+
+namespace IdentityService_Api.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class AuthController(IAuthService authService) : ControllerBase
+{
+    [HttpPost("register")]
+    public async Task<IActionResult> Register([FromBody]RegisterRequest request)
+    {
+        var result = await authService.RegisterAsync(request);
+        if (!result.IsSuccess) return BadRequest(result);
+        return Ok(result);
+    }
+
+    [HttpPost("login")]
+    public async Task<IActionResult> Login([FromBody] LoginRequest request)
+    {
+        var result = await authService.LoginAsync(request);
+        if (!result.IsSuccess) return BadRequest(result);
+        var refreshToken = result.Message;
+        SetRefreshTokenCookie(refreshToken);
+        result.Message = "Login successfully";
+        return Ok(result);
+    }
+    
+    [HttpPost("refresh-token")]
+    public async Task<IActionResult> RefreshToken()
+    {
+        var refreshToken = Request.Cookies["refreshToken"];
+        if (string.IsNullOrEmpty(refreshToken))
+            return BadRequest(ApiResponse<string>.Fail(400, "Refresh token is missing"));
+
+        var result = await authService.RefreshTokenAsync(refreshToken);
+        
+        if (!result.IsSuccess) return BadRequest(result);
+
+        SetRefreshTokenCookie(result.Message);
+        result.Message = "Token refreshed successfully";
+
+        return Ok(result);
+    }
+    
+    private void SetRefreshTokenCookie(string token)
+    {
+        var cookieOptions = new CookieOptions
+        {
+            HttpOnly = true, 
+            Expires = DateTime.UtcNow.AddDays(7),
+            SameSite = SameSiteMode.Strict,
+            Secure = true 
+        };
+        Response.Cookies.Append("refreshToken", token, cookieOptions);
+    }
+}

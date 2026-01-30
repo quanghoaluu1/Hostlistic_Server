@@ -1,10 +1,13 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace IdentityService_Domain.Entities;
 
 public class RefreshToken
 {
     public Guid Id { get; set; }
+    [ForeignKey("UserId")] 
+    public virtual User User { get; set; } = null!;
     public Guid UserId { get; set; }
     [Required]
     public required string Token { get; set; }

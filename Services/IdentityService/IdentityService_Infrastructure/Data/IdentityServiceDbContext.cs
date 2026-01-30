@@ -39,7 +39,7 @@ public class IdentityServiceDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
             
             entity.HasMany(e => e.RefreshTokens)
-                .WithOne()
+                .WithOne(rt => rt.User)
                 .HasForeignKey(r => r.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
