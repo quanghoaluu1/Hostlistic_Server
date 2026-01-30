@@ -1,4 +1,6 @@
-﻿namespace EventService_Domain.Entities;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace EventService_Domain.Entities;
 
 public class Sponsor
 {
@@ -10,5 +12,13 @@ public class Sponsor
     public string? WebsiteUrl { get; set; } = string.Empty;
     public Guid TierId { get; set; }
     
+    // Navigation properties to parent
+    [ForeignKey("EventId")]
+    public virtual Event Event { get; set; } = null!;
+    
+    [ForeignKey("TierId")]
+    public virtual SponsorTier Tier { get; set; } = null!;
+    
+    // Navigation properties to children
     public ICollection<SponsorInteraction> SponsorInteractions { get; set; } = new List<SponsorInteraction>();
 }

@@ -1,4 +1,5 @@
-﻿using EventService_Domain.Enums;
+using System.ComponentModel.DataAnnotations.Schema;
+using EventService_Domain.Enums;
 
 namespace EventService_Domain.Entities;
 
@@ -9,4 +10,8 @@ public class SessionBooking
     public Guid UserId { get; set; }
     public DateTime BookingDate { get; set; }
     public BookingStatus Status { get; set; }
+    
+    // Navigation property to parent
+    [ForeignKey("SessionId")]
+    public virtual Session Session { get; set; } = null!;
 }

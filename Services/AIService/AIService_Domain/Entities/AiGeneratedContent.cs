@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace AIService_Domain.Entities;
 
 public class AiGeneratedContent

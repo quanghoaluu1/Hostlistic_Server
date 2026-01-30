@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+using System.ComponentModel.DataAnnotations.Schema;
 using Common;
 using EventService_Domain.Enums;
 
@@ -19,6 +19,11 @@ public class Poll : BaseClass
     public int? DurationInSecond { get; set; }
     public bool IsActive { get; set; } = true;
     
+    // Navigation property to parent
+    [ForeignKey("SessionId")]
+    public virtual Session Session { get; set; } = null!;
+    
+    // Navigation properties to children
     public ICollection<PollResponse> PollResponses { get; set; } = new List<PollResponse>();
 }
 

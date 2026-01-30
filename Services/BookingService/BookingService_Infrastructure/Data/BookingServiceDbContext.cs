@@ -26,13 +26,18 @@ public class BookingServiceDbContext : DbContext
             entity.HasKey(e => e.Id);
 
             entity.HasMany(e => e.OrderDetails)
-                .WithOne()
-                .HasForeignKey(e => e.OrderId)
+                .WithOne(od => od.Order)
+                .HasForeignKey(od => od.OrderId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasMany(e => e.Tickets)
+                .WithOne(t => t.Order)
+                .HasForeignKey(t => t.OrderId)
+                .OnDelete(DeleteBehavior.Cascade);
+            
+            entity.HasMany(e => e.Payments)
                 .WithOne()
-                .HasForeignKey(e => e.OrderId)
+                .HasForeignKey(p => p.OrderId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
@@ -66,8 +71,8 @@ public class BookingServiceDbContext : DbContext
                 .HasPrecision(18, 2);
 
             entity.HasMany(e => e.Payments)
-                .WithOne()
-                .HasForeignKey(e => e.PaymentMethodId)
+                .WithOne(p => p.PaymentMethod)
+                .HasForeignKey(p => p.PaymentMethodId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
