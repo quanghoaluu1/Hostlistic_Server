@@ -13,7 +13,7 @@ public class User : BaseClass
     public string AvatarUrl { get; set; } = string.Empty;
     public Role Role { get; set; }
     public bool IsActive { get; set; } = true;
-    public Guid OrganizationId { get; set; }
+    public Guid? OrganizationId { get; set; }
 
     // Navigation property to parent
     [ForeignKey("OrganizationId")]
