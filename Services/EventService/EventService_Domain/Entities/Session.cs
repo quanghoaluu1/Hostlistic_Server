@@ -20,4 +20,5 @@ public class Session
     public ICollection<QaQuestion> QaQuestions { get; set; } = new List<QaQuestion>();
     public ICollection<SessionBooking> SessionBookings { get; set; } = new List<SessionBooking>();
     public ICollection<Lineup> Lineups { get; set; } = new List<Lineup>();
+    public ICollection<CheckIn> CheckIns { get; set; } = new List<CheckIn>();
 }
