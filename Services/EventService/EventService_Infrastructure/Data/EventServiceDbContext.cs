@@ -40,49 +40,59 @@ public class EventServiceDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
 
-            entity.HasOne<EventType>()
+            entity.HasOne(e => e.EventType)
                 .WithMany(et => et.Events)
                 .HasForeignKey(e => e.EventTypeId)
                 .OnDelete(DeleteBehavior.SetNull);
 
-            entity.HasOne<Venue>()
+            entity.HasOne(e => e.Venue)
                 .WithMany(v => v.Events)
                 .HasForeignKey(e => e.VenueId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             entity.HasMany(e => e.EventTeamMembers)
-                .WithOne()
+                .WithOne(etm => etm.Event)
                 .HasForeignKey(etm => etm.EventId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasMany(e => e.Tracks)
-                .WithOne()
+                .WithOne(t => t.Event)
                 .HasForeignKey(t => t.EventId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasMany(e => e.Sessions)
-                .WithOne()
+                .WithOne(s => s.Event)
                 .HasForeignKey(s => s.EventId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasMany(e => e.Lineups)
-                .WithOne()
+                .WithOne(l => l.Event)
                 .HasForeignKey(l => l.EventId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasMany(e => e.TicketTypes)
-                .WithOne()
+                .WithOne(tt => tt.Event)
                 .HasForeignKey(tt => tt.EventId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasMany(e => e.Sponsors)
-                .WithOne()
+                .WithOne(s => s.Event)
                 .HasForeignKey(s => s.EventId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasMany(e => e.CheckIns)
-                .WithOne()
+                .WithOne(c => c.Event)
                 .HasForeignKey(c => c.EventId)
+                .OnDelete(DeleteBehavior.Cascade);
+            
+            entity.HasMany(e => e.Feedbacks)
+                .WithOne(f => f.Event)
+                .HasForeignKey(f => f.EventId)
+                .OnDelete(DeleteBehavior.Cascade);
+            
+            entity.HasMany(e => e.SponsorTiers)
+                .WithOne(st => st.Event)
+                .HasForeignKey(st => st.EventId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
@@ -119,7 +129,7 @@ public class EventServiceDbContext : DbContext
             entity.HasKey(e => e.Id);
 
             entity.HasMany(e => e.Sessions)
-                .WithOne()
+                .WithOne(s => s.Venue)
                 .HasForeignKey(s => s.VenueId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
@@ -130,7 +140,7 @@ public class EventServiceDbContext : DbContext
             entity.HasKey(e => e.Id);
 
             entity.HasMany(e => e.Sessions)
-                .WithOne()
+                .WithOne(s => s.Track)
                 .HasForeignKey(s => s.TrackId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
@@ -141,28 +151,38 @@ public class EventServiceDbContext : DbContext
             entity.HasKey(e => e.Id);
 
             entity.HasMany(e => e.Polls)
-                .WithOne()
+                .WithOne(p => p.Session)
                 .HasForeignKey(p => p.SessionId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasMany(e => e.QaQuestions)
-                .WithOne()
+                .WithOne(q => q.Session)
                 .HasForeignKey(q => q.SessionId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasMany(e => e.SessionBookings)
-                .WithOne()
+                .WithOne(sb => sb.Session)
                 .HasForeignKey(sb => sb.SessionId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasMany(e => e.Lineups)
-                .WithOne()
+                .WithOne(l => l.Session)
                 .HasForeignKey(l => l.SessionId)
                 .OnDelete(DeleteBehavior.SetNull);
 
             entity.HasMany(e => e.CheckIns)
-                .WithOne()
+                .WithOne(c => c.Session)
                 .HasForeignKey(c => c.SessionId)
+                .OnDelete(DeleteBehavior.SetNull);
+            
+            entity.HasMany(e => e.Feedbacks)
+                .WithOne(f => f.Session)
+                .HasForeignKey(f => f.SessionId)
+                .OnDelete(DeleteBehavior.Cascade);
+            
+            entity.HasMany(e => e.TicketTypes)
+                .WithOne(tt => tt.Session)
+                .HasForeignKey(tt => tt.SessionId)
                 .OnDelete(DeleteBehavior.SetNull);
         });
 
@@ -184,7 +204,7 @@ public class EventServiceDbContext : DbContext
             entity.HasKey(e => e.Id);
 
             entity.HasMany(e => e.Lineups)
-                .WithOne()
+                .WithOne(l => l.Talent)
                 .HasForeignKey(l => l.TalentId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
@@ -204,7 +224,7 @@ public class EventServiceDbContext : DbContext
             entity.HasKey(e => e.Id);
 
             entity.HasMany(e => e.SponsorInteractions)
-                .WithOne()
+                .WithOne(si => si.Sponsor)
                 .HasForeignKey(si => si.SponsorId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
@@ -215,7 +235,7 @@ public class EventServiceDbContext : DbContext
             entity.HasKey(e => e.Id);
 
             entity.HasMany(e => e.Sponsors)
-                .WithOne()
+                .WithOne(s => s.Tier)
                 .HasForeignKey(s => s.TierId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
@@ -244,7 +264,7 @@ public class EventServiceDbContext : DbContext
                 .HasColumnType("jsonb");
 
             entity.HasMany(e => e.PollResponses)
-                .WithOne()
+                .WithOne(pr => pr.Poll)
                 .HasForeignKey(pr => pr.PollId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
@@ -261,7 +281,7 @@ public class EventServiceDbContext : DbContext
             entity.HasKey(e => e.Id);
 
             entity.HasMany(e => e.Votes)
-                .WithOne()
+                .WithOne(v => v.QaQuestion)
                 .HasForeignKey(v => v.QaQuestionId)
                 .OnDelete(DeleteBehavior.Cascade);
         });

@@ -1,4 +1,6 @@
-﻿namespace IdentityService_Domain.Entities;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace IdentityService_Domain.Entities;
 
 public class OrganizerBankInfo
 {
@@ -9,4 +11,10 @@ public class OrganizerBankInfo
     public Guid? OrganizationId { get; set; }
     public Guid? UserId { get; set; }
     
+    // Navigation properties to parent
+    [ForeignKey("OrganizationId")]
+    public virtual Organization? Organization { get; set; }
+    
+    [ForeignKey("UserId")]
+    public virtual User? User { get; set; }
 }

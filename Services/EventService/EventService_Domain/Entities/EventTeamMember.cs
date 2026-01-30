@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+using System.ComponentModel.DataAnnotations.Schema;
 using EventService_Domain.Enums;
 
 namespace EventService_Domain.Entities;
@@ -16,4 +16,7 @@ public class EventTeamMember
     public DateTime InvitedAt { get; set; } = DateTime.UtcNow;
     public DateTime? JoinedAt { get; set; }
     
+    // Navigation property to parent
+    [ForeignKey("EventId")]
+    public virtual Event Event { get; set; } = null!;
 }

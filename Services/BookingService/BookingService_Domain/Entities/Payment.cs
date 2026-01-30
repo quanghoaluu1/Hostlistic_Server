@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations.Schema;
 using BookingService_Domain.Enum;
 
 namespace BookingService_Domain.Entities;
@@ -12,4 +13,8 @@ public class Payment
     public string? TransactionId { get; set; }
     public DateTime PaymentDate { get; set; } = DateTime.UtcNow;
     public string Gateway { get; set; } = string.Empty;
+    
+    // Navigation properties to parent
+    [ForeignKey("PaymentMethodId")]
+    public virtual PaymentMethod PaymentMethod { get; set; } = null!;
 }

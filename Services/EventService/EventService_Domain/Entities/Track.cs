@@ -1,4 +1,6 @@
-﻿namespace EventService_Domain.Entities;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace EventService_Domain.Entities;
 
 public class Track
 {
@@ -8,5 +10,10 @@ public class Track
     public string? Description { get; set; } = string.Empty;
     public string ColorHex { get; set; } = string.Empty;
     
+    // Navigation property to parent
+    [ForeignKey("EventId")]
+    public virtual Event Event { get; set; } = null!;
+    
+    // Navigation properties to children
     public ICollection<Session> Sessions { get; set; } = new List<Session>();
 }

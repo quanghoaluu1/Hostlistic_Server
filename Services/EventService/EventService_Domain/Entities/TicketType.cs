@@ -1,4 +1,5 @@
-﻿using EventService_Domain.Enums;
+using System.ComponentModel.DataAnnotations.Schema;
+using EventService_Domain.Enums;
 
 namespace EventService_Domain.Entities;
 
@@ -21,4 +22,11 @@ public class TicketType
     public bool IsRequireHolderInfo { get; set; }
     public TicketTypeStatus Status { get; set; } = TicketTypeStatus.Active;
     public SaleChannel SaleChannel { get; set; }
+    
+    // Navigation properties to parent
+    [ForeignKey("EventId")]
+    public virtual Event Event { get; set; } = null!;
+    
+    [ForeignKey("SessionId")]
+    public virtual Session? Session { get; set; }
 }

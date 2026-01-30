@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations.Schema;
 using EventService_Domain.Enums;
 
 namespace EventService_Domain.Entities;
@@ -13,4 +14,10 @@ public class CheckIn
     public string CheckInLocation { get; set; } = string.Empty;
     public CheckInType CheckInType { get; set; }
     
+    // Navigation properties to parent
+    [ForeignKey("EventId")]
+    public virtual Event Event { get; set; } = null!;
+    
+    [ForeignKey("SessionId")]
+    public virtual Session? Session { get; set; }
 }

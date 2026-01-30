@@ -10,6 +10,7 @@ public class IdentityServiceDbContext : DbContext
     }
 
     public DbSet<User> Users => Set<User>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<Organization> Organizations => Set<Organization>();
     public DbSet<OrganizerBankInfo> OrganizerBankInfos => Set<OrganizerBankInfo>();
     public DbSet<SubscriptionPlan> SubscriptionPlans => Set<SubscriptionPlan>();
@@ -28,14 +29,28 @@ public class IdentityServiceDbContext : DbContext
                 .IsUnique();
 
             entity.HasMany(e => e.OrganizerBankInfos)
-                .WithOne()
+                .WithOne(obi => obi.User)
                 .HasForeignKey(obi => obi.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasMany(e => e.UserPlans)
-                .WithOne()
+                .WithOne(up => up.User)
                 .HasForeignKey(up => up.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+            
+            entity.HasMany(e => e.RefreshTokens)
+                .WithOne()
+                .HasForeignKey(r => r.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<RefreshToken>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.Token)
+                .IsUnique();
+            entity.Property(e => e.Token)
+                .HasMaxLength(500);
         });
 
         // Organization configuration
@@ -44,12 +59,12 @@ public class IdentityServiceDbContext : DbContext
             entity.HasKey(e => e.Id);
 
             entity.HasMany(e => e.Users)
-                .WithOne()
+                .WithOne(u => u.Organization)
                 .HasForeignKey(u => u.OrganizationId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             entity.HasMany(e => e.OrganizerBankInfos)
-                .WithOne()
+                .WithOne(obi => obi.Organization)
                 .HasForeignKey(obi => obi.OrganizationId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
@@ -72,7 +87,7 @@ public class IdentityServiceDbContext : DbContext
                 .HasPrecision(5, 4);
 
             entity.HasMany(e => e.UserPlans)
-                .WithOne()
+                .WithOne(up => up.SubscriptionPlan)
                 .HasForeignKey(up => up.SubscriptionPlanId)
                 .OnDelete(DeleteBehavior.Restrict);
         });

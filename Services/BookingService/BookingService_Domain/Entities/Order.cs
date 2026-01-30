@@ -11,6 +11,8 @@ public class Order
     public OrderStatus Status { get; set; }
     public string? Notes { get; set; } 
     
+    // Navigation properties to children
     public ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();
     public ICollection<Ticket> Tickets { get; set; } = new List<Ticket>();
+    public ICollection<Payment> Payments { get; set; } = new List<Payment>();
 }
