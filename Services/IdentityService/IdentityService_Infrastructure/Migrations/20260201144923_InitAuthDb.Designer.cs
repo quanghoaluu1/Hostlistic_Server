@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace IdentityService_Infrastructure.Migrations
 {
     [DbContext(typeof(IdentityServiceDbContext))]
-    [Migration("20260130104744_AddNullableOrganization")]
-    partial class AddNullableOrganization
+    [Migration("20260201144923_InitAuthDb")]
+    partial class InitAuthDb
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

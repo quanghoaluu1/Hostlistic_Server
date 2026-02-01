@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace BookingService_Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class Initial : Migration
+    public partial class InitBookingDb : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -121,6 +121,12 @@ namespace BookingService_Infrastructure.Migrations
                 {
                     table.PrimaryKey("PK_Payments", x => x.Id);
                     table.ForeignKey(
+                        name: "FK_Payments_Orders_OrderId",
+                        column: x => x.OrderId,
+                        principalTable: "Orders",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
                         name: "FK_Payments_PaymentMethods_PaymentMethodId",
                         column: x => x.PaymentMethodId,
                         principalTable: "PaymentMethods",
@@ -131,6 +137,11 @@ namespace BookingService_Infrastructure.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_OrderDetails_OrderId",
                 table: "OrderDetails",
+                column: "OrderId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Payments_OrderId",
+                table: "Payments",
                 column: "OrderId");
 
             migrationBuilder.CreateIndex(
