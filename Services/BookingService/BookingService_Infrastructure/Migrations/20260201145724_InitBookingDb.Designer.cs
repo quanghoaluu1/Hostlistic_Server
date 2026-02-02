@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace BookingService_Infrastructure.Migrations
 {
     [DbContext(typeof(BookingServiceDbContext))]
-    [Migration("20260130063004_Initial")]
-    partial class Initial
+    [Migration("20260201145724_InitBookingDb")]
+    partial class InitBookingDb
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -107,6 +107,8 @@ namespace BookingService_Infrastructure.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("OrderId");
 
                     b.HasIndex("PaymentMethodId");
 
@@ -210,34 +212,48 @@ namespace BookingService_Infrastructure.Migrations
 
             modelBuilder.Entity("BookingService_Domain.Entities.OrderDetail", b =>
                 {
-                    b.HasOne("BookingService_Domain.Entities.Order", null)
+                    b.HasOne("BookingService_Domain.Entities.Order", "Order")
                         .WithMany("OrderDetails")
                         .HasForeignKey("OrderId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Order");
                 });
 
             modelBuilder.Entity("BookingService_Domain.Entities.Payment", b =>
                 {
-                    b.HasOne("BookingService_Domain.Entities.PaymentMethod", null)
+                    b.HasOne("BookingService_Domain.Entities.Order", null)
+                        .WithMany("Payments")
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BookingService_Domain.Entities.PaymentMethod", "PaymentMethod")
                         .WithMany("Payments")
                         .HasForeignKey("PaymentMethodId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("PaymentMethod");
                 });
 
             modelBuilder.Entity("BookingService_Domain.Entities.Ticket", b =>
                 {
-                    b.HasOne("BookingService_Domain.Entities.Order", null)
+                    b.HasOne("BookingService_Domain.Entities.Order", "Order")
                         .WithMany("Tickets")
                         .HasForeignKey("OrderId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Order");
                 });
 
             modelBuilder.Entity("BookingService_Domain.Entities.Order", b =>
                 {
                     b.Navigation("OrderDetails");
+
+                    b.Navigation("Payments");
 
                     b.Navigation("Tickets");
                 });

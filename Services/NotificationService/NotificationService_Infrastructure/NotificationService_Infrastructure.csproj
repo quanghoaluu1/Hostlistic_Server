@@ -15,4 +15,8 @@
         <ProjectReference Include="..\NotificationService_Domain\NotificationService_Domain.csproj" />
         <ProjectReference Include="..\NotificationService_Application\NotificationService_Application.csproj" />
     </ItemGroup>
+    
+    <ItemGroup>
+      <Folder Include="Migrations\" />
+    </ItemGroup>
 </Project>

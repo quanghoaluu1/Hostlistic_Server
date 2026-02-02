@@ -97,7 +97,7 @@ public class AuthService(IUserRepository userRepository, IRefreshTokenRepository
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
         var token = new JwtSecurityToken(
             configuration["Jwt:Issuer"], 
-            configuration["Jwt:Issuer"], 
+            configuration["Jwt:Audience"], 
             claims,
             expires: DateTime.Now.AddMinutes(30),
             signingCredentials: creds);

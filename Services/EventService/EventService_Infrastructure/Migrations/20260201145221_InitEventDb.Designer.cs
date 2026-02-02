@@ -14,8 +14,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace EventService_Infrastructure.Migrations
 {
     [DbContext(typeof(EventServiceDbContext))]
-    [Migration("20260130064122_Initial")]
-    partial class Initial
+    [Migration("20260201145221_InitEventDb")]
+    partial class InitEventDb
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -216,6 +216,10 @@ namespace EventService_Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("EventId");
+
+                    b.HasIndex("SessionId");
 
                     b.ToTable("Feedbacks");
                 });
@@ -532,6 +536,8 @@ namespace EventService_Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("EventId");
+
                     b.ToTable("SponsorTiers");
                 });
 
@@ -627,6 +633,8 @@ namespace EventService_Infrastructure.Migrations
 
                     b.HasIndex("EventId");
 
+                    b.HasIndex("SessionId");
+
                     b.ToTable("TicketTypes");
                 });
 
@@ -666,9 +674,6 @@ namespace EventService_Infrastructure.Migrations
                     b.Property<int>("Capacity")
                         .HasColumnType("integer");
 
-                    b.Property<Guid>("EventId")
-                        .HasColumnType("uuid");
-
                     b.Property<string>("LayoutUrl")
                         .HasColumnType("text");
 
@@ -705,39 +710,49 @@ namespace EventService_Infrastructure.Migrations
 
             modelBuilder.Entity("EventService_Domain.Entities.CheckIn", b =>
                 {
-                    b.HasOne("EventService_Domain.Entities.Event", null)
+                    b.HasOne("EventService_Domain.Entities.Event", "Event")
                         .WithMany("CheckIns")
                         .HasForeignKey("EventId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("EventService_Domain.Entities.Session", null)
+                    b.HasOne("EventService_Domain.Entities.Session", "Session")
                         .WithMany("CheckIns")
                         .HasForeignKey("SessionId")
                         .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Event");
+
+                    b.Navigation("Session");
                 });
 
             modelBuilder.Entity("EventService_Domain.Entities.Event", b =>
                 {
-                    b.HasOne("EventService_Domain.EventType", null)
+                    b.HasOne("EventService_Domain.EventType", "EventType")
                         .WithMany("Events")
                         .HasForeignKey("EventTypeId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.HasOne("EventService_Domain.Entities.Venue", null)
+                    b.HasOne("EventService_Domain.Entities.Venue", "Venue")
                         .WithMany("Events")
                         .HasForeignKey("VenueId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("EventType");
+
+                    b.Navigation("Venue");
                 });
 
             modelBuilder.Entity("EventService_Domain.Entities.EventTeamMember", b =>
                 {
-                    b.HasOne("EventService_Domain.Entities.Event", null)
+                    b.HasOne("EventService_Domain.Entities.Event", "Event")
                         .WithMany("EventTeamMembers")
                         .HasForeignKey("EventId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Event");
                 });
 
             modelBuilder.Entity("EventService_Domain.Entities.EventTemplate", b =>
@@ -789,132 +804,201 @@ namespace EventService_Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("EventService_Domain.Entities.Feedback", b =>
+                {
+                    b.HasOne("EventService_Domain.Entities.Event", "Event")
+                        .WithMany("Feedbacks")
+                        .HasForeignKey("EventId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("EventService_Domain.Entities.Session", "Session")
+                        .WithMany("Feedbacks")
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Event");
+
+                    b.Navigation("Session");
+                });
+
             modelBuilder.Entity("EventService_Domain.Entities.Lineup", b =>
                 {
-                    b.HasOne("EventService_Domain.Entities.Event", null)
+                    b.HasOne("EventService_Domain.Entities.Event", "Event")
                         .WithMany("Lineups")
                         .HasForeignKey("EventId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("EventService_Domain.Entities.Session", null)
+                    b.HasOne("EventService_Domain.Entities.Session", "Session")
                         .WithMany("Lineups")
                         .HasForeignKey("SessionId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.HasOne("EventService_Domain.Entities.Talent", null)
+                    b.HasOne("EventService_Domain.Entities.Talent", "Talent")
                         .WithMany("Lineups")
                         .HasForeignKey("TalentId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Event");
+
+                    b.Navigation("Session");
+
+                    b.Navigation("Talent");
                 });
 
             modelBuilder.Entity("EventService_Domain.Entities.Poll", b =>
                 {
-                    b.HasOne("EventService_Domain.Entities.Session", null)
+                    b.HasOne("EventService_Domain.Entities.Session", "Session")
                         .WithMany("Polls")
                         .HasForeignKey("SessionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Session");
                 });
 
             modelBuilder.Entity("EventService_Domain.Entities.PollResponse", b =>
                 {
-                    b.HasOne("EventService_Domain.Entities.Poll", null)
+                    b.HasOne("EventService_Domain.Entities.Poll", "Poll")
                         .WithMany("PollResponses")
                         .HasForeignKey("PollId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Poll");
                 });
 
             modelBuilder.Entity("EventService_Domain.Entities.QaQuestion", b =>
                 {
-                    b.HasOne("EventService_Domain.Entities.Session", null)
+                    b.HasOne("EventService_Domain.Entities.Session", "Session")
                         .WithMany("QaQuestions")
                         .HasForeignKey("SessionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Session");
                 });
 
             modelBuilder.Entity("EventService_Domain.Entities.QaVote", b =>
                 {
-                    b.HasOne("EventService_Domain.Entities.QaQuestion", null)
+                    b.HasOne("EventService_Domain.Entities.QaQuestion", "QaQuestion")
                         .WithMany("Votes")
                         .HasForeignKey("QaQuestionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("QaQuestion");
                 });
 
             modelBuilder.Entity("EventService_Domain.Entities.Session", b =>
                 {
-                    b.HasOne("EventService_Domain.Entities.Event", null)
+                    b.HasOne("EventService_Domain.Entities.Event", "Event")
                         .WithMany("Sessions")
                         .HasForeignKey("EventId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("EventService_Domain.Entities.Track", null)
+                    b.HasOne("EventService_Domain.Entities.Track", "Track")
                         .WithMany("Sessions")
                         .HasForeignKey("TrackId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("EventService_Domain.Entities.Venue", null)
+                    b.HasOne("EventService_Domain.Entities.Venue", "Venue")
                         .WithMany("Sessions")
                         .HasForeignKey("VenueId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("Event");
+
+                    b.Navigation("Track");
+
+                    b.Navigation("Venue");
                 });
 
             modelBuilder.Entity("EventService_Domain.Entities.SessionBooking", b =>
                 {
-                    b.HasOne("EventService_Domain.Entities.Session", null)
+                    b.HasOne("EventService_Domain.Entities.Session", "Session")
                         .WithMany("SessionBookings")
                         .HasForeignKey("SessionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Session");
                 });
 
             modelBuilder.Entity("EventService_Domain.Entities.Sponsor", b =>
                 {
-                    b.HasOne("EventService_Domain.Entities.Event", null)
+                    b.HasOne("EventService_Domain.Entities.Event", "Event")
                         .WithMany("Sponsors")
                         .HasForeignKey("EventId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("EventService_Domain.Entities.SponsorTier", null)
+                    b.HasOne("EventService_Domain.Entities.SponsorTier", "Tier")
                         .WithMany("Sponsors")
                         .HasForeignKey("TierId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("Event");
+
+                    b.Navigation("Tier");
                 });
 
             modelBuilder.Entity("EventService_Domain.Entities.SponsorInteraction", b =>
                 {
-                    b.HasOne("EventService_Domain.Entities.Sponsor", null)
+                    b.HasOne("EventService_Domain.Entities.Sponsor", "Sponsor")
                         .WithMany("SponsorInteractions")
                         .HasForeignKey("SponsorId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Sponsor");
+                });
+
+            modelBuilder.Entity("EventService_Domain.Entities.SponsorTier", b =>
+                {
+                    b.HasOne("EventService_Domain.Entities.Event", "Event")
+                        .WithMany("SponsorTiers")
+                        .HasForeignKey("EventId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Event");
                 });
 
             modelBuilder.Entity("EventService_Domain.Entities.TicketType", b =>
                 {
-                    b.HasOne("EventService_Domain.Entities.Event", null)
+                    b.HasOne("EventService_Domain.Entities.Event", "Event")
                         .WithMany("TicketTypes")
                         .HasForeignKey("EventId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("EventService_Domain.Entities.Session", "Session")
+                        .WithMany("TicketTypes")
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Event");
+
+                    b.Navigation("Session");
                 });
 
             modelBuilder.Entity("EventService_Domain.Entities.Track", b =>
                 {
-                    b.HasOne("EventService_Domain.Entities.Event", null)
+                    b.HasOne("EventService_Domain.Entities.Event", "Event")
                         .WithMany("Tracks")
                         .HasForeignKey("EventId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Event");
                 });
 
             modelBuilder.Entity("EventService_Domain.Entities.Event", b =>
@@ -923,9 +1007,13 @@ namespace EventService_Infrastructure.Migrations
 
                     b.Navigation("EventTeamMembers");
 
+                    b.Navigation("Feedbacks");
+
                     b.Navigation("Lineups");
 
                     b.Navigation("Sessions");
+
+                    b.Navigation("SponsorTiers");
 
                     b.Navigation("Sponsors");
 
@@ -948,6 +1036,8 @@ namespace EventService_Infrastructure.Migrations
                 {
                     b.Navigation("CheckIns");
 
+                    b.Navigation("Feedbacks");
+
                     b.Navigation("Lineups");
 
                     b.Navigation("Polls");
@@ -955,6 +1045,8 @@ namespace EventService_Infrastructure.Migrations
                     b.Navigation("QaQuestions");
 
                     b.Navigation("SessionBookings");
+
+                    b.Navigation("TicketTypes");
                 });
 
             modelBuilder.Entity("EventService_Domain.Entities.Sponsor", b =>

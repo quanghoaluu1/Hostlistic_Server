@@ -15,4 +15,8 @@
         <ProjectReference Include="..\IdentityService_Domain\IdentityService_Domain.csproj" />
         <ProjectReference Include="..\IdentityService_Application\IdentityService_Application.csproj" />
     </ItemGroup>
+    
+    <ItemGroup>
+      <Folder Include="Migrations\" />
+    </ItemGroup>
 </Project>

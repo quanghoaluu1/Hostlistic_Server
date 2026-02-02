@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AIService_Infrastructure.Migrations
 {
     [DbContext(typeof(AIServiceDbContext))]
-    [Migration("20260130062750_Initial")]
-    partial class Initial
+    [Migration("20260201145918_InitAIDb")]
+    partial class InitAIDb
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

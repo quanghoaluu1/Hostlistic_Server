@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace EventService_Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class Initial : Migration
+    public partial class InitEventDb : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -43,38 +43,6 @@ namespace EventService_Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Feedbacks",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    EventId = table.Column<Guid>(type: "uuid", nullable: false),
-                    SessionId = table.Column<Guid>(type: "uuid", nullable: false),
-                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
-                    Rating = table.Column<int>(type: "integer", nullable: false),
-                    Comment = table.Column<string>(type: "text", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Feedbacks", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "SponsorTiers",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    EventId = table.Column<Guid>(type: "uuid", nullable: false),
-                    Name = table.Column<string>(type: "text", nullable: false),
-                    Priority = table.Column<int>(type: "integer", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_SponsorTiers", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "Talents",
                 columns: table => new
                 {
@@ -96,7 +64,6 @@ namespace EventService_Infrastructure.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    EventId = table.Column<Guid>(type: "uuid", nullable: false),
                     Name = table.Column<string>(type: "text", nullable: false),
                     Location = table.Column<string>(type: "text", nullable: false),
                     Capacity = table.Column<int>(type: "integer", nullable: false),
@@ -170,61 +137,19 @@ namespace EventService_Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Sponsors",
+                name: "SponsorTiers",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     EventId = table.Column<Guid>(type: "uuid", nullable: false),
                     Name = table.Column<string>(type: "text", nullable: false),
-                    LogoUrl = table.Column<string>(type: "text", nullable: false),
-                    Description = table.Column<string>(type: "text", nullable: true),
-                    WebsiteUrl = table.Column<string>(type: "text", nullable: true),
-                    TierId = table.Column<Guid>(type: "uuid", nullable: false)
+                    Priority = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Sponsors", x => x.Id);
+                    table.PrimaryKey("PK_SponsorTiers", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Sponsors_Events_EventId",
-                        column: x => x.EventId,
-                        principalTable: "Events",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_Sponsors_SponsorTiers_TierId",
-                        column: x => x.TierId,
-                        principalTable: "SponsorTiers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "TicketTypes",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    EventId = table.Column<Guid>(type: "uuid", nullable: false),
-                    SessionId = table.Column<Guid>(type: "uuid", nullable: true),
-                    Name = table.Column<string>(type: "text", nullable: false),
-                    Price = table.Column<double>(type: "double precision", precision: 18, scale: 2, nullable: false),
-                    Description = table.Column<string>(type: "text", nullable: true),
-                    QuantityAvailable = table.Column<int>(type: "integer", nullable: false),
-                    QuantitySold = table.Column<int>(type: "integer", nullable: false),
-                    SaleStartDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    SaleEndTime = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    SaleEndUnit = table.Column<int>(type: "integer", nullable: false),
-                    SaleEndWhen = table.Column<int>(type: "integer", nullable: false),
-                    MinPerOrder = table.Column<int>(type: "integer", nullable: false),
-                    MaxPerOrder = table.Column<int>(type: "integer", nullable: false),
-                    IsRequireHolderInfo = table.Column<bool>(type: "boolean", nullable: false),
-                    Status = table.Column<int>(type: "integer", nullable: false),
-                    SaleChannel = table.Column<int>(type: "integer", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_TicketTypes", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_TicketTypes_Events_EventId",
+                        name: "FK_SponsorTiers_Events_EventId",
                         column: x => x.EventId,
                         principalTable: "Events",
                         principalColumn: "Id",
@@ -253,24 +178,32 @@ namespace EventService_Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "SponsorInteractions",
+                name: "Sponsors",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    SponsorId = table.Column<Guid>(type: "uuid", nullable: false),
-                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
-                    InteractionType = table.Column<int>(type: "integer", nullable: false),
-                    InteractionDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    EventId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Name = table.Column<string>(type: "text", nullable: false),
+                    LogoUrl = table.Column<string>(type: "text", nullable: false),
+                    Description = table.Column<string>(type: "text", nullable: true),
+                    WebsiteUrl = table.Column<string>(type: "text", nullable: true),
+                    TierId = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_SponsorInteractions", x => x.Id);
+                    table.PrimaryKey("PK_Sponsors", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_SponsorInteractions_Sponsors_SponsorId",
-                        column: x => x.SponsorId,
-                        principalTable: "Sponsors",
+                        name: "FK_Sponsors_Events_EventId",
+                        column: x => x.EventId,
+                        principalTable: "Events",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Sponsors_SponsorTiers_TierId",
+                        column: x => x.TierId,
+                        principalTable: "SponsorTiers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -313,6 +246,27 @@ namespace EventService_Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "SponsorInteractions",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    SponsorId = table.Column<Guid>(type: "uuid", nullable: false),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    InteractionType = table.Column<int>(type: "integer", nullable: false),
+                    InteractionDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_SponsorInteractions", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_SponsorInteractions_Sponsors_SponsorId",
+                        column: x => x.SponsorId,
+                        principalTable: "Sponsors",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "CheckIns",
                 columns: table => new
                 {
@@ -340,6 +294,36 @@ namespace EventService_Infrastructure.Migrations
                         principalTable: "Sessions",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.SetNull);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Feedbacks",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    EventId = table.Column<Guid>(type: "uuid", nullable: false),
+                    SessionId = table.Column<Guid>(type: "uuid", nullable: false),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Rating = table.Column<int>(type: "integer", nullable: false),
+                    Comment = table.Column<string>(type: "text", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Feedbacks", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Feedbacks_Events_EventId",
+                        column: x => x.EventId,
+                        principalTable: "Events",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Feedbacks_Sessions_SessionId",
+                        column: x => x.SessionId,
+                        principalTable: "Sessions",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -449,6 +433,45 @@ namespace EventService_Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "TicketTypes",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    EventId = table.Column<Guid>(type: "uuid", nullable: false),
+                    SessionId = table.Column<Guid>(type: "uuid", nullable: true),
+                    Name = table.Column<string>(type: "text", nullable: false),
+                    Price = table.Column<double>(type: "double precision", precision: 18, scale: 2, nullable: false),
+                    Description = table.Column<string>(type: "text", nullable: true),
+                    QuantityAvailable = table.Column<int>(type: "integer", nullable: false),
+                    QuantitySold = table.Column<int>(type: "integer", nullable: false),
+                    SaleStartDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    SaleEndTime = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    SaleEndUnit = table.Column<int>(type: "integer", nullable: false),
+                    SaleEndWhen = table.Column<int>(type: "integer", nullable: false),
+                    MinPerOrder = table.Column<int>(type: "integer", nullable: false),
+                    MaxPerOrder = table.Column<int>(type: "integer", nullable: false),
+                    IsRequireHolderInfo = table.Column<bool>(type: "boolean", nullable: false),
+                    Status = table.Column<int>(type: "integer", nullable: false),
+                    SaleChannel = table.Column<int>(type: "integer", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_TicketTypes", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_TicketTypes_Events_EventId",
+                        column: x => x.EventId,
+                        principalTable: "Events",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_TicketTypes_Sessions_SessionId",
+                        column: x => x.SessionId,
+                        principalTable: "Sessions",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "PollResponses",
                 columns: table => new
                 {
@@ -513,6 +536,16 @@ namespace EventService_Infrastructure.Migrations
                 name: "IX_EventTeamMembers_EventId",
                 table: "EventTeamMembers",
                 column: "EventId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Feedbacks_EventId",
+                table: "Feedbacks",
+                column: "EventId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Feedbacks_SessionId",
+                table: "Feedbacks",
+                column: "SessionId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Lineups_EventId",
@@ -585,9 +618,19 @@ namespace EventService_Infrastructure.Migrations
                 column: "TierId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_SponsorTiers_EventId",
+                table: "SponsorTiers",
+                column: "EventId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_TicketTypes_EventId",
                 table: "TicketTypes",
                 column: "EventId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_TicketTypes_SessionId",
+                table: "TicketTypes",
+                column: "SessionId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Tracks_EventId",

@@ -7,19 +7,22 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.1"/>
-        <PackageReference Include="Scalar.AspNetCore" Version="2.12.22" />
+        <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.2" />
+        <PackageReference Include="Mapster" Version="10.0.0-pre01" />
+		<PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.1"/>
+		<PackageReference Include="Scalar.AspNetCore" Version="2.12.22" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.2">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-
-    </ItemGroup>
+		<PackageReference Include="Swashbuckle.AspNetCore" Version="10.1.0" />
+	</ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\EventService_Domain\EventService_Domain.csproj" />
         <ProjectReference Include="..\EventService_Application\EventService_Application.csproj" />
         <ProjectReference Include="..\EventService_Infrastructure\EventService_Infrastructure.csproj" />
+        <ProjectReference Include="..\..\..\Common\Common.csproj" />
     </ItemGroup>
 
 </Project>
