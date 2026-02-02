@@ -54,6 +54,8 @@ public class SessionService : ISessionService
 
         var session = request.Adapt<Session>();
         session.Status = EventService_Domain.Enums.SessionStatus.Scheduled;
+        session.StartTime = DateTime.SpecifyKind(request.StartTime, DateTimeKind.Utc);
+        session.EndTime = DateTime.SpecifyKind(request.EndTime, DateTimeKind.Utc);
 
         await _sessionRepository.AddSessionAsync(session);
         await _sessionRepository.SaveChangesAsync();
