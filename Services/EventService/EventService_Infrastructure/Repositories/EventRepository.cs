@@ -9,12 +9,18 @@ public class EventRepository(EventServiceDbContext dbContext) : IEventRepository
 {
     public async Task<IReadOnlyList<Event>> GetAllEventsAsync()
     {
-        return await dbContext.Events.ToListAsync();
+        return await dbContext.Events.Include(e => e.Tracks)
+            .ThenInclude(t => t.Sessions)
+            .Include(e => e.Venue).ToListAsync();
     }
 
     public async Task<Event?> GetEventByIdAsync(Guid eventId)
     {
-        return await dbContext.Events.FindAsync(eventId);
+        return await dbContext.Events
+            .Include(e => e.Tracks)
+                .ThenInclude(t => t.Sessions)
+            .Include(e => e.Venue)
+            .FirstOrDefaultAsync(e => e.Id == eventId);
     }
 
     public Event AddEventAsync(Event @event)
@@ -35,5 +41,9 @@ public class EventRepository(EventServiceDbContext dbContext) : IEventRepository
     public async Task<bool> EventExistsAsync(Guid eventId)
     {
         return await dbContext.Events.AnyAsync(e => e.Id == eventId);
+    }
+    public async Task SaveChangesAsync()
+    {
+        await dbContext.SaveChangesAsync();
     }
 }

@@ -15,9 +15,9 @@ public class Event : BaseClass
     public Guid? EventTypeId { get; set; }
     public string CoverImageUrl { get; set; } = string.Empty;
     public int TotalCapacity { get; set; }
-    public bool IsPublic { get; set; } = true;
+    public bool IsPublic { get; set; } = false;
     public EventStatus EventStatus { get; set; } = EventStatus.Draft;
-    public Guid VenueId { get; set; }
+    public Guid? VenueId { get; set; }
     
     // Navigation properties to parent
     [ForeignKey("EventTypeId")]
