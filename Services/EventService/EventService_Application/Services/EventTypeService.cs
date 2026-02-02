@@ -26,31 +26,31 @@ public class EventTypeService(IEventTypeRepository eventTypeRepository) : IEvent
         return ApiResponse<EventTypeResponse>.Success(201, "Event type created successfully", result.Adapt<EventTypeResponse>());
     }
 
-    public async Task<ApiResponse<IReadOnlyList<EventTypeDto>>> GetAllEventTypesAsync()
+    public async Task<ApiResponse<IReadOnlyList<EventTypeResponse>>> GetAllEventTypesAsync()
     {
         var eventTypes =  await eventTypeRepository.GetAllEventTypesAsync();
-        var result = eventTypes.Adapt<IReadOnlyList<EventTypeDto>>();
-        return ApiResponse<IReadOnlyList<EventTypeDto>>.Success(200, "Event types retrieved successfully", result);
+        var result = eventTypes.Adapt<IReadOnlyList<EventTypeResponse>>();
+        return ApiResponse<IReadOnlyList<EventTypeResponse>>.Success(200, "Event types retrieved successfully", result);
     }
 
-    public async Task<ApiResponse<EventTypeDto>> GetEventTypeByIdAsync(Guid eventTypeId)
+    public async Task<ApiResponse<EventTypeResponse>> GetEventTypeByIdAsync(Guid eventTypeId)
     {
         var eventType = await eventTypeRepository.GetEventTypeByIdAsync(eventTypeId);
-        var result = eventType.Adapt<EventTypeDto>();
-        return result == null ? ApiResponse<EventTypeDto>.Fail(404, "Event type not found") : ApiResponse<EventTypeDto>.Success(200, "Event type retrieved successfully", result);
+        var result = eventType.Adapt<EventTypeResponse>();
+        return result == null ? ApiResponse<EventTypeResponse>.Fail(404, "Event type not found") : ApiResponse<EventTypeResponse>.Success(200, "Event type retrieved successfully", result);
     }
     
-    public async Task<ApiResponse<EventTypeDto>> UpdateEventTypeAsync(Guid eventTypeId,
+    public async Task<ApiResponse<EventTypeResponse>> UpdateEventTypeAsync(Guid eventTypeId,
         UpdateEventTypeDto eventTypeToUpdate)
     {
         var existedEventType = await eventTypeRepository.GetEventTypeByIdAsync(eventTypeId);
         if (existedEventType == null)
-            return ApiResponse<EventTypeDto>.Fail(404, "Event type not found");
-        existedEventType.Name = eventTypeToUpdate.EventType.Name ?? existedEventType.Name;       
-        existedEventType.IsActive = eventTypeToUpdate.EventType.IsActive ?? existedEventType.IsActive;
+            return ApiResponse<EventTypeResponse>.Fail(404, "Event type not found");
+        existedEventType.Name = eventTypeToUpdate.Name ?? existedEventType.Name;       
+        existedEventType.IsActive = eventTypeToUpdate.IsActive ?? existedEventType.IsActive;
         eventTypeRepository.UpdateEventTypeAsync(existedEventType);
         await eventTypeRepository.SaveChangesAsync();
-        var result = existedEventType.Adapt<EventTypeDto>();
-        return ApiResponse<EventTypeDto>.Success(200, "Event type updated successfully", result);
+        var result = existedEventType.Adapt<EventTypeResponse>();
+        return ApiResponse<EventTypeResponse>.Success(200, "Event type updated successfully", result);
     }
 }

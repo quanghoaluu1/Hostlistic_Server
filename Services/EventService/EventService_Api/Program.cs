@@ -12,13 +12,42 @@ using Swashbuckle.AspNetCore.SwaggerGen;
 using Scalar.AspNetCore;
 using System.Reflection;
 using System.Text;
+using Common;
 using EventService_Api;
+using EventService_Api.Validator;
+using FluentValidation;
+using FluentValidation.AspNetCore;
+using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
 builder.Services.AddControllers();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    options.InvalidModelStateResponseFactory = context =>
+    {
+        var errors = context.ModelState.Values
+            .SelectMany(v => v.Errors)
+            .Select(e => e.ErrorMessage)
+            .ToList();
+
+        var response = new ApiResponse<object>
+        {
+            IsSuccess = false,
+            StatusCode = StatusCodes.Status400BadRequest,
+            Message = "Dữ liệu không hợp lệ",
+            Errors = errors
+        };
+
+        return new BadRequestObjectResult(response);
+    };
+});
+builder.Services.AddValidatorsFromAssemblyContaining<CreateEventValidator>();
+builder.Services.AddFluentValidationAutoValidation();   
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi(options =>
 {
@@ -96,12 +125,14 @@ builder.Services.AddScoped<ISessionRepository, SessionRepository>();
 builder.Services.AddScoped<ISessionBookingRepository, SessionBookingRepository>();
 builder.Services.AddScoped<ITrackRepository, TrackRepository>();
 builder.Services.AddScoped<IEventTypeRepository, EventTypeRepository>();
+builder.Services.AddScoped<IEventRepository, EventRepository>();
 
 // Register services
 builder.Services.AddScoped<ISessionService, SessionService>();
 builder.Services.AddScoped<ISessionBookingService, SessionBookingService>();
 builder.Services.AddScoped<ITrackService, TrackService>();
 builder.Services.AddScoped<IEventTypeService, EventTypeService>();
+builder.Services.AddScoped<IEventService, EventService>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -115,7 +146,7 @@ if (app.Environment.IsDevelopment())
             auth.Token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...";
         }));
 }
-
+app.UseExceptionHandler();
 app.UseHttpsRedirection();
 
 app.UseAuthentication();

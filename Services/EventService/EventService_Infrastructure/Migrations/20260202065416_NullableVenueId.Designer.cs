@@ -5,6 +5,7 @@ using EventService_Domain.Entities;
 using EventService_Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -13,9 +14,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace EventService_Infrastructure.Migrations
 {
     [DbContext(typeof(EventServiceDbContext))]
-    partial class EventServiceDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260202065416_NullableVenueId")]
+    partial class NullableVenueId
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -397,7 +400,7 @@ namespace EventService_Infrastructure.Migrations
                     b.Property<Guid>("EventId")
                         .HasColumnType("uuid");
 
-                    b.Property<int?>("QaMode")
+                    b.Property<int>("QaMode")
                         .HasColumnType("integer");
 
                     b.Property<DateTime>("StartTime")
@@ -416,7 +419,7 @@ namespace EventService_Infrastructure.Migrations
                     b.Property<Guid>("TrackId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("VenueId")
+                    b.Property<Guid>("VenueId")
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
@@ -906,7 +909,8 @@ namespace EventService_Infrastructure.Migrations
                     b.HasOne("EventService_Domain.Entities.Venue", "Venue")
                         .WithMany("Sessions")
                         .HasForeignKey("VenueId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.Navigation("Event");
 

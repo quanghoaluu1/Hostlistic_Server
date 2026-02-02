@@ -10,4 +10,5 @@ public interface IEventRepository
     Event UpdateEventAsync(Event @event);
     Task<bool> DeleteEventAsync(Guid eventId);
     Task<bool> EventExistsAsync(Guid eventId);
+    Task SaveChangesAsync();
 }
