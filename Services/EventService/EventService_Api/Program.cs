@@ -83,9 +83,6 @@ builder.Services.AddAuthorization();
 //         [new OpenApiSecuritySchemeReference("Bearer", document)] = []
 //     });
 // });
-Console.WriteLine(key.ToString());
-Console.WriteLine(issuer);
-Console.WriteLine(audience);
 builder.Services.AddDbContext<EventServiceDbContext>(optionsAction =>
 {
     optionsAction.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
@@ -98,11 +95,13 @@ builder.Services.AddSingleton(config);
 builder.Services.AddScoped<ISessionRepository, SessionRepository>();
 builder.Services.AddScoped<ISessionBookingRepository, SessionBookingRepository>();
 builder.Services.AddScoped<ITrackRepository, TrackRepository>();
+builder.Services.AddScoped<IEventTypeRepository, EventTypeRepository>();
 
 // Register services
 builder.Services.AddScoped<ISessionService, SessionService>();
 builder.Services.AddScoped<ISessionBookingService, SessionBookingService>();
 builder.Services.AddScoped<ITrackService, TrackService>();
+builder.Services.AddScoped<IEventTypeService, EventTypeService>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
