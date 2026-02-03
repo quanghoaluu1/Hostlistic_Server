@@ -120,6 +120,17 @@ var config = TypeAdapterConfig.GlobalSettings;
 config.Scan(Assembly.GetExecutingAssembly());
 builder.Services.AddSingleton(config);
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("NextApp", policy =>
+    {
+        policy.WithOrigins("http://localhost:3000")
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
+});
+
 // Register repositories
 builder.Services.AddScoped<ISessionRepository, SessionRepository>();
 builder.Services.AddScoped<ISessionBookingRepository, SessionBookingRepository>();
@@ -146,6 +157,7 @@ if (app.Environment.IsDevelopment())
             auth.Token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...";
         }));
 }
+app.UseCors("NextApp");
 app.UseExceptionHandler();
 app.UseHttpsRedirection();
 
