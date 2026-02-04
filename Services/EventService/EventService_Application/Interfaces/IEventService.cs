@@ -5,7 +5,8 @@ namespace EventService_Application.Interfaces;
 
 public interface IEventService
 {
-    Task<ApiResponse<EventResponseDto>> CreateEventAsync(CreateEventDto request);
+    Task<ApiResponse<EventResponseDto>> CreateEventAsync(EventRequestDto request);
     Task<ApiResponse<IReadOnlyCollection<EventResponseDto>>> GetAllEventsAsync();
     Task<ApiResponse<EventResponseDto>> GetEventByIdAsync(Guid eventId);
+    Task<ApiResponse<EventResponseDto>> UpdateEventAsync(Guid eventId, EventRequestDto request, string? publicId);
 }

@@ -2,19 +2,21 @@ using EventService_Domain.Enums;
 
 namespace EventService_Application.DTOs;
 
-public record CreateEventDto(
+public record EventRequestDto(
 
-    string Title,
-    string Description,
-    EventMode EventMode,
-    DateTime StartDate,
-    DateTime EndDate,
-    string Location,
-    Guid? EventTypeId,
-    string CoverImageUrl,
-    int TotalCapacity,
-    Guid? VenueId
+    string? Title = null,
+    string? Description = null,
+    EventMode? EventMode = null,
+    DateTime? StartDate = null,
+    DateTime? EndDate = null,
+    string? Location = null,
+    Guid? EventTypeId = null,
+    string? CoverImageUrl = null,
+    int? TotalCapacity = null,
+    Guid? VenueId = null,
+    bool? IsPublic = null
 );
+
 public record EventResponseDto(
     Guid Id, 
     string Title, 
@@ -25,6 +27,7 @@ public record EventResponseDto(
     string Location, 
     string CoverImageUrl, 
     int TotalCapacity,
+    bool IsPublic,
     VenueResponseDto? Venue, 
     List<TrackResponseDto> Tracks
 );

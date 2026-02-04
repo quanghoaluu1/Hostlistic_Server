@@ -120,6 +120,17 @@ var config = TypeAdapterConfig.GlobalSettings;
 config.Scan(Assembly.GetExecutingAssembly());
 builder.Services.AddSingleton(config);
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("NextApp", policy =>
+    {
+        policy.WithOrigins("http://localhost:3000")
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
+});
+builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
 // Register repositories
 builder.Services.AddScoped<ISessionRepository, SessionRepository>();
 builder.Services.AddScoped<ISessionBookingRepository, SessionBookingRepository>();
@@ -133,6 +144,7 @@ builder.Services.AddScoped<ISessionBookingService, SessionBookingService>();
 builder.Services.AddScoped<ITrackService, TrackService>();
 builder.Services.AddScoped<IEventTypeService, EventTypeService>();
 builder.Services.AddScoped<IEventService, EventService>();
+builder.Services.AddScoped<IPhotoService, PhotoService>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -146,6 +158,7 @@ if (app.Environment.IsDevelopment())
             auth.Token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...";
         }));
 }
+app.UseCors("NextApp");
 app.UseExceptionHandler();
 app.UseHttpsRedirection();
 
