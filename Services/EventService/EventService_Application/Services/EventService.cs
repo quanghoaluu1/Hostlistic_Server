@@ -10,17 +10,23 @@ namespace EventService_Application.Services;
 
 public class EventService(IEventRepository eventRepository, ITrackService trackService, ISessionService sessionService) : IEventService
 {
-    public async Task<ApiResponse<EventResponseDto>> CreateEventAsync(CreateEventDto request)
+    public async Task<ApiResponse<EventResponseDto>> CreateEventAsync(EventRequestDto request)
     {
         var eventEntity = request.Adapt<Event>();
-        eventEntity.StartDate = DateTime.SpecifyKind(request.StartDate, DateTimeKind.Utc);
-        eventEntity.EndDate = DateTime.SpecifyKind(request.EndDate, DateTimeKind.Utc);
+        eventEntity.StartDate = request.StartDate == null 
+            ? null 
+            : DateTime.SpecifyKind(request.StartDate.Value, DateTimeKind.Utc);
+        eventEntity.EndDate = request.EndDate == null 
+            ? null 
+            : DateTime.SpecifyKind(request.EndDate.Value, DateTimeKind.Utc);
         eventEntity.EventStatus = EventStatus.Draft;
         eventEntity.IsPublic = false;
         var defaultTrack = new Track
         {
             Name = "Main Track",
             Description = "Main track for the event",
+            StartTime = eventEntity.StartDate,
+            EndTime = eventEntity.EndDate,
             ColorHex = "#000000",
             Sessions = new List<Session>()
         };
@@ -52,5 +58,41 @@ public class EventService(IEventRepository eventRepository, ITrackService trackS
         var eventEntity = await eventRepository.GetEventByIdAsync(eventId);
         var responseDto = eventEntity.Adapt<EventResponseDto>();
         return responseDto == null ? ApiResponse<EventResponseDto>.Fail(404, "Event not found") : ApiResponse<EventResponseDto>.Success(200, "Event retrieved successfully", responseDto);
+    }
+
+    public async Task<ApiResponse<EventResponseDto>> UpdateEventAsync(Guid eventId, EventRequestDto request, string? publicId)
+    {
+        var eventEntity = await eventRepository.GetEventByIdAsync(eventId);
+        if (eventEntity == null)
+            return ApiResponse<EventResponseDto>.Fail(404, "Event not found");
+        ApplyEventUpdate(eventEntity, request);
+        eventEntity.CoverImagePublicId = publicId;
+        eventRepository.UpdateEventAsync(eventEntity);
+        await eventRepository.SaveChangesAsync();
+        var responseDto = eventEntity.Adapt<EventResponseDto>();
+        return ApiResponse<EventResponseDto>.Success(200, "Event updated successfully", responseDto);
+    }
+
+    private void ApplyEventUpdate(Event eventEntity, EventRequestDto request)
+    {
+        eventEntity.Title = request.Title ?? eventEntity.Title;
+        eventEntity.Description = request.Description ?? eventEntity.Description;
+        eventEntity.Location = request.Location ?? eventEntity.Location;
+        eventEntity.CoverImageUrl = request.CoverImageUrl ?? eventEntity.CoverImageUrl;
+        
+        eventEntity.EventMode = request.EventMode ?? eventEntity.EventMode;
+        eventEntity.TotalCapacity = request.TotalCapacity ?? eventEntity.TotalCapacity;
+        eventEntity.EventTypeId = request.EventTypeId ?? eventEntity.EventTypeId;
+        eventEntity.VenueId = request.VenueId ?? eventEntity.VenueId;
+        eventEntity.IsPublic = request.IsPublic ?? eventEntity.IsPublic;
+        if (request.StartDate.HasValue)
+        {
+            eventEntity.StartDate = DateTime.SpecifyKind(request.StartDate.Value, DateTimeKind.Utc);
+        }
+
+        if (request.EndDate.HasValue)
+        {
+            eventEntity.EndDate = DateTime.SpecifyKind(request.EndDate.Value, DateTimeKind.Utc);
+        }
     }
 }

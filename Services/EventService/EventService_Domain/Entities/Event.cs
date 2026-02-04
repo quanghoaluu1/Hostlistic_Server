@@ -6,16 +6,17 @@ namespace EventService_Domain.Entities;
 
 public class Event : BaseClass
 {
-    public string Title { get; set; } = string.Empty;
-    public string Description { get; set; } = string.Empty;
-    public EventMode EventMode { get; set; }
-    public DateTime StartDate { get; set; }
-    public DateTime EndDate { get; set; }
-    public string Location { get; set; } = string.Empty;
+    public string? Title { get; set; } = string.Empty;
+    public string? Description { get; set; } = string.Empty;
+    public EventMode? EventMode { get; set; }
+    public DateTime? StartDate { get; set; }
+    public DateTime? EndDate { get; set; }
+    public string? Location { get; set; } = string.Empty;
     public Guid? EventTypeId { get; set; }
-    public string CoverImageUrl { get; set; } = string.Empty;
-    public int TotalCapacity { get; set; }
-    public bool IsPublic { get; set; } = false;
+    public string? CoverImageUrl { get; set; } = string.Empty;
+    public string? CoverImagePublicId { get; set; } = string.Empty;
+    public int? TotalCapacity { get; set; }
+    public bool? IsPublic { get; set; } = false;
     public EventStatus EventStatus { get; set; } = EventStatus.Draft;
     public Guid? VenueId { get; set; }
     
