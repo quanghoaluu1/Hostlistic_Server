@@ -46,8 +46,8 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
         return new BadRequestObjectResult(response);
     };
 });
-builder.Services.AddValidatorsFromAssemblyContaining<CreateEventValidator>();
-builder.Services.AddFluentValidationAutoValidation();   
+// builder.Services.AddValidatorsFromAssemblyContaining<CreateEventValidator>();
+// builder.Services.AddFluentValidationAutoValidation();   
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi(options =>
 {

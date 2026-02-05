@@ -79,7 +79,7 @@ public class EventService(IEventRepository eventRepository, ITrackService trackS
         eventEntity.Description = request.Description ?? eventEntity.Description;
         eventEntity.Location = request.Location ?? eventEntity.Location;
         eventEntity.CoverImageUrl = request.CoverImageUrl ?? eventEntity.CoverImageUrl;
-        
+        eventEntity.EventStatus = request.EventStatus ?? eventEntity.EventStatus;
         eventEntity.EventMode = request.EventMode ?? eventEntity.EventMode;
         eventEntity.TotalCapacity = request.TotalCapacity ?? eventEntity.TotalCapacity;
         eventEntity.EventTypeId = request.EventTypeId ?? eventEntity.EventTypeId;
