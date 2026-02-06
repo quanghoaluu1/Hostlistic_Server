@@ -1,23 +1,18 @@
-﻿using EventService_Application.Interfaces;
+﻿using Common;
+using EventService_Api;
+using EventService_Application.Interfaces;
 using EventService_Application.Services;
 using EventService_Domain.Interfaces;
 using EventService_Infrastructure.Data;
 using EventService_Infrastructure.Repositories;
 using Mapster;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi;
-using Swashbuckle.AspNetCore.SwaggerGen;
 using Scalar.AspNetCore;
 using System.Reflection;
 using System.Text;
-using Common;
-using EventService_Api;
-using EventService_Api.Validator;
-using FluentValidation;
-using FluentValidation.AspNetCore;
-using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -53,7 +48,7 @@ builder.Services.AddOpenApi(options =>
 {
     options.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
 });
-var secretKey = builder.Configuration["Jwt:Key"]; 
+var secretKey = builder.Configuration["Jwt:Key"];
 var issuer = builder.Configuration["Jwt:Issuer"];
 var audience = builder.Configuration["Jwt:Audience"];
 var key = Encoding.UTF8.GetBytes(secretKey);
@@ -68,15 +63,15 @@ builder.Services.AddAuthentication(options =>
         ValidateIssuerSigningKey = true,
         IssuerSigningKey = new SymmetricSecurityKey(key),
 
-        ValidateIssuer = true, 
+        ValidateIssuer = true,
         ValidIssuer = issuer,
 
         ValidateAudience = true,
         ValidAudience = audience,
 
         ValidateLifetime = true,
-        
-        ClockSkew = TimeSpan.Zero 
+
+        ClockSkew = TimeSpan.Zero
     };
     options.Events = new JwtBearerEvents
     {
@@ -137,6 +132,7 @@ builder.Services.AddScoped<ISessionBookingRepository, SessionBookingRepository>(
 builder.Services.AddScoped<ITrackRepository, TrackRepository>();
 builder.Services.AddScoped<IEventTypeRepository, EventTypeRepository>();
 builder.Services.AddScoped<IEventRepository, EventRepository>();
+builder.Services.AddScoped<ITalentService, TalentService>();
 
 // Register services
 builder.Services.AddScoped<ISessionService, SessionService>();
@@ -145,6 +141,7 @@ builder.Services.AddScoped<ITrackService, TrackService>();
 builder.Services.AddScoped<IEventTypeService, EventTypeService>();
 builder.Services.AddScoped<IEventService, EventService>();
 builder.Services.AddScoped<IPhotoService, PhotoService>();
+builder.Services.AddScoped<ITalentService, TalentService>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
