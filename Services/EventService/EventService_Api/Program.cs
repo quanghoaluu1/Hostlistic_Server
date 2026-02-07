@@ -1,4 +1,4 @@
-﻿using EventService_Application.Interfaces;
+using EventService_Application.Interfaces;
 using EventService_Application.Services;
 using EventService_Domain.Interfaces;
 using EventService_Infrastructure.Data;
@@ -137,6 +137,7 @@ builder.Services.AddScoped<ISessionBookingRepository, SessionBookingRepository>(
 builder.Services.AddScoped<ITrackRepository, TrackRepository>();
 builder.Services.AddScoped<IEventTypeRepository, EventTypeRepository>();
 builder.Services.AddScoped<IEventRepository, EventRepository>();
+builder.Services.AddScoped<ITicketTypeRepository, TicketTypeRepository>();
 
 // Register services
 builder.Services.AddScoped<ISessionService, SessionService>();
@@ -144,6 +145,7 @@ builder.Services.AddScoped<ISessionBookingService, SessionBookingService>();
 builder.Services.AddScoped<ITrackService, TrackService>();
 builder.Services.AddScoped<IEventTypeService, EventTypeService>();
 builder.Services.AddScoped<IEventService, EventService>();
+builder.Services.AddScoped<ITicketTypeService, TicketTypeService>();
 builder.Services.AddScoped<IPhotoService, PhotoService>();
 var app = builder.Build();
 
