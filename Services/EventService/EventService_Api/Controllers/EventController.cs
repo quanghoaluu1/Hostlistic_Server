@@ -45,4 +45,14 @@ public class EventController(IEventService eventService, IPhotoService photoServ
         var updateResult = await eventService.UpdateEventAsync(eventId, updateCoverImage, publicId);
         return Ok(updateResult);
     }
+
+    [HttpPatch("{eventId:guid}")]
+    public async Task<IActionResult> UpdateEvent(Guid eventId, EventRequestDto dto)
+    {
+        var eventEntity = await eventService.GetEventByIdAsync(eventId);
+        if (eventEntity.Data == null) return NotFound(eventEntity);
+        var result = await eventService.UpdateEventAsync(eventId, dto, null);
+        return Ok(result);
+    }
+    
 }

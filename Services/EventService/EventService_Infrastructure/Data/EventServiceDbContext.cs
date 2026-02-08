@@ -1,3 +1,4 @@
+using System.Text.Json;
 using EventService_Domain;
 using EventService_Domain.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -39,7 +40,12 @@ public class EventServiceDbContext : DbContext
         modelBuilder.Entity<Event>(entity =>
         {
             entity.HasKey(e => e.Id);
-
+            entity.Property(e => e.Description)
+                .HasColumnType("jsonb")
+                .HasConversion(
+                    v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null),
+                    v => JsonSerializer.Deserialize<RichTextContent>(v, (JsonSerializerOptions)null)
+                );
             entity.HasOne(e => e.EventType)
                 .WithMany(et => et.Events)
                 .HasForeignKey(e => e.EventTypeId)
