@@ -13,6 +13,16 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.WithOrigins("http://localhost:3000", "http://127.0.0.1:3000")
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
+});
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
@@ -65,10 +75,14 @@ if (app.Environment.IsDevelopment())
         }));
 }
 
-app.UseHttpsRedirection();
-
-app.UseAuthorization();
+app.UseRouting();
+app.UseCors();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapControllers();
 
