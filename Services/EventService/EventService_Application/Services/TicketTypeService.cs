@@ -52,7 +52,7 @@ public class TicketTypeService : ITicketTypeService
         if (request.QuantityAvailable <= 0)
             return ApiResponse<TicketTypeDto>.Fail(400, "Quantity available must be greater than 0");
 
-        if (request.SaleStartDate >= request.SaleEndTime)
+        if (request.SaleStartDate > request.SaleEndTime)
             return ApiResponse<TicketTypeDto>.Fail(400, "Sale start date must be before sale end time");
 
         if (request.MinPerOrder < 0 || request.MaxPerOrder < 0 || request.MinPerOrder > request.MaxPerOrder)
@@ -86,7 +86,7 @@ public class TicketTypeService : ITicketTypeService
         if (request.QuantityAvailable < 0)
             return ApiResponse<TicketTypeDto>.Fail(400, "Quantity available must be greater than or equal to 0");
 
-        if (request.SaleStartDate >= request.SaleEndTime)
+        if (request.SaleStartDate > request.SaleEndTime)
             return ApiResponse<TicketTypeDto>.Fail(400, "Sale start date must be before sale end time");
 
         if (request.MinPerOrder < 0 || request.MaxPerOrder < 0 || request.MinPerOrder > request.MaxPerOrder)
