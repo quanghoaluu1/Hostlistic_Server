@@ -1,3 +1,4 @@
+using EventService_Domain.Entities;
 using EventService_Domain.Enums;
 
 namespace EventService_Application.DTOs;
@@ -5,7 +6,7 @@ namespace EventService_Application.DTOs;
 public record EventRequestDto(
 
     string? Title = null,
-    string? Description = null,
+    RichTextContent? Description = null,
     EventMode? EventMode = null,
     DateTime? StartDate = null,
     DateTime? EndDate = null,
@@ -14,13 +15,14 @@ public record EventRequestDto(
     string? CoverImageUrl = null,
     int? TotalCapacity = null,
     Guid? VenueId = null,
-    bool? IsPublic = null
+    bool? IsPublic = null,
+    EventStatus? EventStatus = null
 );
 
 public record EventResponseDto(
     Guid Id, 
     string Title, 
-    string Description, 
+    RichTextContent Description, 
     EventMode EventMode, 
     DateTime StartDate, 
     DateTime EndDate, 
@@ -29,7 +31,8 @@ public record EventResponseDto(
     int TotalCapacity,
     bool IsPublic,
     VenueResponseDto? Venue, 
-    List<TrackResponseDto> Tracks
+    List<TrackResponseDto> Tracks,
+    EventStatus EventStatus
 );
 public record VenueResponseDto(Guid Id, string Name, string Address, string Capacity);
 

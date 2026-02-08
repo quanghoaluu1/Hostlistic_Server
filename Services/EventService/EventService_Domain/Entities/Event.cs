@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json;
 using Common;
 using EventService_Domain.Enums;
 
@@ -7,7 +8,7 @@ namespace EventService_Domain.Entities;
 public class Event : BaseClass
 {
     public string? Title { get; set; } = string.Empty;
-    public string? Description { get; set; } = string.Empty;
+    public RichTextContent? Description { get; set; }
     public EventMode? EventMode { get; set; }
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
@@ -37,4 +38,10 @@ public class Event : BaseClass
     public ICollection<CheckIn> CheckIns { get; set; } = new List<CheckIn>();
     public ICollection<Feedback> Feedbacks { get; set; } = new List<Feedback>();
     public ICollection<SponsorTier> SponsorTiers { get; set; } = new List<SponsorTier>();
+}
+
+public class RichTextContent
+{
+    public string Type { get; set; } // "doc"
+    public JsonElement Content { get; set; } // Các node nội dung
 }
