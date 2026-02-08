@@ -133,7 +133,7 @@ builder.Services.AddScoped<ITrackRepository, TrackRepository>();
 builder.Services.AddScoped<IEventTypeRepository, EventTypeRepository>();
 builder.Services.AddScoped<IEventRepository, EventRepository>();
 builder.Services.AddScoped<ITicketTypeRepository, TicketTypeRepository>();
-builder.Services.AddScoped<ITalentService, TalentService>();
+builder.Services.AddScoped<ITalentRepository, TalentRepository>();
 
 // Register services
 builder.Services.AddScoped<ISessionService, SessionService>();
