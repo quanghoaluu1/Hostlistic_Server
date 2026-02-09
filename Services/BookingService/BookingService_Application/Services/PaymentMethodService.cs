@@ -4,16 +4,19 @@ using BookingService_Application.Interfaces;
 using BookingService_Domain.Entities;
 using BookingService_Domain.Interfaces;
 using Mapster;
+using Microsoft.AspNetCore.Http;
 
 namespace BookingService_Application.Services;
 
 public class PaymentMethodService : IPaymentMethodService
 {
     private readonly IPaymentMethodRepository _paymentMethodRepository;
+    private readonly IPhotoService _photoService;
 
-    public PaymentMethodService(IPaymentMethodRepository paymentMethodRepository)
+    public PaymentMethodService(IPaymentMethodRepository paymentMethodRepository, IPhotoService photoService)
     {
         _paymentMethodRepository = paymentMethodRepository;
+        _photoService = photoService;
     }
 
     public async Task<ApiResponse<PaymentMethodDto>> GetPaymentMethodByIdAsync(Guid paymentMethodId)
@@ -50,7 +53,7 @@ public class PaymentMethodService : IPaymentMethodService
         return ApiResponse<PaymentMethodDto>.Success(200, "Payment method retrieved successfully", paymentMethodDto);
     }
 
-    public async Task<ApiResponse<PaymentMethodDto>> CreatePaymentMethodAsync(CreatePaymentMethodRequest request)
+    public async Task<ApiResponse<PaymentMethodDto>> CreatePaymentMethodWithIconAsync(CreatePaymentMethodRequest request, IFormFile? iconFile)
     {
         if (string.IsNullOrWhiteSpace(request.Name))
             return ApiResponse<PaymentMethodDto>.Fail(400, "Payment method name is required");
@@ -65,6 +68,16 @@ public class PaymentMethodService : IPaymentMethodService
 
         var paymentMethod = request.Adapt<PaymentMethod>();
 
+        // Upload icon if provided
+        if (iconFile is not null && iconFile.Length > 0)
+        {
+            var uploadResult = await _photoService.UploadPhotoAsync(iconFile);
+            if (uploadResult.Error != null)
+                return ApiResponse<PaymentMethodDto>.Fail(400, $"Icon upload failed: {uploadResult.Error.Message}");
+            
+            paymentMethod.IconUrl = uploadResult.SecureUrl.AbsoluteUri;
+        }
+
         await _paymentMethodRepository.AddPaymentMethodAsync(paymentMethod);
         await _paymentMethodRepository.SaveChangesAsync();
 
@@ -72,7 +85,7 @@ public class PaymentMethodService : IPaymentMethodService
         return ApiResponse<PaymentMethodDto>.Success(201, "Payment method created successfully", paymentMethodDto);
     }
 
-    public async Task<ApiResponse<PaymentMethodDto>> UpdatePaymentMethodAsync(Guid paymentMethodId, UpdatePaymentMethodRequest request)
+    public async Task<ApiResponse<PaymentMethodDto>> UpdatePaymentMethodWithIconAsync(Guid paymentMethodId, UpdatePaymentMethodRequest request, IFormFile? iconFile)
     {
         var existingPaymentMethod = await _paymentMethodRepository.GetPaymentMethodByIdAsync(paymentMethodId);
         if (existingPaymentMethod == null)
@@ -81,9 +94,32 @@ public class PaymentMethodService : IPaymentMethodService
         if (string.IsNullOrWhiteSpace(request.Name))
             return ApiResponse<PaymentMethodDto>.Fail(400, "Payment method name is required");
 
-        // Update properties
+        // Upload new icon if provided
+        if (iconFile is not null && iconFile.Length > 0)
+        {
+            var uploadResult = await _photoService.UploadPhotoAsync(iconFile);
+            if (uploadResult.Error != null)
+                return ApiResponse<PaymentMethodDto>.Fail(400, $"Icon upload failed: {uploadResult.Error.Message}");
+            
+            // Delete old icon if exists
+            if (!string.IsNullOrEmpty(existingPaymentMethod.IconUrl))
+            {
+                var publicId = ExtractPublicIdFromUrl(existingPaymentMethod.IconUrl);
+                if (!string.IsNullOrEmpty(publicId))
+                {
+                    await _photoService.DeletePhotoAsync(publicId);
+                }
+            }
+            
+            existingPaymentMethod.IconUrl = uploadResult.SecureUrl.AbsoluteUri;
+        }
+        else if (!string.IsNullOrEmpty(request.IconUrl))
+        {
+            existingPaymentMethod.IconUrl = request.IconUrl;
+        }
+
+        // Update other properties
         existingPaymentMethod.Name = request.Name;
-        existingPaymentMethod.IconUrl = request.IconUrl;
         existingPaymentMethod.FeePercentage = request.FeePercentage;
         existingPaymentMethod.FixedFee = request.FixedFee;
         existingPaymentMethod.IsActive = request.IsActive;
@@ -93,6 +129,21 @@ public class PaymentMethodService : IPaymentMethodService
 
         var paymentMethodDto = existingPaymentMethod.Adapt<PaymentMethodDto>();
         return ApiResponse<PaymentMethodDto>.Success(200, "Payment method updated successfully", paymentMethodDto);
+    }
+
+    private static string ExtractPublicIdFromUrl(string url)
+    {
+        try
+        {
+            var uri = new Uri(url);
+            var pathSegments = uri.AbsolutePath.Split('/');
+            var fileName = pathSegments[^1]; // Get last segment
+            return Path.GetFileNameWithoutExtension(fileName);
+        }
+        catch
+        {
+            return string.Empty;
+        }
     }
 
     public async Task<ApiResponse<bool>> DeletePaymentMethodAsync(Guid paymentMethodId)

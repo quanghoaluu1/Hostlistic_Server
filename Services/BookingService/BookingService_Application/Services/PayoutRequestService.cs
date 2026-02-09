@@ -4,16 +4,19 @@ using BookingService_Application.Interfaces;
 using BookingService_Domain.Entities;
 using BookingService_Domain.Interfaces;
 using Mapster;
+using Microsoft.AspNetCore.Http;
 
 namespace BookingService_Application.Services;
 
 public class PayoutRequestService : IPayoutRequestService
 {
     private readonly IPayoutRequestRepository _payoutRequestRepository;
+    private readonly IPhotoService _photoService;
 
-    public PayoutRequestService(IPayoutRequestRepository payoutRequestRepository)
+    public PayoutRequestService(IPayoutRequestRepository payoutRequestRepository, IPhotoService photoService)
     {
         _payoutRequestRepository = payoutRequestRepository;
+        _photoService = photoService;
     }
 
     public async Task<ApiResponse<PayoutRequestDto>> GetPayoutRequestByIdAsync(Guid payoutRequestId)
@@ -40,10 +43,19 @@ public class PayoutRequestService : IPayoutRequestService
         return ApiResponse<IEnumerable<PayoutRequestDto>>.Success(200, "Payout requests retrieved successfully", payoutRequestDtos);
     }
 
-    // add real payment intergration later
-    public async Task<ApiResponse<PayoutRequestDto>> CreatePayoutRequestAsync(CreatePayoutRequestRequest request)
+    public async Task<ApiResponse<PayoutRequestDto>> CreatePayoutRequestWithProofAsync(CreatePayoutRequestRequest request, IFormFile? proofFile)
     {
         var payoutRequest = request.Adapt<PayoutRequest>();
+
+        // Upload proof image if provided
+        if (proofFile is not null && proofFile.Length > 0)
+        {
+            var uploadResult = await _photoService.UploadPhotoAsync(proofFile);
+            if (uploadResult.Error != null)
+                return ApiResponse<PayoutRequestDto>.Fail(400, $"Proof image upload failed: {uploadResult.Error.Message}");
+            
+            payoutRequest.ProofImageUrl = uploadResult.SecureUrl.AbsoluteUri;
+        }
 
         await _payoutRequestRepository.AddPayoutRequestAsync(payoutRequest);
         await _payoutRequestRepository.SaveChangesAsync();
@@ -52,21 +64,59 @@ public class PayoutRequestService : IPayoutRequestService
         return ApiResponse<PayoutRequestDto>.Success(201, "Payout request created successfully", payoutRequestDto);
     }
 
-    public async Task<ApiResponse<PayoutRequestDto>> UpdatePayoutRequestAsync(Guid payoutRequestId, UpdatePayoutRequestRequest request)
+    public async Task<ApiResponse<PayoutRequestDto>> UpdatePayoutRequestWithProofAsync(Guid payoutRequestId, UpdatePayoutRequestRequest request, IFormFile? proofFile)
     {
         var existingPayoutRequest = await _payoutRequestRepository.GetPayoutRequestByIdAsync(payoutRequestId);
         if (existingPayoutRequest == null)
             return ApiResponse<PayoutRequestDto>.Fail(404, "Payout request not found");
 
-        // Update properties
+        // Upload new proof image if provided
+        if (proofFile is not null && proofFile.Length > 0)
+        {
+            var uploadResult = await _photoService.UploadPhotoAsync(proofFile);
+            if (uploadResult.Error != null)
+                return ApiResponse<PayoutRequestDto>.Fail(400, $"Proof image upload failed: {uploadResult.Error.Message}");
+            
+            // Delete old proof image if exists
+            if (!string.IsNullOrEmpty(existingPayoutRequest.ProofImageUrl))
+            {
+                var publicId = ExtractPublicIdFromUrl(existingPayoutRequest.ProofImageUrl);
+                if (!string.IsNullOrEmpty(publicId))
+                {
+                    await _photoService.DeletePhotoAsync(publicId);
+                }
+            }
+            
+            existingPayoutRequest.ProofImageUrl = uploadResult.SecureUrl.AbsoluteUri;
+        }
+        else if (!string.IsNullOrEmpty(request.ProofImageUrl))
+        {
+            existingPayoutRequest.ProofImageUrl = request.ProofImageUrl;
+        }
+
+        // Update other properties
         existingPayoutRequest.Status = request.Status;
-        existingPayoutRequest.ProofImageUrl = request.ProofImageUrl;
 
         await _payoutRequestRepository.UpdatePayoutRequestAsync(existingPayoutRequest);
         await _payoutRequestRepository.SaveChangesAsync();
 
         var payoutRequestDto = existingPayoutRequest.Adapt<PayoutRequestDto>();
         return ApiResponse<PayoutRequestDto>.Success(200, "Payout request updated successfully", payoutRequestDto);
+    }
+
+    private static string ExtractPublicIdFromUrl(string url)
+    {
+        try
+        {
+            var uri = new Uri(url);
+            var pathSegments = uri.AbsolutePath.Split('/');
+            var fileName = pathSegments[^1]; // Get last segment
+            return Path.GetFileNameWithoutExtension(fileName);
+        }
+        catch
+        {
+            return string.Empty;
+        }
     }
 
     public async Task<ApiResponse<bool>> DeletePayoutRequestAsync(Guid payoutRequestId)

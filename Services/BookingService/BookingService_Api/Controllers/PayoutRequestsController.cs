@@ -11,10 +11,12 @@ namespace BookingService_Api.Controllers;
 public class PayoutRequestsController : ControllerBase
 {
     private readonly IPayoutRequestService _payoutRequestService;
+    private readonly IPhotoService _photoService;
 
-    public PayoutRequestsController(IPayoutRequestService payoutRequestService)
+    public PayoutRequestsController(IPayoutRequestService payoutRequestService, IPhotoService photoService)
     {
         _payoutRequestService = payoutRequestService;
+        _photoService = photoService;
     }
 
     [HttpGet("{payoutRequestId:guid}")]
@@ -42,17 +44,42 @@ public class PayoutRequestsController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> CreatePayoutRequest([FromBody] CreatePayoutRequestRequest request)
+    public async Task<IActionResult> CreatePayoutRequest([FromForm] CreatePayoutRequestRequest request, IFormFile proofFile)
     {
-        var result = await _payoutRequestService.CreatePayoutRequestAsync(request);
+        if (proofFile == null || proofFile.Length == 0)
+            return BadRequest(new { message = "Proof image file is required" });
+            
+        var result = await _payoutRequestService.CreatePayoutRequestWithProofAsync(request, proofFile);
         if (!result.IsSuccess) return BadRequest(result);
         return Ok(result);
     }
 
-    [HttpPut("{payoutRequestId:guid}")]
-    public async Task<IActionResult> UpdatePayoutRequest(Guid payoutRequestId, [FromBody] UpdatePayoutRequestRequest request)
+    [HttpPatch("proof/{payoutRequestId:guid}")]
+    public async Task<IActionResult> SetPayoutRequestProof(Guid payoutRequestId, IFormFile file)
     {
-        var result = await _payoutRequestService.UpdatePayoutRequestAsync(payoutRequestId, request);
+        var payoutRequestEntity = await _payoutRequestService.GetPayoutRequestByIdAsync(payoutRequestId);
+        if (payoutRequestEntity.Data == null) return NotFound(payoutRequestEntity);
+        
+        var result = await _photoService.UploadPhotoAsync(file);
+        if (result.Error != null) return BadRequest(result.Error);
+        
+        var imageUrl = result.SecureUrl.AbsoluteUri;
+        var publicId = result.PublicId;
+        
+        var updateRequest = new UpdatePayoutRequestRequest
+        {
+            Status = payoutRequestEntity.Data.Status,
+            ProofImageUrl = imageUrl
+        };
+        
+        var updateResult = await _payoutRequestService.UpdatePayoutRequestWithProofAsync(payoutRequestId, updateRequest, null);
+        return Ok(updateResult);
+    }
+
+    [HttpPut("{payoutRequestId:guid}")]
+    public async Task<IActionResult> UpdatePayoutRequest(Guid payoutRequestId, [FromForm] UpdatePayoutRequestRequest request, IFormFile? proofFile)
+    {
+        var result = await _payoutRequestService.UpdatePayoutRequestWithProofAsync(payoutRequestId, request, proofFile);
         if (!result.IsSuccess) return BadRequest(result);
         return Ok(result);
     }
