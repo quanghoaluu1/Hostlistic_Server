@@ -3,6 +3,7 @@ using EventService_Application.DTOs;
 using EventService_Application.Interfaces;
 using EventService_Domain.Entities;
 using EventService_Domain.Interfaces;
+using Mapster;
 
 namespace EventService_Application.Services
 {
@@ -39,6 +40,7 @@ namespace EventService_Application.Services
             }
 
             var uniqueTalentIds = request.TalentIds.Distinct().ToList();
+            
 
             if (!uniqueTalentIds.Any())
             {
@@ -90,7 +92,7 @@ namespace EventService_Application.Services
                     Id = l.Id,
                     EventId = l.EventId,
                     SessionId = l.SessionId,
-                    TalentId = l.TalentId
+                    Talent = l.Talent.Adapt<TalentDto>()
                 }).ToList(),
 
                 SkippedTalentIds = existingTalentIdsInLineup.ToList()
@@ -111,7 +113,7 @@ namespace EventService_Application.Services
                 Id = l.Id,
                 EventId = l.EventId,
                 SessionId = l.SessionId,
-                TalentId = l.TalentId
+                Talent = l.Talent.Adapt<TalentDto>()
             }).ToList();
             return ApiResponse<List<LineupDto>>.Success(
                 200,
@@ -132,7 +134,7 @@ namespace EventService_Application.Services
                 Id = lineup.Id,
                 EventId = lineup.EventId,
                 SessionId = lineup.SessionId,
-                TalentId = lineup.TalentId
+                Talent = lineup.Talent.Adapt<TalentDto>()
             };
             return ApiResponse<LineupDto>.Success(200, "Lineup retrieved successfully", lineupDto);
         }
@@ -149,7 +151,7 @@ namespace EventService_Application.Services
                 Id = l.Id,
                 EventId = l.EventId,
                 SessionId = l.SessionId,
-                TalentId = l.TalentId
+                Talent = l.Talent.Adapt<TalentDto>()
             }).ToList();
             return ApiResponse<List<LineupDto>>.Success(
                 200,
@@ -190,10 +192,10 @@ namespace EventService_Application.Services
                 }
             }
 
-            if (existingLineup.TalentId != request.TalentId)
+            if (existingLineup.Talent != request.Talent.Adapt<Talent>())
             {
                 var existingTalent =
-                    await _talentRepository.GetTalentByIdAsync(request.TalentId);
+                    await _talentRepository.GetTalentByIdAsync(request.Talent.Id);
 
                 if (existingTalent == null)
                 {
@@ -204,7 +206,7 @@ namespace EventService_Application.Services
             var duplicated = await _lineupRepository.LineupExistsAsync(
                 request.EventId,
                 request.SessionId,
-                request.TalentId
+                request.Talent.Id
             );
 
             if (duplicated)
@@ -216,7 +218,7 @@ namespace EventService_Application.Services
             }
 
             existingLineup.SessionId = request.SessionId;
-            existingLineup.TalentId = request.TalentId;
+            existingLineup.TalentId = request.Talent.Id;
 
             await _lineupRepository.UpdateLineupAsync(existingLineup);
 
@@ -225,7 +227,7 @@ namespace EventService_Application.Services
                 Id = existingLineup.Id,
                 EventId = existingLineup.EventId,
                 SessionId = existingLineup.SessionId,
-                TalentId = existingLineup.TalentId
+                Talent = existingLineup.Talent.Adapt<TalentDto>()
             };
 
             return ApiResponse<LineupDto>.Success(

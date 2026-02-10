@@ -3,7 +3,7 @@
     public class LineupDto
     {
         public Guid Id { get; set; }
-        public Guid TalentId { get; set; }
+        public TalentDto Talent { get; set; }
         public Guid? SessionId { get; set; }
         public Guid EventId { get; set; }
     }

@@ -18,8 +18,9 @@ public class OtpController(IOtpService otpService) : ControllerBase
         }
         try
         {
-            var otp = await otpService.GenerateOtpAsync(request.Email);
-            return Ok(ApiResponse<string>.Success(200, "Otp sent successfully", null));
+            var result = await otpService.SendOtpAsync(request);
+            if (!result.IsSuccess) return BadRequest(ApiResponse<string>.Fail(400, result.Message));
+            return Ok(ApiResponse<string>.Success(200, result.Message, null));
         }
         catch (Exception e)
         {

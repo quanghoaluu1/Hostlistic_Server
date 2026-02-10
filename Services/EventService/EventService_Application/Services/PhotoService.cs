@@ -15,7 +15,7 @@ public class PhotoService : IPhotoService
         _cloudinary = new Cloudinary(acc);
     }
 
-    public async Task<ImageUploadResult> UploadPhotoAsync(IFormFile file)
+    public async Task<ImageUploadResult> UploadPhotoAsync(IFormFile file, string folderName)
     {
         var uploadResult = new ImageUploadResult();
         if (file.Length <= 0) return uploadResult;
@@ -24,7 +24,7 @@ public class PhotoService : IPhotoService
         {
             File = new FileDescription(file.FileName, stream),
             Transformation = new Transformation().Width(800).Height(500).Crop("fill").Gravity("face"),
-            Folder = "hostlistic-events-cover"
+            Folder = folderName,
         };
         uploadResult = await _cloudinary.UploadAsync(uploadParams);
         return uploadResult;
