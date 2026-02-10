@@ -66,7 +66,7 @@ public class AuthService(IUserRepository userRepository, IRefreshTokenRepository
         var otp = await otpService.GenerateOtpAsync(email);
         var client = httpClientFactory.CreateClient();
         var emailRequest = new {Email = email, Otp = otp};
-        await client.PostAsJsonAsync("https://localhost:7292/api/Email/send-email-otp", emailRequest);
+        await client.PostAsJsonAsync("http://localhost:5097/api/Email/send-email-otp", emailRequest);
         return ApiResponse<AuthResponse>.Success(200, "Otp sent successfully", null);
     }
 

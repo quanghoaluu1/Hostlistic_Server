@@ -22,17 +22,17 @@ namespace EventService_Infrastructure.Repositories
 
         public async Task<Lineup?> GetLineupByIdAsync(Guid lineupId)
         {
-            return await _context.Lineups.FirstOrDefaultAsync(t => t.Id == lineupId);
+            return await _context.Lineups.Include(l => l.Talent).FirstOrDefaultAsync(t => t.Id == lineupId);
         }
 
         public async Task<List<Lineup>> GetAllLineupsAsync()
         {
-            return await _context.Lineups.ToListAsync();
+            return await _context.Lineups.Include(l => l.Talent).ToListAsync();
         }
 
         public async Task<List<Lineup>> GetLineupsByEventIdAsync(Guid eventId)
         {
-            return await _context.Lineups
+            return await _context.Lineups.Include(l => l.Talent)
                 .Where(l => l.EventId == eventId)
                 .ToListAsync();
         }

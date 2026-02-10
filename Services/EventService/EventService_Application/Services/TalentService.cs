@@ -37,7 +37,8 @@ namespace EventService_Application.Services
             if (string.IsNullOrWhiteSpace(request.Name))
                 return ApiResponse<TalentDto>.Fail(400, "Talent name is required");
             if (string.IsNullOrWhiteSpace(request.AvatarUrl))
-                return ApiResponse<TalentDto>.Fail(400, "Talent Avatar is required");
+                request.AvatarUrl =
+                    "https://res.cloudinary.com/dvsiqkepf/image/upload/v1770737091/istockphoto-519078727-612x612_sspxxk.jpg";
             var talent = request.Adapt<Talent>();
             talent.Id = new Guid();
             await _talentRepository.AddTalentAsync(talent);

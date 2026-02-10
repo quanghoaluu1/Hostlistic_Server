@@ -134,6 +134,7 @@ builder.Services.AddScoped<IEventTypeRepository, EventTypeRepository>();
 builder.Services.AddScoped<IEventRepository, EventRepository>();
 builder.Services.AddScoped<ITicketTypeRepository, TicketTypeRepository>();
 builder.Services.AddScoped<ITalentRepository, TalentRepository>();
+builder.Services.AddScoped<ILineupRepository, LineupRepository>();
 
 // Register services
 builder.Services.AddScoped<ISessionService, SessionService>();
@@ -144,6 +145,7 @@ builder.Services.AddScoped<IEventService, EventService>();
 builder.Services.AddScoped<ITicketTypeService, TicketTypeService>();
 builder.Services.AddScoped<IPhotoService, PhotoService>();
 builder.Services.AddScoped<ITalentService, TalentService>();
+builder.Services.AddScoped<ILineupService, LineupService>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
