@@ -11,10 +11,12 @@ namespace BookingService_Api.Controllers;
 public class PaymentMethodsController : ControllerBase
 {
     private readonly IPaymentMethodService _paymentMethodService;
+    private readonly IPhotoService _photoService;
 
-    public PaymentMethodsController(IPaymentMethodService paymentMethodService)
+    public PaymentMethodsController(IPaymentMethodService paymentMethodService, IPhotoService photoService)
     {
         _paymentMethodService = paymentMethodService;
+        _photoService = photoService;
     }
 
     [HttpGet("{paymentMethodId:guid}")]
@@ -50,17 +52,45 @@ public class PaymentMethodsController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> CreatePaymentMethod([FromBody] CreatePaymentMethodRequest request)
+    public async Task<IActionResult> CreatePaymentMethod([FromForm] CreatePaymentMethodRequest request, IFormFile iconFile)
     {
-        var result = await _paymentMethodService.CreatePaymentMethodAsync(request);
+        if (iconFile == null || iconFile.Length == 0)
+            return BadRequest(new { message = "Icon file is required" });
+            
+        var result = await _paymentMethodService.CreatePaymentMethodWithIconAsync(request, iconFile);
         if (!result.IsSuccess) return BadRequest(result);
         return Ok(result);
     }
 
-    [HttpPut("{paymentMethodId:guid}")]
-    public async Task<IActionResult> UpdatePaymentMethod(Guid paymentMethodId, [FromBody] UpdatePaymentMethodRequest request)
+    [HttpPatch("icon/{paymentMethodId:guid}")]
+    public async Task<IActionResult> SetPaymentMethodIcon(Guid paymentMethodId, IFormFile file)
     {
-        var result = await _paymentMethodService.UpdatePaymentMethodAsync(paymentMethodId, request);
+        var paymentMethodEntity = await _paymentMethodService.GetPaymentMethodByIdAsync(paymentMethodId);
+        if (paymentMethodEntity.Data == null) return NotFound(paymentMethodEntity);
+        
+        var result = await _photoService.UploadPhotoAsync(file);
+        if (result.Error != null) return BadRequest(result.Error);
+        
+        var imageUrl = result.SecureUrl.AbsoluteUri;
+        var publicId = result.PublicId;
+        
+        var updateRequest = new UpdatePaymentMethodRequest
+        {
+            Name = paymentMethodEntity.Data.Name,
+            IconUrl = imageUrl,
+            FeePercentage = paymentMethodEntity.Data.FeePercentage,
+            FixedFee = paymentMethodEntity.Data.FixedFee,
+            IsActive = paymentMethodEntity.Data.IsActive
+        };
+        
+        var updateResult = await _paymentMethodService.UpdatePaymentMethodWithIconAsync(paymentMethodId, updateRequest, null);
+        return Ok(updateResult);
+    }
+
+    [HttpPut("{paymentMethodId:guid}")]
+    public async Task<IActionResult> UpdatePaymentMethod(Guid paymentMethodId, [FromForm] UpdatePaymentMethodRequest request, IFormFile? iconFile)
+    {
+        var result = await _paymentMethodService.UpdatePaymentMethodWithIconAsync(paymentMethodId, request, iconFile);
         if (!result.IsSuccess) return BadRequest(result);
         return Ok(result);
     }
