@@ -7,7 +7,9 @@ using IdentityService_Infrastructure.Data;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
+using NotificationService_Application.Interfaces;
 using Scalar.AspNetCore;
+using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -54,6 +56,8 @@ builder.Services.AddDbContext<IdentityServiceDbContext>(optionsAction =>
 {
     optionsAction.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
 });
+builder.Services.AddSingleton<IConnectionMultiplexer>(sp => 
+    ConnectionMultiplexer.Connect(builder.Configuration.GetConnectionString("RedisConnection")!));
 
 // Configure Cloudinary
 builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
@@ -61,7 +65,9 @@ builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection(
 var config = TypeAdapterConfig.GlobalSettings;
 config.Scan(Assembly.GetExecutingAssembly());
 builder.Services.AddSingleton(config);
+builder.Services.AddHttpClient();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IOtpService, OtpService>();
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();

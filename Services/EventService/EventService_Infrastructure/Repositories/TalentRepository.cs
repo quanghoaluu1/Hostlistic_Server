@@ -41,6 +41,13 @@ namespace EventService_Infrastructure.Repositories
                 .FirstOrDefaultAsync(t => t.Id == talentId);
         }
 
+        public async Task<List<Talent>> GetTalentByIdAsync(List<Guid> talentIds)
+        {
+            return await _context.Talents
+                .Where(t => talentIds.Contains(t.Id))
+                .ToListAsync();
+        }
+
         public async Task SaveChangesAsync()
         {
             await _context.SaveChangesAsync();
