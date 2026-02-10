@@ -1,7 +1,7 @@
 ﻿using NotificationService_Application.Interfaces;
 using StackExchange.Redis;
 
-namespace NotificationService_Application.Services;
+namespace IdentityService_Application.Services;
 
 public class OtpService(IConnectionMultiplexer redis) : IOtpService
 {

@@ -1,13 +1,13 @@
 ﻿using Common;
+using IdentityService_Application.DTOs;
 using Microsoft.AspNetCore.Mvc;
-using NotificationService_Application.Dtos;
 using NotificationService_Application.Interfaces;
 
-namespace NotificationService_Api.Controllers;
+namespace IdentityService_Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class OtpController(IOtpService otpService, IEmailService emailService) : ControllerBase
+public class OtpController(IOtpService otpService) : ControllerBase
 {
     [HttpPost("send-otp")]
     public async Task<IActionResult> SendOtp([FromBody] SendOtpRequest request)
@@ -19,7 +19,6 @@ public class OtpController(IOtpService otpService, IEmailService emailService) :
         try
         {
             var otp = await otpService.GenerateOtpAsync(request.Email);
-            await emailService.SendOtpEmailAsync(request.Email, otp);
             return Ok(ApiResponse<string>.Success(200, "Otp sent successfully", null));
         }
         catch (Exception e)
