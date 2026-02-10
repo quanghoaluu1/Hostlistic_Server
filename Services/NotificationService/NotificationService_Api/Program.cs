@@ -1,6 +1,10 @@
 using Microsoft.EntityFrameworkCore;
+using NotificationService_Application.Interfaces;
+using NotificationService_Application.Services;
 using NotificationService_Infrastructure.Data;
+using Resend;
 using Scalar.AspNetCore;
+using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,6 +17,17 @@ builder.Services.AddDbContext<NotificationServiceDbContext>(optionsAction =>
 {
     optionsAction.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
 });
+builder.Services.AddSingleton<IConnectionMultiplexer>(sp => 
+    ConnectionMultiplexer.Connect(builder.Configuration.GetConnectionString("RedisConnection")!));
+builder.Services.AddOptions();
+builder.Services.AddHttpClient<IResend, ResendClient>();
+builder.Services.Configure<ResendClientOptions>(o =>
+{
+    o.ApiToken = builder.Configuration["Resend:ApiToken"];
+});
+builder.Services.AddTransient<IResend, ResendClient>();
+builder.Services.AddScoped<IOtpService, OtpService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -20,7 +35,6 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
     app.MapScalarApiReference();
-
 }
 
 app.UseHttpsRedirection();
