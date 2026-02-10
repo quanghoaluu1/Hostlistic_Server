@@ -44,6 +44,22 @@ public class AuthController(IAuthService authService) : ControllerBase
 
         return Ok(result);
     }
+
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> SendResetPasswordEmail(string email)
+    {
+        var result = await authService.RequestPasswordResetAsync(email);
+        if (!result.IsSuccess) return BadRequest(result);
+        return Ok(result);
+    }
+
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPasswordAsync(string email, string otp, string newPassword)
+    {
+        var result = await authService.ResetPasswordAsync(email, otp, newPassword);
+        if (!result.IsSuccess) return BadRequest(result);
+        return Ok(result);
+    }
     
     private void SetRefreshTokenCookie(string token)
     {

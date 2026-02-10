@@ -1,6 +1,8 @@
-﻿namespace NotificationService_Application.Interfaces;
+﻿using NotificationService_Application.Dtos;
+
+namespace NotificationService_Application.Interfaces;
 
 public interface IEmailService
 {
-    Task SendOtpEmailAsync(string email, string otp);
+    Task SendOtpEmailAsync(EmailOtpRequest request);
 }

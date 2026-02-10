@@ -17,8 +17,7 @@ builder.Services.AddDbContext<NotificationServiceDbContext>(optionsAction =>
 {
     optionsAction.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
 });
-builder.Services.AddSingleton<IConnectionMultiplexer>(sp => 
-    ConnectionMultiplexer.Connect(builder.Configuration.GetConnectionString("RedisConnection")!));
+
 builder.Services.AddOptions();
 builder.Services.AddHttpClient<IResend, ResendClient>();
 builder.Services.Configure<ResendClientOptions>(o =>
@@ -26,7 +25,6 @@ builder.Services.Configure<ResendClientOptions>(o =>
     o.ApiToken = builder.Configuration["Resend:ApiToken"];
 });
 builder.Services.AddTransient<IResend, ResendClient>();
-builder.Services.AddScoped<IOtpService, OtpService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 var app = builder.Build();
 

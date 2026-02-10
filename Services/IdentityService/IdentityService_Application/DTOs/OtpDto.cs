@@ -1,4 +1,4 @@
-﻿namespace NotificationService_Application.Dtos;
+﻿namespace IdentityService_Application.DTOs;
 
 public class SendOtpRequest
 {
