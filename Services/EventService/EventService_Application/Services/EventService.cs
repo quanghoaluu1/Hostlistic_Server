@@ -21,26 +21,32 @@ public class EventService(IEventRepository eventRepository, ITrackService trackS
             : DateTime.SpecifyKind(request.EndDate.Value, DateTimeKind.Utc);
         eventEntity.EventStatus = EventStatus.Draft;
         eventEntity.IsPublic = false;
+        eventEntity.Id = Guid.NewGuid();
         var defaultTrack = new Track
         {
+            Id = Guid.NewGuid(),
             Name = "Main Track",
             Description = "Main track for the event",
             StartTime = eventEntity.StartDate,
             EndTime = eventEntity.EndDate,
             ColorHex = "#000000",
-            Sessions = new List<Session>()
+            Sessions = new List<Session>(),
+            EventId = eventEntity.Id
         };
 
         var defaultSession = new Session
         {
+            Id = Guid.NewGuid(),
             Title = "Main Session",
             Description = "Main session for the event",
             StartTime = eventEntity.StartDate,
             EndTime = eventEntity.EndDate,
             TotalCapacity = request.TotalCapacity,
-            VenueId = eventEntity.VenueId
+            VenueId = eventEntity.VenueId,
+            EventId = eventEntity.Id
         };
         defaultTrack.Sessions.Add(defaultSession);
+        eventEntity.Tracks.Add(defaultTrack);
         eventRepository.AddEventAsync(eventEntity);
         await eventRepository.SaveChangesAsync();
 
