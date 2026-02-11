@@ -156,7 +156,7 @@ if (app.Environment.IsDevelopment())
         .AddPreferredSecuritySchemes("Bearer")
         .AddHttpAuthentication("Bearer", auth =>
         {
-            auth.Token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...";
+            auth.Token = "";
         }));
 }
 app.UseCors("NextApp");
