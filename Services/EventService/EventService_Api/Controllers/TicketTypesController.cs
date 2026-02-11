@@ -7,7 +7,7 @@ namespace EventService_Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+// [Authorize]
 public class TicketTypesController : ControllerBase
 {
     private readonly ITicketTypeService _ticketTypeService;

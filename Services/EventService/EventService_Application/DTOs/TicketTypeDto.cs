@@ -33,8 +33,6 @@ public class CreateTicketTypeRequest
     public int QuantityAvailable { get; set; }
     public DateTime SaleStartDate { get; set; }
     public DateTime SaleEndTime { get; set; }
-    public SaleEndUnit SaleEndUnit { get; set; }
-    public SaleEndWhen SaleEndWhen { get; set; }
     public int MinPerOrder { get; set; }
     public int MaxPerOrder { get; set; }
     public bool IsRequireHolderInfo { get; set; }
@@ -49,8 +47,6 @@ public class UpdateTicketTypeRequest
     public int QuantityAvailable { get; set; }
     public DateTime SaleStartDate { get; set; }
     public DateTime SaleEndTime { get; set; }
-    public SaleEndUnit SaleEndUnit { get; set; }
-    public SaleEndWhen SaleEndWhen { get; set; }
     public int MinPerOrder { get; set; }
     public int MaxPerOrder { get; set; }
     public bool IsRequireHolderInfo { get; set; }

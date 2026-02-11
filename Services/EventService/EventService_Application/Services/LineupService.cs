@@ -29,8 +29,7 @@ namespace EventService_Application.Services
 
             if (existingEvent.Sessions.Any())
             {
-                if (request.SessionId == null ||
-                    !existingEvent.Sessions.Any(s => s.Id == request.SessionId))
+                if (request.SessionId == null || existingEvent.Sessions.All(s => s.Id != request.SessionId))
                 {
                     return ApiResponse<BatchLineupResultDto>.Fail(
                         400,
