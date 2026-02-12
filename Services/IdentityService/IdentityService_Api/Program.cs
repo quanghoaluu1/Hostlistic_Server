@@ -1,11 +1,15 @@
 using System.Reflection;
+using System.Text;
+using Common;
 using IdentityService_Application.Interfaces;
 using IdentityService_Application.Services;
 using IdentityService_Domain.Interfaces;
 using IdentityService_Domain.Repositories;
 using IdentityService_Infrastructure.Data;
 using Mapster;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using NotificationService_Application.Interfaces;
 using Scalar.AspNetCore;
@@ -27,31 +31,44 @@ builder.Services.AddCors(options =>
 });
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
-builder.Services.AddAuthentication().AddJwtBearer();
-builder.Services.AddSwaggerGen(options =>
+builder.Services.AddOpenApi(options =>
 {
-    options.SwaggerDoc("v1", new OpenApiInfo 
-    { 
-        Title = "Identity API", 
-        Version = "v1" 
-    });
-    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    options.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
+});var secretKey = builder.Configuration["Jwt:Key"];
+var issuer = builder.Configuration["Jwt:Issuer"];
+var audience = builder.Configuration["Jwt:Audience"];
+var key = Encoding.UTF8.GetBytes(secretKey);
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+}).AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
     {
-        Name = "Authorization",
-        Type = SecuritySchemeType.Http,
-        Scheme = "bearer",
-        BearerFormat = "JWT",
-        In = ParameterLocation.Header,
-        Description = "Nhập JwT token vào đây"
-    });
-    options.AddSecurityRequirement((document => new OpenApiSecurityRequirement
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(key),
+
+        ValidateIssuer = true,
+        ValidIssuer = issuer,
+
+        ValidateAudience = true,
+        ValidAudience = audience,
+
+        ValidateLifetime = true,
+
+        ClockSkew = TimeSpan.Zero
+    };
+    options.Events = new JwtBearerEvents
     {
-        [new OpenApiSecuritySchemeReference("Bearer", document)] = [] 
-    }
-    ));
-    
+        OnAuthenticationFailed = context =>
+        {
+            Console.WriteLine("Token valid failed: " + context.Exception.Message);
+            return Task.CompletedTask;
+        }
+    };
 });
+builder.Services.AddAuthorization();
 builder.Services.AddDbContext<IdentityServiceDbContext>(optionsAction =>
 {
     optionsAction.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
@@ -80,8 +97,8 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
     app.MapScalarApiReference(options => options
-        .AddPreferredSecuritySchemes("BearerAuth")
-        .AddHttpAuthentication("BearerAuth", auth =>
+        .AddPreferredSecuritySchemes("Bearer")
+        .AddHttpAuthentication("Bearer", auth =>
         {
             auth.Token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...";
         }));

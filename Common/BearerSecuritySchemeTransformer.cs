@@ -2,9 +2,9 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.OpenApi;
 
-namespace EventService_Api;
+namespace Common;
 
-internal sealed class BearerSecuritySchemeTransformer : IOpenApiDocumentTransformer
+public sealed class BearerSecuritySchemeTransformer : IOpenApiDocumentTransformer
 {
     private readonly IAuthenticationSchemeProvider _authenticationSchemeProvider;
 
