@@ -34,7 +34,7 @@ public class EventController(IEventService eventService, IPhotoService photoServ
     {
         var eventEntity = await eventService.GetEventByIdAsync(eventId);
         if (eventEntity.Data == null) return NotFound(eventEntity);
-        var result = await photoService.UploadPhotoAsync(file);
+        var result = await photoService.UploadPhotoAsync(file, "cover-images/");
         if (result.Error != null) return BadRequest(result.Error);
         var imageUrl = result.SecureUrl.AbsoluteUri;
         var publicId = result.PublicId;

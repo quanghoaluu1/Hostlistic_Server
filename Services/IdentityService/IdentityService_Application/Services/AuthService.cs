@@ -1,4 +1,5 @@
 using System.IdentityModel.Tokens.Jwt;
+using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text;
 using Common;
@@ -11,10 +12,11 @@ using IdentityService_Domain.Interfaces;
 using Mapster;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
+using NotificationService_Application.Interfaces;
 
 namespace IdentityService_Application.Services;
 
-public class AuthService(IUserRepository userRepository, IRefreshTokenRepository refreshTokenRepository, IConfiguration configuration)
+public class AuthService(IUserRepository userRepository, IRefreshTokenRepository refreshTokenRepository, IConfiguration configuration, IOtpService otpService, IHttpClientFactory httpClientFactory)
     : IAuthService
 {
     public async Task<ApiResponse<bool>> RegisterAsync(RegisterRequest request)
@@ -51,6 +53,31 @@ public class AuthService(IUserRepository userRepository, IRefreshTokenRepository
             User = user.Adapt<UserDto>()
         };
         return ApiResponse<AuthResponse>.Success(200, refreshToken.tokenString, response);
+    }
+
+    public async Task<ApiResponse<AuthResponse>> RequestPasswordResetAsync(string email)
+    {
+        var user = await userRepository.GetUserByEmailAsync(email);
+        if (user is null)
+        {
+            return ApiResponse<AuthResponse>.Fail(404, "User not found");
+        }
+
+        var otp = await otpService.GenerateOtpAsync(email);
+        var client = httpClientFactory.CreateClient();
+        var emailRequest = new {Email = email, Otp = otp};
+        await client.PostAsJsonAsync("http://localhost:5097/api/Email/send-email-otp", emailRequest);
+        return ApiResponse<AuthResponse>.Success(200, "Otp sent successfully", null);
+    }
+
+    public async Task<ApiResponse<AuthResponse>> ResetPasswordAsync(string email, string otp, string newPassword)
+    {
+        var isValidOtp = await otpService.VerifyOtpAsync(email, otp);
+        if (!isValidOtp) return ApiResponse<AuthResponse>.Fail(400, "Invalid otp");
+        var user = await userRepository.GetUserByEmailAsync(email);
+        user.HashedPassword = BCrypt.Net.BCrypt.HashPassword(newPassword);
+        await userRepository.SaveChangesAsync();
+        return ApiResponse<AuthResponse>.Success(200, "Password reset successfully", null);
     }
     
     public async Task<ApiResponse<AuthResponse>> RefreshTokenAsync(string oldToken)

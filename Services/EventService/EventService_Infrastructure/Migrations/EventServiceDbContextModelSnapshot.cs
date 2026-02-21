@@ -543,6 +543,9 @@ namespace EventService_Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("AvatarPublicId")
+                        .HasColumnType("text");
+
                     b.Property<string>("AvatarUrl")
                         .IsRequired()
                         .HasColumnType("text");
@@ -609,12 +612,6 @@ namespace EventService_Infrastructure.Migrations
 
                     b.Property<DateTime>("SaleEndTime")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("SaleEndUnit")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("SaleEndWhen")
-                        .HasColumnType("integer");
 
                     b.Property<DateTime>("SaleStartDate")
                         .HasColumnType("timestamp with time zone");

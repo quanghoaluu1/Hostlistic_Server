@@ -10,4 +10,10 @@
       <ProjectReference Include="..\NotificationService_Domain\NotificationService_Domain.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <PackageReference Include="Mapster" Version="7.4.0" />
+      <PackageReference Include="Resend" Version="0.2.1" />
+      <PackageReference Include="StackExchange.Redis" Version="2.10.14" />
+    </ItemGroup>
+
 </Project>

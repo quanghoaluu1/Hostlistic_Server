@@ -132,8 +132,10 @@ builder.Services.AddScoped<ISessionBookingRepository, SessionBookingRepository>(
 builder.Services.AddScoped<ITrackRepository, TrackRepository>();
 builder.Services.AddScoped<IEventTypeRepository, EventTypeRepository>();
 builder.Services.AddScoped<IEventRepository, EventRepository>();
-builder.Services.AddScoped<ITalentRepository, TalentRepository>();
 builder.Services.AddScoped<ITicketTypeRepository, TicketTypeRepository>();
+builder.Services.AddScoped<ITalentRepository, TalentRepository>();
+builder.Services.AddScoped<ILineupRepository, LineupRepository>();
+builder.Services.AddScoped<ICheckInRepository, CheckInRepository>();
 
 // Register services
 builder.Services.AddScoped<ISessionService, SessionService>();
@@ -144,6 +146,8 @@ builder.Services.AddScoped<IEventService, EventService>();
 builder.Services.AddScoped<ITicketTypeService, TicketTypeService>();
 builder.Services.AddScoped<IPhotoService, PhotoService>();
 builder.Services.AddScoped<ITalentService, TalentService>();
+builder.Services.AddScoped<ILineupService, LineupService>();
+builder.Services.AddScoped<ICheckInService, CheckInService>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -154,7 +158,7 @@ if (app.Environment.IsDevelopment())
         .AddPreferredSecuritySchemes("Bearer")
         .AddHttpAuthentication("Bearer", auth =>
         {
-            auth.Token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIwMTljMGU4Ni0xNDg4LTdmN2UtYWJlZS1iNDJjMzdmM2E1MTEiLCJlbWFpbCI6Im1lbWJlckBnbWFpbC5jb20iLCJuYW1lIjoiIiwiUm9sZSI6Ik1lbWJlciIsImV4cCI6MTc3MDUyMjI0NywiaXNzIjoiaG9zdGxpc3RpYyIsImF1ZCI6Imhvc3RsaXN0aWMifQ.LFbD3bYqm9Qm7Q96ZIEIhIf1EkOrdrTXBY0iqibqn8s";
+            auth.Token = "";
         }));
 }
 app.UseCors("NextApp");

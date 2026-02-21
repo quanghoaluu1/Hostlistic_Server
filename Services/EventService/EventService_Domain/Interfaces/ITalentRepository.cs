@@ -10,6 +10,7 @@ namespace EventService_Domain.Interfaces
         Task<Talent> UpdateTalentAsync(Talent talent);
         Task<bool> DeleteTalentAsync(Guid talentId);
         Task<bool> TalentExistsAsync(Guid talentId);
+        Task<List<Talent>> GetTalentByIdAsync(List<Guid> talentIds);
         Task SaveChangesAsync();
     }
 }
