@@ -13,13 +13,17 @@
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
+        <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.2" />
+        <PackageReference Include="Swashbuckle.AspNetCore" Version="10.1.0" />
 
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\..\..\Common\Common.csproj" />
         <ProjectReference Include="..\AIService_Domain\AIService_Domain.csproj" />
         <ProjectReference Include="..\AIService_Application\AIService_Application.csproj" />
         <ProjectReference Include="..\AIService_Infrastructure\AIService_Infrastructure.csproj" />
     </ItemGroup>
+
 
 </Project>

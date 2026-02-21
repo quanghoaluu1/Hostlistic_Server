@@ -21,12 +21,9 @@ public class AIServiceDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             
-            entity.Property(e => e.InputParams)
-                .HasColumnType("jsonb");
-
             entity.HasMany(e => e.GeneratedContents)
-                .WithOne()
-                .HasForeignKey(e => e.RequestId)
+                .WithOne(c => c.Request)
+                .HasForeignKey(c => c.RequestId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
