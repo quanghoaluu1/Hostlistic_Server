@@ -34,7 +34,8 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi(options =>
 {
     options.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
-});var secretKey = builder.Configuration["Jwt:Key"];
+});
+var secretKey = builder.Configuration["Jwt:Key"];
 var issuer = builder.Configuration["Jwt:Issuer"];
 var audience = builder.Configuration["Jwt:Audience"];
 var key = Encoding.UTF8.GetBytes(secretKey);

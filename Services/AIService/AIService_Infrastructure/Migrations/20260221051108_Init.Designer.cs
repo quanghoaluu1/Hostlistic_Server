@@ -3,6 +3,7 @@ using System;
 using AIService_Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AIService_Infrastructure.Migrations
 {
     [DbContext(typeof(AIServiceDbContext))]
-    partial class AIServiceDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260221051108_Init")]
+    partial class Init
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -28,21 +31,18 @@ namespace AIService_Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<DateTime?>("ChosenAt")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<int>("CompletionTokens")
                         .HasColumnType("integer");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("FinalEditedHtml")
+                    b.Property<string>("FinalEditedText")
                         .HasColumnType("text");
 
                     b.Property<string>("HtmlContent")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<bool>("IsAiGenerated")
+                        .HasColumnType("boolean");
 
                     b.Property<bool>("IsChosen")
                         .HasColumnType("boolean");
@@ -124,13 +124,11 @@ namespace AIService_Infrastructure.Migrations
 
             modelBuilder.Entity("AIService_Domain.Entities.AiGeneratedContent", b =>
                 {
-                    b.HasOne("AIService_Domain.Entities.AiRequest", "Request")
+                    b.HasOne("AIService_Domain.Entities.AiRequest", null)
                         .WithMany("GeneratedContents")
                         .HasForeignKey("RequestId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Request");
                 });
 
             modelBuilder.Entity("AIService_Domain.Entities.AiRequest", b =>
