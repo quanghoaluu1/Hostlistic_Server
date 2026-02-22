@@ -7,6 +7,7 @@ using AIService_Application.Prompts;
 using AIService_Domain.Entities;
 using AIService_Domain.Enum;
 using AIService_Domain.Interfaces;
+using Common;
 using Microsoft.Extensions.Logging;
 
 namespace AIService_Application.Services;
@@ -19,7 +20,7 @@ public class AiContentService(
     : IAiContentService
 {
     
-    public async Task<AiContentResponse> GenerateDescriptionAsync(GenerateDescriptionRequest request, Guid userId, CancellationToken ct = default)
+    public async Task<ApiResponse<AiContentResponse>> GenerateDescriptionAsync(GenerateDescriptionRequest request, Guid userId, CancellationToken ct = default)
     {
         var aiRequest = new AiRequest()
         {
@@ -66,7 +67,7 @@ public class AiContentService(
             aiRequest.Status = AiRequestStatus.Completed;
             aiRequest.CompletedAt = DateTime.UtcNow;
             await aiRequestRepository.SaveChangesAsync(ct);
-            return new AiContentResponse()
+            var aiContentResponse = new AiContentResponse()
             {
                 RequestId = aiRequest.Id,
                 ContentId = generatedContent.Id,
@@ -81,6 +82,13 @@ public class AiContentService(
                     LatencyMs = sw.ElapsedMilliseconds
                 }
             };
+            return new ApiResponse<AiContentResponse>
+            {
+                IsSuccess = true,
+                StatusCode = 200,
+                Message = "Description generated successfully",
+                Data = aiContentResponse
+            };
 
         }
         catch (Exception ex)
@@ -91,7 +99,7 @@ public class AiContentService(
             aiRequest.CompletedAt = DateTime.UtcNow;
                 await aiRequestRepository.SaveChangesAsync(CancellationToken.None);
             logger.LogError(ex, "Failed to generate description for event {EventId}", request.EventId);
-            throw;
+            return ApiResponse<AiContentResponse>.Fail(500, "Failed to generate description");
         }   
     }
 
