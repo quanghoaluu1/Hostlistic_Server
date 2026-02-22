@@ -21,4 +21,18 @@ public class EmailController(IEmailService emailService) : ControllerBase
             return BadRequest(e.Message);
         }
     }
+
+    [HttpPost("send-ticket-confirmation")]
+    public async Task<IActionResult> SendTicketConfirmation([FromBody] TicketPurchaseEmailRequest request)
+    {
+        try
+        {
+            await emailService.SendTicketPurchaseConfirmationAsync(request);
+            return Ok("Ticket confirmation email sent successfully");
+        }
+        catch (Exception e)
+        {
+            return BadRequest(e.Message);
+        }
+    }
 }

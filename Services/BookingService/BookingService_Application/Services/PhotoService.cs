@@ -27,7 +27,7 @@ namespace BookingService_Application.Services
             {
                 File = new FileDescription(file.FileName, stream),
                 Transformation = new Transformation().Width(800).Height(500).Crop("fill").Gravity("face"),
-                Folder = "hostlistic-events-cover"
+                Folder = "Booking_Service_Photos",
             };
             uploadResult = await _cloudinary.UploadAsync(uploadParams);
             return uploadResult;

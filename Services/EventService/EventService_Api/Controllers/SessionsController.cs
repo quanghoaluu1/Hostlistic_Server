@@ -7,7 +7,7 @@ namespace EventService_Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+//[Authorize]
 public class SessionsController : ControllerBase
 {
     private readonly ISessionService _sessionService;
