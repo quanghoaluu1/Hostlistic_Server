@@ -15,6 +15,8 @@ public class BookingServiceDbContext : DbContext
     public DbSet<PaymentMethod> PaymentMethods => Set<PaymentMethod>();
     public DbSet<PayoutRequest> PayoutRequests => Set<PayoutRequest>();
     public DbSet<Ticket> Tickets => Set<Ticket>();
+    public DbSet<InventoryReservation> InventoryReservations => Set<InventoryReservation>();
+
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -89,6 +91,14 @@ public class BookingServiceDbContext : DbContext
             
             entity.HasIndex(e => e.TicketCode)
                 .IsUnique();
+        });
+
+        // InventoryReservation configuration
+        modelBuilder.Entity<InventoryReservation>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.ReservationId);
+            entity.HasIndex(e => e.ExpiresAt);
         });
     }
 }

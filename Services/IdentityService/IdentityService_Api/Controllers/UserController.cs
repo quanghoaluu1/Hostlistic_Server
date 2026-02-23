@@ -13,11 +13,13 @@ public class UserController : ControllerBase
 {
     private readonly IUserService _userService;
     private readonly IPhotoService _photoService;
+    private readonly IUserTicketService _userTicketService;
 
-    public UserController(IUserService userService, IPhotoService photoService)
+    public UserController(IUserService userService, IPhotoService photoService, IUserTicketService userTicketService)
     {
         _userService = userService;
         _photoService = photoService;
+        _userTicketService = userTicketService;
     }
 
     [HttpGet("profile")]
@@ -61,9 +63,52 @@ public class UserController : ControllerBase
         return Ok(updateResult);
     }
 
+    [HttpGet("orders")]
+    public async Task<IActionResult> GetMyOrders()
+    {
+        var userId = GetCurrentUserId();
+        var result = await _userTicketService.GetUserOrdersAsync(userId);
+        
+        if (!result.IsSuccess)
+        {
+            return StatusCode(result.StatusCode, result);
+        }
+        
+        return Ok(result);
+    }
+
+    [HttpGet("tickets")]
+    public async Task<IActionResult> GetMyTickets()
+    {
+        var userId = GetCurrentUserId();
+        var result = await _userTicketService.GetUserTicketsAsync(userId);
+        
+        if (!result.IsSuccess)
+        {
+            return StatusCode(result.StatusCode, result);
+        }
+        
+        return Ok(result);
+    }
+
+    [HttpGet("tickets/detailed")]
+    public async Task<IActionResult> GetMyTicketsWithDetails()
+    {
+        var userId = GetCurrentUserId();
+        var result = await _userTicketService.GetUserTicketsWithEventDetailsAsync(userId);
+        
+        if (!result.IsSuccess)
+        {
+            return StatusCode(result.StatusCode, result);
+        }
+        
+        return Ok(result);
+    }
+
     private Guid GetCurrentUserId()
     {
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
         return Guid.Parse(userIdClaim ?? throw new UnauthorizedAccessException("User ID not found in token"));
     }
 }
+

@@ -9,6 +9,7 @@
     <ItemGroup>
       <PackageReference Include="CloudinaryDotNet" Version="1.28.0" />
       <PackageReference Include="Mapster" Version="10.0.0-pre01" />
+      <PackageReference Include="QRCoder" Version="1.7.0" />
       <ProjectReference Include="..\BookingService_Domain\BookingService_Domain.csproj" />
       <ProjectReference Include="..\..\..\Common\Common.csproj" />
     </ItemGroup>

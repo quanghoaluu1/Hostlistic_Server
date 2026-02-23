@@ -31,7 +31,7 @@ builder.Services.AddSwaggerGen(options =>
         Scheme = "bearer",
         BearerFormat = "JWT",
         In = ParameterLocation.Header,
-        Description = "Nh?p JWT token vào ?ây"
+        Description = "Enter JWT Token here"
     });
     options.AddSecurityRequirement((document => new OpenApiSecurityRequirement
     {
@@ -55,6 +55,10 @@ builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<IPaymentMethodRepository, PaymentMethodRepository>();
 builder.Services.AddScoped<ITicketRepository, TicketRepository>();
 builder.Services.AddScoped<IPayoutRequestRepository, PayoutRequestRepository>();
+builder.Services.AddScoped<ITicketPurchaseService, TicketPurchaseService>();
+builder.Services.AddScoped<IInventoryService, InventoryService>();
+builder.Services.AddScoped<IQrCodeService, QrCodeService>();
+builder.Services.AddScoped<IInventoryReservationRepository, InventoryReservationRepository>();
 
 // Register services
 builder.Services.AddScoped<IOrderService, OrderService>();
@@ -63,6 +67,22 @@ builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<IPaymentMethodService, PaymentMethodService>();
 builder.Services.AddScoped<ITicketService, TicketService>();
 builder.Services.AddScoped<IPayoutRequestService, PayoutRequestService>();
+builder.Services.AddScoped<IPhotoService, PhotoService>();
+
+builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
+
+builder.Services.AddHttpClient();
+
+builder.Services.AddHttpClient("EventService", client =>
+{
+    client.BaseAddress = new Uri("http://localhost:5139");
+});
+
+builder.Services.AddHttpClient("NotificationService", client =>
+{
+    client.BaseAddress = new Uri("http://localhost:5097");
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
