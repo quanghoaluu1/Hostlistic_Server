@@ -14,7 +14,8 @@ public class User : BaseClass
     public Role Role { get; set; }
     public bool IsActive { get; set; } = true;
     public Guid? OrganizationId { get; set; }
-
+    public LoginProvider LoginProvider { get; set; } = LoginProvider.Local;
+    public string? GoogleId { get; set; }
     // Navigation property to parent
     [ForeignKey("OrganizationId")]
     public virtual Organization Organization { get; set; } = null!;

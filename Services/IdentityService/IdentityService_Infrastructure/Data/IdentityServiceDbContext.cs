@@ -42,6 +42,11 @@ public class IdentityServiceDbContext : DbContext
                 .WithOne(rt => rt.User)
                 .HasForeignKey(r => r.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+            
+            entity.HasIndex(u => u.GoogleId)
+                .IsUnique()
+                .HasFilter("\"GoogleId\" IS NOT NULL")
+                .HasDatabaseName("IX_Users_GoogleId");
         });
 
         modelBuilder.Entity<RefreshToken>(entity =>

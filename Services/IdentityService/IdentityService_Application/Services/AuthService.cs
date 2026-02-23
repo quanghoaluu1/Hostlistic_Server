@@ -4,6 +4,7 @@ using System.Security.Claims;
 using System.Text;
 using Common;
 using Common.DTOs;
+using Google.Apis.Auth;
 using IdentityService_Application.DTOs;
 using IdentityService_Application.Interfaces;
 using IdentityService_Domain.Entities;
@@ -78,6 +79,76 @@ public class AuthService(IUserRepository userRepository, IRefreshTokenRepository
         user.HashedPassword = BCrypt.Net.BCrypt.HashPassword(newPassword);
         await userRepository.SaveChangesAsync();
         return ApiResponse<AuthResponse>.Success(200, "Password reset successfully", null);
+    }
+
+    public async Task<ApiResponse<AuthResponse>> GoogleLoginAsync(GoogleLoginRequest request)
+    {
+        GoogleJsonWebSignature.Payload payload;
+        try
+        {
+            var settings = new GoogleJsonWebSignature.ValidationSettings
+            {
+                Audience =
+                [
+                    configuration["Google:ClientId"]
+                    ?? throw new InvalidOperationException("Google ClientId not configured")
+                ]
+            };
+
+            payload = await GoogleJsonWebSignature.ValidateAsync(request.IdToken, settings);
+        }
+        catch (InvalidJwtException)
+        {
+            return ApiResponse<AuthResponse>.Fail(401, "Invalid Google token");
+        }
+
+        var googleId = payload.Subject;
+        var email = payload.Email;
+        var fullName = payload.Name ?? email;
+        var avatarUrl = payload.Picture ?? string.Empty;
+        if (!payload.EmailVerified)
+        {
+            return ApiResponse<AuthResponse>.Fail(400, "Google email is not verified");
+        }
+        var user = await userRepository.GetUserByEmailAsync(email);
+        if (user is not null)
+        {
+            user.GoogleId = googleId;
+            user.LoginProvider = LoginProvider.Google;
+            if (string.IsNullOrEmpty(user.AvatarUrl)) user.AvatarUrl = avatarUrl;
+            user.UpdatedAt = DateTime.UtcNow;
+            await userRepository.UpdateUserAsync(user);
+            await userRepository.SaveChangesAsync();
+        }
+        else
+        {
+            user = new User()
+            {
+                Id = Guid.NewGuid(),
+                Email = email,
+                FullName = fullName,
+                AvatarUrl = avatarUrl,
+                GoogleId = googleId,
+                LoginProvider = LoginProvider.Google,
+                HashedPassword = string.Empty,
+                Role = Role.Member,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            await userRepository.AddUserAsync(user);
+            await userRepository.SaveChangesAsync();
+        }
+        if (!user.IsActive) return ApiResponse<AuthResponse>.Fail(400, "User is deactivated");
+        var accessToken = GenerateJwtToken(user);
+        var refreshToken = GenerateRefreshToken(user.Id);
+        var response = new AuthResponse
+        {
+            AccessToken = accessToken,
+            AccessTokenExpiration = DateTime.UtcNow.AddMinutes(30),
+            User = user.Adapt<UserDto>()
+        };
+        return ApiResponse<AuthResponse>.Success(200, refreshToken.tokenString, response);
     }
     
     public async Task<ApiResponse<AuthResponse>> RefreshTokenAsync(string oldToken)
