@@ -3,6 +3,7 @@ using System;
 using AIService_Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AIService_Infrastructure.Migrations
 {
     [DbContext(typeof(AIServiceDbContext))]
-    partial class AIServiceDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260221101009_AddCompleteAt")]
+    partial class AddCompleteAt
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -64,9 +67,14 @@ namespace AIService_Infrastructure.Migrations
                     b.Property<Guid>("RequestId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid>("RequestId1")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
 
                     b.HasIndex("RequestId");
+
+                    b.HasIndex("RequestId1");
 
                     b.ToTable("AiGeneratedContents");
                 });
@@ -124,9 +132,15 @@ namespace AIService_Infrastructure.Migrations
 
             modelBuilder.Entity("AIService_Domain.Entities.AiGeneratedContent", b =>
                 {
-                    b.HasOne("AIService_Domain.Entities.AiRequest", "Request")
+                    b.HasOne("AIService_Domain.Entities.AiRequest", null)
                         .WithMany("GeneratedContents")
                         .HasForeignKey("RequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("AIService_Domain.Entities.AiRequest", "Request")
+                        .WithMany()
+                        .HasForeignKey("RequestId1")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 

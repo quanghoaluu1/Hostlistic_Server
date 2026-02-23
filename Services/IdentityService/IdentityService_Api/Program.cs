@@ -34,7 +34,8 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi(options =>
 {
     options.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
-});var secretKey = builder.Configuration["Jwt:Key"];
+});
+var secretKey = builder.Configuration["Jwt:Key"];
 var issuer = builder.Configuration["Jwt:Issuer"];
 var audience = builder.Configuration["Jwt:Audience"];
 var key = Encoding.UTF8.GetBytes(secretKey);
@@ -101,8 +102,39 @@ if (app.Environment.IsDevelopment())
         .AddPreferredSecuritySchemes("Bearer")
         .AddHttpAuthentication("Bearer", auth =>
         {
-            auth.Token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...";
-        }));
+            auth.Token = "";
+        }).CustomCss = """
+
+                       /* Set the width constraints */
+                       .cm-editor, .cm-scroller, .cm-content {
+                         min-width: 0 !important;
+                         max-width: calc(100% - 46px); !important; /* account for gutter and border */
+                       }
+
+                       /* Disable horizontal scrolling at every layer that might scroll */
+                       .body-raw-scroller, .cm-scroller {
+                         overflow-x: hidden !important;
+                       }
+
+                       /* Force wrapping on each rendered line */
+                       .cm-content, .cm-line {
+                         white-space: pre-wrap !important;
+                         overflow-wrap: anywhere !important;
+                         word-break: break-word !important;
+                       }
+
+                       /* Make sure syntax-highlight spans don’t re-disable wrapping */
+                       .cm-line > span {
+                         white-space: inherit !important;
+                         overflow-wrap: anywhere !important;
+                         word-break: break-word !important;
+                       }
+
+                       /* Align value span with key span */
+                       span.ͼu { 
+                         padding-left: 2ch !important;
+                       }
+                       """);
 }
 
 app.UseRouting();
