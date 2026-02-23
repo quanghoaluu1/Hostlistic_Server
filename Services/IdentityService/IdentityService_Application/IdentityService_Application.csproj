@@ -13,6 +13,7 @@
     <ItemGroup>
       <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
       <PackageReference Include="CloudinaryDotNet" Version="1.28.0" />
+      <PackageReference Include="Google.Apis.Auth" Version="1.73.0" />
       <PackageReference Include="Mapster" Version="10.0.0-pre01" />
       <PackageReference Include="Mapster.DependencyInjection" Version="10.0.0-pre01" />
       <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.2" />

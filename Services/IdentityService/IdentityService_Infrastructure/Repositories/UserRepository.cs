@@ -41,4 +41,10 @@ public class UserRepository : IUserRepository
     {
         await _dbContext.SaveChangesAsync();
     }
+    public async Task<User?> GetUserByGoogleIdAsync(string googleId)
+    {
+        return await _dbContext.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.GoogleId == googleId);
+    }
 }

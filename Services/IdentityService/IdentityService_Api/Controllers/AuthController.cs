@@ -61,6 +61,17 @@ public class AuthController(IAuthService authService) : ControllerBase
         return Ok(result);
     }
     
+    [HttpPost("google-login")]
+    public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginRequest request)
+    {
+        var result = await authService.GoogleLoginAsync(request);
+        if (!result.IsSuccess) return BadRequest(result);
+        var refreshToken = result.Message;
+        SetRefreshTokenCookie(refreshToken);
+        result.Message = "Login Google successfully";
+        return Ok(result);
+    }
+    
     private void SetRefreshTokenCookie(string token)
     {
         var cookieOptions = new CookieOptions
