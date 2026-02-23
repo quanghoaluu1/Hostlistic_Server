@@ -72,6 +72,20 @@ public class AuthController(IAuthService authService) : ControllerBase
         return Ok(result);
     }
     
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout()
+    {
+        var refreshToken = Request.Cookies["refreshToken"];
+        if (string.IsNullOrEmpty(refreshToken))
+            return BadRequest(ApiResponse<bool>.Fail(400, "Refresh token is missing"));
+
+        var result = await authService.LogoutAsync(refreshToken);
+        if (!result.IsSuccess) return BadRequest(result);
+
+        Response.Cookies.Delete("refreshToken");
+        return Ok(result);
+    }
+
     private void SetRefreshTokenCookie(string token)
     {
         var cookieOptions = new CookieOptions

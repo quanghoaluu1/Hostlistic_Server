@@ -151,6 +151,7 @@ public class AuthService(IUserRepository userRepository, IRefreshTokenRepository
         return ApiResponse<AuthResponse>.Success(200, refreshToken.tokenString, response);
     }
     
+    
     public async Task<ApiResponse<AuthResponse>> RefreshTokenAsync(string oldToken)
     {
 
@@ -180,6 +181,17 @@ public class AuthService(IUserRepository userRepository, IRefreshTokenRepository
                 User = user.Adapt<UserDto>()
             };
             return ApiResponse<AuthResponse>.Success(200, newRefreshToken.tokenString, response);
+    }
+
+    public async Task<ApiResponse<bool>> LogoutAsync(string refreshToken)
+    {
+        var existingToken = await refreshTokenRepository.GetTokenAsync(refreshToken);
+        if (existingToken is null || existingToken.IsRevoked)
+            return ApiResponse<bool>.Fail(400, "Invalid refresh token");
+
+        await refreshTokenRepository.RevokeRefreshTokenAsync(existingToken);
+        await refreshTokenRepository.SaveChangesAsync();
+        return ApiResponse<bool>.Success(200, "Logged out successfully", true);
     }
 
     private string GenerateJwtToken(User user)
