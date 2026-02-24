@@ -11,6 +11,7 @@ public class AIServiceDbContext : DbContext
 
     public DbSet<AiRequest> AiRequests => Set<AiRequest>();
     public DbSet<AiGeneratedContent> AiGeneratedContents => Set<AiGeneratedContent>();
+    public DbSet<PromptTemplate> PromptTemplates => Set<PromptTemplate>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -31,6 +32,28 @@ public class AIServiceDbContext : DbContext
         modelBuilder.Entity<AiGeneratedContent>(entity =>
         {
             entity.HasKey(e => e.Id);
+        });
+        
+        modelBuilder.Entity<PromptTemplate>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.TemplateKey)
+                .HasConversion<string>()
+                .HasMaxLength(100);
+
+            entity.HasIndex(e => e.TemplateKey)
+                .IsUnique();
+
+            entity.Property(e => e.Category)
+                .HasConversion<string>()
+                .HasMaxLength(50);
+
+            entity.HasIndex(e => e.Category);
+
+            entity.Property(e => e.SystemPrompt).HasColumnType("text");
+            entity.Property(e => e.UserPromptTemplate).HasColumnType("text");
+            entity.Property(e => e.DefaultTemperature).HasPrecision(3, 2);
         });
     }
 }

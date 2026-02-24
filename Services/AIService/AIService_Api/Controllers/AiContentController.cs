@@ -63,4 +63,21 @@ public class AiContentController(IAiContentService aiContentService, ILogger<AiC
             });
         }
     }
+    
+    [HttpPost("generate-email")]
+    [ProducesResponseType(typeof(EmailContentResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status429TooManyRequests)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GenerateEmail(
+        [FromBody] GenerateEmailRequest request,
+        CancellationToken ct)
+    {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userId = Guid.Parse(userIdClaim ?? throw new UnauthorizedAccessException("User ID not found in token"));
+        var result = await aiContentService.GenerateEmailAsync(request, userId, ct);
+
+        return Ok(result);
+    }
 }

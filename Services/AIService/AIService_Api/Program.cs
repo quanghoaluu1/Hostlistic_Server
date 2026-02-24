@@ -27,6 +27,13 @@ builder.Services.AddSingleton<IAiProvider, GeminiProvider>();
 builder.Services.AddScoped<IAiContentService, AiContentService>();
 builder.Services.AddScoped<IAiRequestRepository, AiRequestRepository>();
 builder.Services.AddScoped<IAiGeneratedContentRepository, AiGeneratedContentRepository>();
+builder.Services.AddScoped<IPromptTemplateRepository, PromptTemplateRepository>();
+builder.Services.AddScoped<IPromptTemplateService, PromptTemplateService>();
+builder.Services.AddHttpClient<IEventServiceClient, EventServiceClient>(client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["Services:EventService"]!);
+    client.Timeout = TimeSpan.FromSeconds(10);
+});
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("NextJs", policy =>

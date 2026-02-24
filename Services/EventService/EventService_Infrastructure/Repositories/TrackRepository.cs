@@ -19,6 +19,7 @@ public class TrackRepository : ITrackRepository
         return await _context.Tracks
             .Include(t => t.Event)
             .Include(t => t.Sessions)
+            .ThenInclude(s => s.Lineups)
             .FirstOrDefaultAsync(t => t.Id == trackId);
     }
 
