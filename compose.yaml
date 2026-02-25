@@ -8,13 +8,6 @@ services:
       - "8080:8080"    # Khớp với Nginx proxy_pass
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
-      - ConnectionStrings__Redis=${REDIS_CONNECTION}
-      # YARP override Docker service names
-      - ReverseProxy__Clusters__EventCluster__Destinations__EventService__Address=http://event-service:8080
-      - ReverseProxy__Clusters__IdentityCluster__Destinations__IdentityService__Address=http://identity-service:8080
-      - ReverseProxy__Clusters__BookingCluster__Destinations__BookingService__Address=http://booking-service:8080
-      - ReverseProxy__Clusters__AICluster__Destinations__AIService__Address=http://ai-service:8080
-      - ReverseProxy__Clusters__NotificationCluster__Destinations__NotificationService__Address=http://notification-service:8080
     depends_on:
       identityservice:
         condition: service_healthy
