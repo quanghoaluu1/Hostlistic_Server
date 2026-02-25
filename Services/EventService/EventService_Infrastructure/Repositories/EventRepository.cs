@@ -11,6 +11,9 @@ public class EventRepository(EventServiceDbContext dbContext) : IEventRepository
     {
         return await dbContext.Events.Include(e => e.Tracks)
             .ThenInclude(t => t.Sessions)
+            .ThenInclude(s => s.Lineups)
+            .ThenInclude(l => l.Talent)
+            .Include(e => e.EventType)
             .Include(e => e.Venue).ToListAsync();
     }
 
@@ -19,7 +22,10 @@ public class EventRepository(EventServiceDbContext dbContext) : IEventRepository
         return await dbContext.Events
             .Include(e => e.Tracks)
                 .ThenInclude(t => t.Sessions)
+            .ThenInclude(s => s.Lineups)
+            .ThenInclude(l => l.Talent)
             .Include(e => e.Venue)
+            .Include(e => e.EventType)
             .FirstOrDefaultAsync(e => e.Id == eventId);
     }
 

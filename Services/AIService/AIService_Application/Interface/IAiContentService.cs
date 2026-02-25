@@ -10,4 +10,7 @@ public interface IAiContentService
         GenerateDescriptionRequest request,
         Guid userId,
         CancellationToken ct = default);
+
+    Task<ApiResponse<EmailContentResponse>> GenerateEmailAsync(GenerateEmailRequest request, Guid organizerId,
+        CancellationToken ct = default);
 }
