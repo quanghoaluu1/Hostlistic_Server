@@ -12,9 +12,10 @@ builder.Services.AddReverseProxy()
 // Add CORS
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowFrontend", policy =>
+    options.AddPolicy("Production", policy =>
     {
-        policy.WithOrigins("http://localhost:3000", "http://127.0.0.1:3000")
+        policy.WithOrigins(
+                "http://localhost:3000", "https://hostlistic.tech")
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
@@ -76,7 +77,7 @@ if (app.Environment.IsDevelopment())
     app.UseDeveloperExceptionPage();
 }
 
-app.UseCors("AllowFrontend");
+app.UseCors("Production");
 
 app.UseRouting();
 

@@ -17,6 +17,17 @@ builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 builder.Services.AddAuthentication().AddJwtBearer();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Production", policy =>
+    {
+        policy.WithOrigins(
+                "http://localhost:3000", "https://hostlistic.tech")
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
+});
 builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo 
@@ -75,13 +86,14 @@ builder.Services.AddHttpClient();
 
 builder.Services.AddHttpClient("EventService", client =>
 {
-    client.BaseAddress = new Uri("http://localhost:5139");
+    client.BaseAddress = new Uri("http://event-service:8080");
 });
 
 builder.Services.AddHttpClient("NotificationService", client =>
 {
-    client.BaseAddress = new Uri("http://localhost:5097");
+    client.BaseAddress = new Uri("http://notification-service:8080");
 });
+builder.Services.AddHealthChecks();
 
 var app = builder.Build();
 
@@ -96,12 +108,13 @@ if (app.Environment.IsDevelopment())
             auth.Token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...";
         }));
 }
-
+app.UseCors("Production");
 app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHealthChecks("/health");
 
 app.Run();
