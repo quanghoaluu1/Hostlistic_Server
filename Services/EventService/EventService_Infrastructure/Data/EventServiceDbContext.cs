@@ -50,7 +50,11 @@ public class EventServiceDbContext : DbContext
                 .WithMany(et => et.Events)
                 .HasForeignKey(e => e.EventTypeId)
                 .OnDelete(DeleteBehavior.SetNull);
-
+            
+            entity.Property(e => e.EventMode)
+                .HasConversion<string>()
+                    .HasMaxLength(50);
+            
             entity.HasOne(e => e.Venue)
                 .WithMany(v => v.Events)
                 .HasForeignKey(e => e.VenueId)

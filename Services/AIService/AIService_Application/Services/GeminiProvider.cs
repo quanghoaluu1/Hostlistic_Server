@@ -1,4 +1,6 @@
 using AIService_Application.Interface;
+using AIService_Domain.Enum;
+using Google;
 using Google.GenAI;
 using Google.GenAI.Types;
 using Microsoft.Extensions.Configuration;
@@ -21,7 +23,7 @@ public class GeminiProvider : IAiProvider
     }
 
 
-    public async Task<AiProviderResult> GenerateContentAsync(string systemPrompt, string userPrompt, CancellationToken cancellationToken = default)
+    public async Task<AiProviderResult> GenerateContentAsync(string systemPrompt, string userPrompt, AiRequestOptions options, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Calling Gemini API with model {Model}", _model);
         try
@@ -35,13 +37,29 @@ public class GeminiProvider : IAiProvider
                     {
                         Parts = [new Part { Text = systemPrompt }]
                     },
-                    Temperature = 0.7f,
+                    Temperature = options.Temperature,
                     TopP = 0.9f,
-                    MaxOutputTokens = 2048
+                    MaxOutputTokens = options.MaxTokens
                 },
                 cancellationToken: cancellationToken);
             var text = response.Candidates?[0]?.Content?.Parts?[0].Text;
             var usage = response.UsageMetadata;
+            if (response is null || string.IsNullOrEmpty(text))
+            {
+                throw new Exception("Gemini API returned null response");
+            }
+
+            if (response.Candidates is not { Count: > 0 })
+            { 
+                throw new Exception("Gemini API returned empty candidates");
+            }
+            var candidate = response.Candidates[0];
+            var finishReason = candidate.FinishReason;
+            if (finishReason.HasValue && finishReason != FinishReason.Stop && finishReason != FinishReason.FinishReasonUnspecified)
+            {
+                _logger.LogWarning("Gemini API returned finish reason {FinishReason}", candidate.FinishReason.Value);
+                throw new Exception($"Gemini API returned finish reason {finishReason.Value}");
+            }
             return new AiProviderResult(
                 Content: text,
                 PromptTokens: usage?.PromptTokenCount ?? 0,
@@ -52,6 +70,18 @@ public class GeminiProvider : IAiProvider
         {
             _logger.LogError(ex, "Error calling Gemini API");
             throw;
+        }catch (GoogleApiException ex)
+        {
+            // API-level errors: 429 rate limit, 403 quota, 400 bad request
+            throw new Exception($"Gemini API error: {ex.Message}", ex);
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new Exception("Cannot reach Gemini API", ex);
+        }
+        catch (TaskCanceledException ex)
+        {
+            throw new Exception("Gemini request timed out", ex);
         }
     }
 }

@@ -1,13 +1,134 @@
-﻿services:
-  hostlistic_server:
-    image: hostlistic_server
+services:
+  apigateway:
+    image: hostlistic/apigateway
     build:
       context: .
-      dockerfile: Hostlistic_Server/Dockerfile
+      dockerfile: ApiGateway/Dockerfile
+    ports:
+      - "8080:8080"    # Khớp với Nginx proxy_pass
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+    depends_on:
+      identityservice:
+        condition: service_healthy
+      eventservice:
+        condition: service_healthy
+      bookingservice:
+        condition: service_healthy
+    networks:
+      - hostlistic_net
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
   identityservice:
-    image: identityservice
+    image: hostlistic/identityservice
     build:
       context: .
       dockerfile: Services/IdentityService/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_HTTP_PORTS=8080
+      - ConnectionStrings__DefaultConnection=${IDENTITY_DB_CONNECTION}
+      - ConnectionStrings__RedisConnection=${REDIS_CONNECTION}
+      - Jwt__Key=${JWT_SECRET_KEY}
+      - Jwt__Issuer=hostlistic
+      - Jwt__Audience=hostlistic
+      - CloudinarySettings__CloudName=${CLOUDINARY_CLOUD_NAME}
+      - CloudinarySettings__ApiKey=${CLOUDINARY_API_KEY}
+      - CloudinarySettings__ApiSecret=${CLOUDINARY_API_SECRET}
+      - Google__ClientId=${GOOGLE_CLIENT_ID}
+    networks:
+      - hostlistic_net
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
+  eventservice:
+    image: hostlistic/eventservice
+    build:
+      context: .
+      dockerfile: Services/EventService/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_HTTP_PORTS=8080
+      - ConnectionStrings__DefaultConnection=${EVENT_DB_CONNECTION}
+      - Jwt__Key=${JWT_SECRET_KEY}
+      - Jwt__Issuer=hostlistic
+      - Jwt__Audience=hostlistic
+      - CloudinarySettings__CloudName=${CLOUDINARY_CLOUD_NAME}
+      - CloudinarySettings__ApiKey=${CLOUDINARY_API_KEY}
+      - CloudinarySettings__ApiSecret=${CLOUDINARY_API_SECRET}
+    networks:
+      - hostlistic_net
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  bookingservice:
+    image: hostlistic/bookingservice
+    build:
+      context: .
+      dockerfile: Services/BookingService/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_HTTP_PORTS=8080
+      - ConnectionStrings__DefaultConnection=${BOOKING_DB_CONNECTION}
+    networks:
+      - hostlistic_net
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  notificationservice:
+    image: hostlistic/notificationservice
+    build:
+      context: .
+      dockerfile: Services/NotificationService/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_HTTP_PORTS=8080
+      - ConnectionStrings__DefaultConnection=${NOTIFICATION_DB_CONNECTION}
+      - Resend__ApiToken=${RESEND_API_KEY}
+    networks:
+      - hostlistic_net
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+
+  aiservice:
+    image: hostlistic/aiservice
+    build:
+      context: .
+      dockerfile: Services/AIService/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_HTTP_PORTS=8080
+      - ConnectionStrings__DefaultConnection=${AI_DB_CONNECTION}
+      - Jwt__Key=${JWT_SECRET_KEY}
+      - Jwt__Issuer=hostlistic
+      - Jwt__Audience=hostlistic
+      - Gemini__ApiKey=${GEMINI_API_KEY}
+      - Gemini__Model=gemini-3-flash-preview
+      - Services__EventService=http://eventservice:8080
+    networks:
+      - hostlistic_net
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+
+networks:
+  hostlistic_net:
+    driver: bridge

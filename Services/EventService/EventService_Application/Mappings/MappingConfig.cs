@@ -10,6 +10,13 @@ public class MappingConfig : IRegister
     {
         TypeAdapterConfig<Event, EventResponseDto>
             .NewConfig()
-            .MaxDepth(3);
+            .Map(dest => dest.EventTypeName, src => src.EventType.Name);
+
+        TypeAdapterConfig<Session, SessionResponseDto>
+            .NewConfig()
+            .Map(dest => dest.Talents, src => src.Lineups.Select(l => l.Talent));
+
+        TypeAdapterConfig<Talent, TalentDetailDto>
+            .NewConfig();
     }
 }
