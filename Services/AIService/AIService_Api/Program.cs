@@ -38,12 +38,13 @@ builder.Services.AddHttpClient<IEventServiceClient, EventServiceClient>(client =
 });
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("NextJs", policy =>
+    options.AddPolicy("Production", policy =>
     {
         policy.WithOrigins(
-                builder.Configuration["Frontend:Url"] ?? "http://localhost:3000")
+               "http://localhost:3000", "https://hostlistic.tech")
             .AllowAnyHeader()
-            .AllowAnyMethod();
+            .AllowAnyMethod()
+            .AllowCredentials();
     });
 });
 var secretKey = builder.Configuration["Jwt:Key"];
@@ -81,6 +82,7 @@ builder.Services.AddAuthentication(options =>
     };
 });
 builder.Services.AddAuthorization();
+builder.Services.AddHealthChecks();
 
 var app = builder.Build();
 
@@ -127,11 +129,12 @@ if (app.Environment.IsDevelopment())
                      }
                      """);
 }
-app.UseCors("NextJs");
+app.UseCors("Production");
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHealthChecks("/health");
 
 app.Run();

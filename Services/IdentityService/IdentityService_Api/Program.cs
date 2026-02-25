@@ -21,9 +21,10 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddCors(options =>
 {
-    options.AddDefaultPolicy(policy =>
+    options.AddPolicy("Production", policy =>
     {
-        policy.WithOrigins("http://localhost:3000", "http://127.0.0.1:3000")
+        policy.WithOrigins(
+                "http://localhost:3000", "https://hostlistic.tech")
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
@@ -91,6 +92,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IPhotoService, PhotoService>();
 builder.Services.AddScoped<IUserTicketService, UserTicketService>();
+builder.Services.AddHealthChecks();
 
 var app = builder.Build();
 
@@ -138,7 +140,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseRouting();
-app.UseCors();
+app.UseCors("Production");
 if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
@@ -147,5 +149,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHealthChecks("/health");
 
 app.Run();
