@@ -13,12 +13,17 @@ using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using System.Reflection;
 using System.Text;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 builder.Services.Configure<ApiBehaviorOptions>(options =>
@@ -112,14 +117,15 @@ builder.Services.AddDbContext<EventServiceDbContext>(optionsAction =>
     optionsAction.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
 });
 var config = TypeAdapterConfig.GlobalSettings;
-config.Scan(Assembly.GetExecutingAssembly());
+config.Scan(Assembly.GetExecutingAssembly(), typeof(EventService_Application.Mappings.MappingConfig).Assembly);
 builder.Services.AddSingleton(config);
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("NextApp", policy =>
+    options.AddPolicy("Production", policy =>
     {
-        policy.WithOrigins("http://localhost:3000")
+        policy.WithOrigins(
+                "http://localhost:3000", "https://hostlistic.tech")
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
@@ -148,6 +154,7 @@ builder.Services.AddScoped<IPhotoService, PhotoService>();
 builder.Services.AddScoped<ITalentService, TalentService>();
 builder.Services.AddScoped<ILineupService, LineupService>();
 builder.Services.AddScoped<ICheckInService, CheckInService>();
+builder.Services.AddHealthChecks();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -161,7 +168,7 @@ if (app.Environment.IsDevelopment())
             auth.Token = "";
         }));
 }
-app.UseCors("NextApp");
+app.UseCors("Production");
 app.UseExceptionHandler();
 app.UseHttpsRedirection();
 
@@ -169,5 +176,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHealthChecks("/health");
 
 app.Run();

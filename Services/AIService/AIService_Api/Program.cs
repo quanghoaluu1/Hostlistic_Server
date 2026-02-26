@@ -27,14 +27,24 @@ builder.Services.AddSingleton<IAiProvider, GeminiProvider>();
 builder.Services.AddScoped<IAiContentService, AiContentService>();
 builder.Services.AddScoped<IAiRequestRepository, AiRequestRepository>();
 builder.Services.AddScoped<IAiGeneratedContentRepository, AiGeneratedContentRepository>();
+builder.Services.AddScoped<IPromptTemplateRepository, PromptTemplateRepository>();
+builder.Services.AddScoped<IPromptTemplateService, PromptTemplateService>();
+builder.Services.AddScoped<IPromptTemplateEngine, PromptTemplateEngine>();
+builder.Services.AddScoped<IEventServiceClient, EventServiceClient>();
+builder.Services.AddHttpClient<IEventServiceClient, EventServiceClient>(client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["Services:EventService"]!);
+    client.Timeout = TimeSpan.FromSeconds(10);
+});
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("NextJs", policy =>
+    options.AddPolicy("Production", policy =>
     {
         policy.WithOrigins(
-                builder.Configuration["Frontend:Url"] ?? "http://localhost:3000")
+               "http://localhost:3000", "https://hostlistic.tech")
             .AllowAnyHeader()
-            .AllowAnyMethod();
+            .AllowAnyMethod()
+            .AllowCredentials();
     });
 });
 var secretKey = builder.Configuration["Jwt:Key"];
@@ -72,6 +82,7 @@ builder.Services.AddAuthentication(options =>
     };
 });
 builder.Services.AddAuthorization();
+builder.Services.AddHealthChecks();
 
 var app = builder.Build();
 
@@ -118,11 +129,12 @@ if (app.Environment.IsDevelopment())
                      }
                      """);
 }
-app.UseCors("NextJs");
+app.UseCors("Production");
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHealthChecks("/health");
 
 app.Run();
