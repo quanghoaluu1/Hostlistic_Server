@@ -92,6 +92,12 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IPhotoService, PhotoService>();
 builder.Services.AddScoped<IUserTicketService, UserTicketService>();
+builder.Services.AddScoped<IOrganizerBankInfoRepository, OrganizerBankInfoRepository>();
+builder.Services.AddScoped<ISubscriptionPlanRepository, SubscriptionPlanRepository>();
+builder.Services.AddScoped<IUserPlanRepository, UserPlanRepository>();
+builder.Services.AddScoped<IOrganizerBankInfoService, OrganizerBankInfoService>();
+builder.Services.AddScoped<ISubscriptionPlanService, SubscriptionPlanService>();
+builder.Services.AddScoped<IUserPlanService, UserPlanService>();
 builder.Services.AddHealthChecks();
 
 var app = builder.Build();

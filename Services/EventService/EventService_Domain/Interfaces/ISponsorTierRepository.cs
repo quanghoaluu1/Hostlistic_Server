@@ -1,0 +1,13 @@
+using EventService_Domain.Entities;
+
+namespace EventService_Domain.Interfaces;
+
+public interface ISponsorTierRepository
+{
+    Task<IReadOnlyList<SponsorTier>> GetByEventIdAsync(Guid eventId);
+    Task<SponsorTier?> GetByIdAsync(Guid id);
+    Task AddAsync(SponsorTier entity);
+    Task UpdateAsync(SponsorTier entity);
+    Task<bool> DeleteAsync(Guid id);
+    Task SaveChangesAsync();
+}

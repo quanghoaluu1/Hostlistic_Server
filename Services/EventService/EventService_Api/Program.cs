@@ -142,6 +142,10 @@ builder.Services.AddScoped<ITicketTypeRepository, TicketTypeRepository>();
 builder.Services.AddScoped<ITalentRepository, TalentRepository>();
 builder.Services.AddScoped<ILineupRepository, LineupRepository>();
 builder.Services.AddScoped<ICheckInRepository, CheckInRepository>();
+builder.Services.AddScoped<IEventTemplateRepository, EventTemplateRepository>();
+builder.Services.AddScoped<ISponsorRepository, SponsorRepository>();
+builder.Services.AddScoped<ISponsorTierRepository, SponsorTierRepository>();
+builder.Services.AddScoped<ISponsorInteractionRepository, SponsorInteractionRepository>();
 
 // Register services
 builder.Services.AddScoped<ISessionService, SessionService>();
@@ -154,6 +158,10 @@ builder.Services.AddScoped<IPhotoService, PhotoService>();
 builder.Services.AddScoped<ITalentService, TalentService>();
 builder.Services.AddScoped<ILineupService, LineupService>();
 builder.Services.AddScoped<ICheckInService, CheckInService>();
+builder.Services.AddScoped<IEventTemplateService, EventTemplateService>();
+builder.Services.AddScoped<ISponsorService, SponsorService>();
+builder.Services.AddScoped<ISponsorTierService, SponsorTierService>();
+builder.Services.AddScoped<ISponsorInteractionService, SponsorInteractionService>();
 builder.Services.AddHealthChecks();
 var app = builder.Build();
 
