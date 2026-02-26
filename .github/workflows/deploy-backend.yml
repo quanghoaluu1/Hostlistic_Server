@@ -1,0 +1,51 @@
+# ============================================================
+# .github/workflows/deploy-backend.yml
+# Auto deploy Backend lên VPS khi push vào main
+# ============================================================
+
+name: 🚀 Deploy Backend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'Services/**'
+      - 'ApiGateway/**'
+      - 'Common/**'
+      - 'compose.yaml'
+
+  # Cho phép chạy manual từ GitHub UI
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to DigitalOcean VPS
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🔗 Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd /home/deploy/Hostlistic_Server
+
+            echo "📥 Pulling latest code..."
+            git pull origin main
+
+            echo "🔨 Building & deploying..."
+            docker compose up -d --build
+
+            echo "🧹 Cleaning old images..."
+            docker image prune -f
+
+            echo "✅ Health check..."
+            sleep 10
+            curl -f http://127.0.0.1:8080/health || echo "⚠️ Health check failed"
+
+            echo "📊 Container status:"
+            docker ps --format "table {{.Names}}\t{{.Status}}"
+
+            echo "✅ Deploy completed at $(date)"
