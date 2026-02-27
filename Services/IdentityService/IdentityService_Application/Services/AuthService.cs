@@ -38,9 +38,12 @@ public class AuthService(IUserRepository userRepository, IRefreshTokenRepository
             return ApiResponse<AuthResponse>.Fail(401,"Invalid credentials");
         
         var isValidPassword = BCrypt.Net.BCrypt.Verify(request.Password, user.HashedPassword);
-        if (!isValidPassword) 
+        if (!isValidPassword)
             return ApiResponse<AuthResponse>.Fail(401,"Invalid credentials");
-        
+
+        if (!user.IsActive)
+            return ApiResponse<AuthResponse>.Fail(401, "Account is deactivated");
+
         var accessToken = GenerateJwtToken(user);
         var refreshToken = GenerateRefreshToken(user.Id);
         
@@ -142,6 +145,10 @@ public class AuthService(IUserRepository userRepository, IRefreshTokenRepository
         if (!user.IsActive) return ApiResponse<AuthResponse>.Fail(400, "User is deactivated");
         var accessToken = GenerateJwtToken(user);
         var refreshToken = GenerateRefreshToken(user.Id);
+
+        await refreshTokenRepository.AddTokenAsync(refreshToken.Entity);
+        await refreshTokenRepository.SaveChangesAsync();
+
         var response = new AuthResponse
         {
             AccessToken = accessToken,
@@ -163,9 +170,10 @@ public class AuthService(IUserRepository userRepository, IRefreshTokenRepository
 
             var user = existingToken.User;
             if (user is null)
-            {
                 return ApiResponse<AuthResponse>.Fail(401, "Invalid refresh token");
-            }
+
+            if (!user.IsActive)
+                return ApiResponse<AuthResponse>.Fail(401, "Account is deactivated");
 
             var newAccessToken = GenerateJwtToken(user);
             var newRefreshToken = GenerateRefreshToken(user.Id);
@@ -206,10 +214,10 @@ public class AuthService(IUserRepository userRepository, IRefreshTokenRepository
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["Jwt:Key"] ?? throw new InvalidOperationException("Jwt Key not found")));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
         var token = new JwtSecurityToken(
-            configuration["Jwt:Issuer"], 
-            configuration["Jwt:Audience"], 
+            configuration["Jwt:Issuer"],
+            configuration["Jwt:Audience"],
             claims,
-            expires: DateTime.Now.AddMinutes(30),
+            expires: DateTime.UtcNow.AddMinutes(30),
             signingCredentials: creds);
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
