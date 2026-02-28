@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Threading.RateLimiting;
+using ApiGateway;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,7 +26,7 @@ builder.Services.AddCors(options =>
 // Add JWT Authentication (optional - if you want authentication at gateway level)
 var secretKey = builder.Configuration["Jwt:Key"];
 var issuer = builder.Configuration["Jwt:Issuer"];
-var audience = builder.Configuration["Jwt:Audience"];
+var audience = builder.Configuration["Jwt:Audience"];   
 
 if (!string.IsNullOrEmpty(secretKey))
 {
@@ -51,7 +52,10 @@ if (!string.IsNullOrEmpty(secretKey))
     
     builder.Services.AddAuthorization();
 }
-
+builder.Services.AddHttpClient("OpenApiFetcher", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(10);
+});
 // Add health checks (optional but recommended)
 builder.Services.AddHealthChecks();
 
@@ -75,6 +79,7 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
+    app.MapAggregatedScalarDocs();
 }
 
 app.UseCors("Production");

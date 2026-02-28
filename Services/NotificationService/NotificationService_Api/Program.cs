@@ -1,3 +1,4 @@
+using Common;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
 using NotificationService_Application.Interfaces;
@@ -16,7 +17,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi(options => options.AddDocumentTransformer<BearerSecuritySchemeTransformer>());
 builder.Services.AddAuthentication().AddJwtBearer();
 builder.Services.AddCors(options =>
 {

@@ -4,6 +4,7 @@ using BookingService_Application.Services;
 using BookingService_Domain.Interfaces;
 using BookingService_Infrastructure.Data;
 using BookingService_Infrastructure.Repositories;
+using Common;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
@@ -15,7 +16,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi(options => options.AddDocumentTransformer<BearerSecuritySchemeTransformer>());
 builder.Services.AddAuthentication().AddJwtBearer();
 builder.Services.AddCors(options =>
 {
