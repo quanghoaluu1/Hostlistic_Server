@@ -8,6 +8,9 @@ services:
       - "8080:8080"    # Khớp với Nginx proxy_pass
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
+      - Jwt__Key=${JWT_SECRET_KEY}
+      - Jwt__Issuer=hostlistic
+      - Jwt__Audience=hostlistic
     depends_on:
       identityservice:
         condition: service_healthy
