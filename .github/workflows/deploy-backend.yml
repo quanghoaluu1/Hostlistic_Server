@@ -29,6 +29,7 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
+          debug: true
           script: |
             cd /home/deploy/Hostlistic_Server
 
