@@ -60,6 +60,11 @@ namespace EventService_Application.Services
             return ApiResponse<FeedbackDto>.Success(200, "Retrieved feedback successfully.", feedbackDto);
         }
 
+        public Task<ApiResponse<List<FeedbackDto>>> GetAllFeedbacksAsync()
+        {
+            throw new NotImplementedException();
+        }
+
         public async Task<ApiResponse<List<FeedbackDto>>> GetFeedbacksByEventIdAsync(Guid eventId)
         {
             var feedbacks = await _feedbackRepository.GetFeedbacksByEventIdAsync(eventId);
