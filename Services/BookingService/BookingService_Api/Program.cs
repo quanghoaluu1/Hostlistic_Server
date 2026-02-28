@@ -87,12 +87,12 @@ builder.Services.AddHttpClient();
 
 builder.Services.AddHttpClient("EventService", client =>
 {
-    client.BaseAddress = new Uri("http://event-service:8080");
+    client.BaseAddress = new Uri("http://eventservice:8080");
 });
 
 builder.Services.AddHttpClient("NotificationService", client =>
 {
-    client.BaseAddress = new Uri("http://notification-service:8080");
+    client.BaseAddress = new Uri("http://notificationservice:8080");
 });
 builder.Services.AddHealthChecks();
 
