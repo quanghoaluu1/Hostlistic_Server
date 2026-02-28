@@ -87,9 +87,7 @@ public class AuthService(IUserRepository userRepository, IRefreshTokenRepository
     public async Task<ApiResponse<AuthResponse>> GoogleLoginAsync(GoogleLoginRequest request)
     {
         GoogleJsonWebSignature.Payload payload;
-        try
-        {
-            var settings = new GoogleJsonWebSignature.ValidationSettings
+        var settings = new GoogleJsonWebSignature.ValidationSettings
             {
                 Audience =
                 [
@@ -98,13 +96,8 @@ public class AuthService(IUserRepository userRepository, IRefreshTokenRepository
                 ]
             };
 
-            payload = await GoogleJsonWebSignature.ValidateAsync(request.IdToken, settings);
-        }
-        catch (InvalidJwtException)
-        {
-            return ApiResponse<AuthResponse>.Fail(401, "Invalid Google token");
-        }
-
+        payload = await GoogleJsonWebSignature.ValidateAsync(request.IdToken, settings);
+        if (payload is null) return ApiResponse<AuthResponse>.Fail(400, "Invalid Google token");
         var googleId = payload.Subject;
         var email = payload.Email;
         var fullName = payload.Name ?? email;
