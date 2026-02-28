@@ -7,7 +7,7 @@ namespace IdentityService_Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class AuthController(IAuthService authService) : ControllerBase
+public class AuthController(IAuthService authService, IWebHostEnvironment env) : ControllerBase
 {
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody]RegisterRequest request)
@@ -88,12 +88,16 @@ public class AuthController(IAuthService authService) : ControllerBase
 
     private void SetRefreshTokenCookie(string token)
     {
+        var isProd = env.IsProduction();
         var cookieOptions = new CookieOptions
         {
-            HttpOnly = true, 
+            HttpOnly = true,
             Expires = DateTime.UtcNow.AddDays(7),
-            SameSite = SameSiteMode.Strict,
-            Secure = true 
+            // Production (HTTPS, cross-domain): SameSite=None requires Secure=true.
+            // Development (HTTP, localhost): SameSite=Lax + Secure=false so the browser
+            // actually stores and sends the cookie over plain HTTP.
+            SameSite = isProd ? SameSiteMode.None : SameSiteMode.Lax,
+            Secure = isProd
         };
         Response.Cookies.Append("refreshToken", token, cookieOptions);
     }
