@@ -94,6 +94,11 @@ builder.Services.AddHttpClient("NotificationService", client =>
 {
     client.BaseAddress = new Uri("http://notificationservice:8080");
 });
+
+builder.Services.AddHttpClient("IdentityService", client =>
+{
+    client.BaseAddress = new Uri("http://identityservice:8080");
+});
 builder.Services.AddHealthChecks();
 
 var app = builder.Build();
