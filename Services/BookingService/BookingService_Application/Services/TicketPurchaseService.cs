@@ -209,7 +209,8 @@ public class TicketPurchaseService : ITicketPurchaseService
                 return false;
             }
 
-            var httpClient = _httpClientFactory.CreateClient();
+            // Use the named NotificationService client
+            var httpClient = _httpClientFactory.CreateClient("NotificationService");
             Console.WriteLine("[DEBUG] HTTP client created");
 
             // Prepare ticket information for email
@@ -250,8 +251,8 @@ public class TicketPurchaseService : ITicketPurchaseService
             Console.WriteLine($"[DEBUG] Event: {emailRequest.EventName}");
             Console.WriteLine($"[DEBUG] Tickets count: {emailRequest.Tickets.Count}");
 
-            // Send to NotificationService
-            var notificationServiceUrl = "http://localhost:5097/api/Email/send-ticket-confirmation";
+            // Send to NotificationService - use relative path since base address is set
+            var notificationServiceUrl = "/api/Email/send-ticket-confirmation";
             Console.WriteLine($"[DEBUG] Sending email to: {notificationServiceUrl}");
             
             var response = await httpClient.PostAsJsonAsync(notificationServiceUrl, emailRequest);
@@ -281,8 +282,9 @@ public class TicketPurchaseService : ITicketPurchaseService
         try
         {
             Console.WriteLine($"[DEBUG] Fetching event info from EventService for ID: {eventId}");
-            var httpClient = _httpClientFactory.CreateClient();
-            var eventServiceUrl = $"http://localhost:5001/api/Events/{eventId}";
+            // Use the named EventService client
+            var httpClient = _httpClientFactory.CreateClient("EventService");
+            var eventServiceUrl = $"/api/Events/{eventId}";
             Console.WriteLine($"[DEBUG] Event service URL: {eventServiceUrl}");
             
             var response = await httpClient.GetAsync(eventServiceUrl);
@@ -316,8 +318,9 @@ public class TicketPurchaseService : ITicketPurchaseService
         try
         {
             Console.WriteLine($"[DEBUG] Fetching user info from IdentityService for ID: {userId}");
-            var httpClient = _httpClientFactory.CreateClient();
-            var userServiceUrl = $"http://localhost:5000/api/Users/{userId}";
+            // Use the named UserService client
+            var httpClient = _httpClientFactory.CreateClient("UserService");
+            var userServiceUrl = $"/api/Users/{userId}";
             Console.WriteLine($"[DEBUG] User service URL: {userServiceUrl}");
             
             var response = await httpClient.GetAsync(userServiceUrl);
@@ -351,8 +354,9 @@ public class TicketPurchaseService : ITicketPurchaseService
         try
         {
             Console.WriteLine($"[DEBUG] Fetching ticket type info from EventService for ID: {ticketTypeId}");
-            var httpClient = _httpClientFactory.CreateClient();
-            var ticketTypeServiceUrl = $"http://localhost:5001/api/TicketTypes/{ticketTypeId}";
+            // Use the named EventService client
+            var httpClient = _httpClientFactory.CreateClient("EventService");
+            var ticketTypeServiceUrl = $"/api/TicketTypes/{ticketTypeId}";
             Console.WriteLine($"[DEBUG] Ticket type service URL: {ticketTypeServiceUrl}");
             
             var response = await httpClient.GetAsync(ticketTypeServiceUrl);
