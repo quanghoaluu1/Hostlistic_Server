@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Scalar.AspNetCore;
 using StreamingService_Infrastructure.Data;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -17,6 +18,12 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.MapScalarApiReference(options => options
+        .AddPreferredSecuritySchemes("Bearer")
+        .AddHttpAuthentication("Bearer", auth =>
+        {
+            auth.Token = "";
+        }));
 }
 
 app.UseHttpsRedirection();
