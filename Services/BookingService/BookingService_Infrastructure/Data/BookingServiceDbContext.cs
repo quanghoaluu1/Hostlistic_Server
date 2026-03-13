@@ -16,6 +16,8 @@ public class BookingServiceDbContext : DbContext
     public DbSet<PayoutRequest> PayoutRequests => Set<PayoutRequest>();
     public DbSet<Ticket> Tickets => Set<Ticket>();
     public DbSet<InventoryReservation> InventoryReservations => Set<InventoryReservation>();
+    public DbSet<Wallet> Wallets => Set<Wallet>();
+    public DbSet<Transaction> Transactions => Set<Transaction>();
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -36,7 +38,7 @@ public class BookingServiceDbContext : DbContext
                 .WithOne(t => t.Order)
                 .HasForeignKey(t => t.OrderId)
                 .OnDelete(DeleteBehavior.Cascade);
-            
+
             entity.HasMany(e => e.Payments)
                 .WithOne()
                 .HasForeignKey(p => p.OrderId)
@@ -47,7 +49,7 @@ public class BookingServiceDbContext : DbContext
         modelBuilder.Entity<OrderDetail>(entity =>
         {
             entity.HasKey(e => e.Id);
-            
+
             entity.Property(e => e.UnitPrice)
                 .HasPrecision(18, 2);
         });
@@ -56,7 +58,7 @@ public class BookingServiceDbContext : DbContext
         modelBuilder.Entity<Payment>(entity =>
         {
             entity.HasKey(e => e.Id);
-            
+
             entity.Property(e => e.Amount)
                 .HasPrecision(18, 2);
         });
@@ -65,10 +67,10 @@ public class BookingServiceDbContext : DbContext
         modelBuilder.Entity<PaymentMethod>(entity =>
         {
             entity.HasKey(e => e.Id);
-            
+
             entity.Property(e => e.FeePercentage)
                 .HasPrecision(5, 4);
-            
+
             entity.Property(e => e.FixedFee)
                 .HasPrecision(18, 2);
 
@@ -79,16 +81,13 @@ public class BookingServiceDbContext : DbContext
         });
 
         // PayoutRequest configuration
-        modelBuilder.Entity<PayoutRequest>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-        });
+        modelBuilder.Entity<PayoutRequest>(entity => { entity.HasKey(e => e.Id); });
 
         // Ticket configuration
         modelBuilder.Entity<Ticket>(entity =>
         {
             entity.HasKey(e => e.Id);
-            
+
             entity.HasIndex(e => e.TicketCode)
                 .IsUnique();
         });
@@ -99,6 +98,15 @@ public class BookingServiceDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.ReservationId);
             entity.HasIndex(e => e.ExpiresAt);
+        });
+
+        modelBuilder.Entity<Wallet>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+        });
+        modelBuilder.Entity<Transaction>(entity =>
+        {
+            entity.HasKey(e => e.Id);
         });
     }
 }
