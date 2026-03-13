@@ -1,9 +1,8 @@
-﻿using Common;
+using Common;
 using BookingService_Application.DTOs;
 using BookingService_Application.Interfaces;
 using BookingService_Domain.Enum;
-using System.Net.Http.Json;
-using System.Text.Json;
+using Microsoft.Extensions.Logging;
 
 namespace BookingService_Application.Services;
 
@@ -12,19 +11,36 @@ public class TicketPurchaseService : ITicketPurchaseService
     private readonly IOrderService _orderService;
     private readonly ITicketService _ticketService;
     private readonly IPaymentService _paymentService;
+    private readonly IWalletService _walletService;
     private readonly IInventoryService _inventoryService;
     private readonly IQrCodeService _qrCodeService;
-    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly IEventServiceClient _eventServiceClient;
+    private readonly IUserServiceClient _userServiceClient;
+    private readonly INotificationServiceClient _notificationServiceClient;
+    private readonly ILogger<TicketPurchaseService> _logger;
 
-    public TicketPurchaseService(IOrderService orderService, ITicketService ticketService, IPaymentService paymentService,
-    IInventoryService inventoryService, IQrCodeService qrCodeService, IHttpClientFactory httpClientFactory)
+    public TicketPurchaseService(
+        IOrderService orderService,
+        ITicketService ticketService,
+        IPaymentService paymentService,
+        IInventoryService inventoryService,
+        IQrCodeService qrCodeService,
+        IWalletService walletService,
+        IEventServiceClient eventServiceClient,
+        IUserServiceClient userServiceClient,
+        INotificationServiceClient notificationServiceClient,
+        ILogger<TicketPurchaseService> logger)
     {
         _orderService = orderService;
         _ticketService = ticketService;
         _paymentService = paymentService;
         _inventoryService = inventoryService;
         _qrCodeService = qrCodeService;
-        _httpClientFactory = httpClientFactory;
+        _walletService = walletService;
+        _eventServiceClient = eventServiceClient;
+        _userServiceClient = userServiceClient;
+        _notificationServiceClient = notificationServiceClient;
+        _logger = logger;
     }
 
     public async Task<ApiResponse<InventoryCheckResponse>> CheckTicketAvailabilityAsync(InventoryCheckRequest request)
@@ -36,10 +52,14 @@ public class TicketPurchaseService : ITicketPurchaseService
     {
         try
         {
+            _logger.LogInformation("Starting ticket purchase for user {UserId} and event {EventId}", request.UserId, request.EventId);
+
             // 1. Validate ticket availability
             var availabilityCheck = await _inventoryService.CheckAvailabilityAsync(request.TicketItems);
             if (!availabilityCheck.IsSuccess || !availabilityCheck.Data!.IsAvailable)
             {
+                _logger.LogWarning("Ticket availability check failed for event {EventId}: {Message}", request.EventId,
+                    availabilityCheck.Data?.Message ?? "Tickets not available");
                 return ApiResponse<PurchaseTicketResponse>.Fail(400,
                     availabilityCheck.Data?.Message ?? "Tickets not available");
             }
@@ -52,7 +72,25 @@ public class TicketPurchaseService : ITicketPurchaseService
                 // 3. Calculate total amount
                 var totalAmount = request.TicketItems.Sum(x => x.UnitPrice * x.Quantity);
 
-                // 4. Create order
+                // 4. Validate wallet and balance
+                var walletResult = await _walletService.GetWalletByUserIdAsync(request.UserId);
+                if (!walletResult.IsSuccess || walletResult.Data is null)
+                {
+                    _logger.LogWarning("Wallet not found for user {UserId} when purchasing tickets", request.UserId);
+                    await _inventoryService.ReleaseReservationAsync(reservationId);
+                    return ApiResponse<PurchaseTicketResponse>.Fail(400,
+                        walletResult.Message ?? "Wallet not found for this user.");
+                }
+
+                if (walletResult.Data.Balance < totalAmount)
+                {
+                    _logger.LogWarning("Insufficient wallet balance for user {UserId}. Balance={Balance}, Required={Required}",
+                        request.UserId, walletResult.Data.Balance, totalAmount);
+                    await _inventoryService.ReleaseReservationAsync(reservationId);
+                    return ApiResponse<PurchaseTicketResponse>.Fail(400, "Insufficient wallet balance.");
+                }
+
+                // 5. Create order
                 var orderRequest = new CreateOrderRequest
                 {
                     EventId = request.EventId,
@@ -69,21 +107,24 @@ public class TicketPurchaseService : ITicketPurchaseService
                 var orderResult = await _orderService.CreateOrderAsync(orderRequest);
                 if (!orderResult.IsSuccess)
                 {
+                    _logger.LogWarning("Order creation failed for user {UserId}: {Message}", request.UserId, orderResult.Message);
                     await _inventoryService.ReleaseReservationAsync(reservationId);
                     return ApiResponse<PurchaseTicketResponse>.Fail(400, orderResult.Message);
                 }
 
-                // 5. Process payment
+                // 6. Create payment record for wallet transaction
                 var paymentResult = await _paymentService.CreatePaymentAsync(new CreatePaymentRequest
                 {
                     OrderId = orderResult.Data!.Id,
                     PaymentMethodId = request.PaymentMethodId,
                     Amount = totalAmount,
-                    Gateway = request.PaymentGateway
+                    Gateway = "Wallet"
                 });
 
                 if (!paymentResult.IsSuccess)
                 {
+                    _logger.LogWarning("Payment creation failed for order {OrderId}: {Message}", orderResult.Data.Id,
+                        paymentResult.Message);
                     await _orderService.UpdateOrderAsync(orderResult.Data.Id, new UpdateOrderRequest
                     {
                         Status = OrderStatus.Cancelled,
@@ -93,69 +134,65 @@ public class TicketPurchaseService : ITicketPurchaseService
                     return ApiResponse<PurchaseTicketResponse>.Fail(400, paymentResult.Message);
                 }
 
-                // 6. Real payment not integrated yet
-                // For now, payment will be marked as successful
+                // 7. Debit user wallet
+                var walletDebitResult = await _walletService.UpdateWalletBalanceAsync(
+                    walletResult.Data.Id,
+                    new UpdateWalletBalanceRequest
+                    {
+                        Amount = totalAmount,
+                        TransactionType = "Withdraw"
+                    });
+
+                if (!walletDebitResult.IsSuccess)
+                {
+                    _logger.LogError("Wallet debit failed for wallet {WalletId}: {Message}", walletResult.Data.Id,
+                        walletDebitResult.Message);
+                    await _paymentService.UpdatePaymentAsync(paymentResult.Data!.Id, new UpdatePaymentRequest
+                    {
+                        Status = PaymentStatus.Failed,
+                        TransactionId = $"WALLET-FAILED-{DateTime.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid().ToString()[..8]}"
+                    });
+
+                    await _orderService.UpdateOrderAsync(orderResult.Data.Id, new UpdateOrderRequest
+                    {
+                        Status = OrderStatus.Cancelled,
+                        Notes = "Wallet payment failed"
+                    });
+
+                    await _inventoryService.ReleaseReservationAsync(reservationId);
+                    return ApiResponse<PurchaseTicketResponse>.Fail(400,
+                        walletDebitResult.Message ?? "Wallet payment failed.");
+                }
+
+                // 8. Mark payment as completed
                 await _paymentService.UpdatePaymentAsync(paymentResult.Data!.Id, new UpdatePaymentRequest
                 {
                     Status = PaymentStatus.Completed,
-                    TransactionId = $"TXN-{DateTime.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid().ToString()[..8]}"
+                    TransactionId = $"WALLET-{DateTime.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid().ToString()[..8]}"
                 });
 
-                // 7. Confirm inventory reduction
+                // 9. Confirm inventory reduction
                 await _inventoryService.ConfirmReservationAsync(reservationId);
 
-                // 8. Generate tickets with QR codes
-                var tickets = new List<TicketDto>();
-                foreach (var item in request.TicketItems)
-                {
-                    for (int i = 0; i < item.Quantity; i++)
-                    {
-                        var ticketResult = await _ticketService.CreateTicketAsync(new CreateTicketRequest
-                        {
-                            OrderId = orderResult.Data.Id,
-                            TicketTypeId = item.TicketTypeId
-                        });
+                // 10. Generate tickets with QR codes
+                var tickets = await GenerateTicketsWithQrCodesAsync(orderResult.Data.Id, request.TicketItems);
 
-                        if (ticketResult.IsSuccess)
-                        {
-                            // Generate QR code
-                            var qrCodeUrl = await _qrCodeService.GenerateQrCodeAsync(ticketResult.Data!.TicketCode);
-
-                            if (!string.IsNullOrEmpty(qrCodeUrl))
-                            {
-                                await _ticketService.UpdateTicketAsync(ticketResult.Data.Id, new UpdateTicketRequest
-                                {
-                                    QrCodeUrl = qrCodeUrl,
-                                    IsUsed = false
-                                });
-
-                                // Update the DTO with QR code URL
-                                ticketResult.Data.QrCodeUrl = qrCodeUrl;
-                            }
-
-                            tickets.Add(ticketResult.Data);
-                        }
-                    }
-                }
-
-                // 9. Update order status
+                // 11. Update order status
                 await _orderService.UpdateOrderAsync(orderResult.Data.Id, new UpdateOrderRequest
                 {
                     Status = OrderStatus.Confirmed,
                     Notes = "Payment completed and tickets generated"
                 });
 
-                // 10. Get event and user information for email
-                Console.WriteLine($"[DEBUG] Getting event info for EventId: {request.EventId}");
-                var eventInfo = await GetEventInfoAsync(request.EventId);
-                Console.WriteLine($"[DEBUG] Event info retrieved: {(eventInfo != null ? eventInfo.Name : "NULL")}");
-                
-                Console.WriteLine($"[DEBUG] Getting user info for UserId: {request.UserId}");
-                var userInfo = await GetUserInfoAsync(request.UserId);
-                Console.WriteLine($"[DEBUG] User info retrieved: {(userInfo != null ? userInfo.Email : "NULL")}");
+                // 12. Get event and user information for email
+                _logger.LogInformation("Fetching event info for EventId {EventId}", request.EventId);
+                var eventInfo = await _eventServiceClient.GetEventInfoAsync(request.EventId);
 
-                // 11. Send confirmation email with tickets and QR codes
-                var emailSent = await SendTicketPurchaseConfirmationAsync(new PurchaseConfirmationRequest
+                _logger.LogInformation("Fetching user info for UserId {UserId}", request.UserId);
+                var userInfo = await _userServiceClient.GetUserInfoAsync(request.UserId);
+
+                // 13. Send confirmation email with tickets and QR codes
+                var emailSent = await _notificationServiceClient.SendTicketPurchaseConfirmationAsync(new PurchaseConfirmationRequest
                 {
                     UserId = request.UserId,
                     OrderId = orderResult.Data.Id,
@@ -183,8 +220,7 @@ public class TicketPurchaseService : ITicketPurchaseService
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[ERROR] Purchase failed: {ex.Message}");
-                Console.WriteLine($"[ERROR] Stack trace: {ex.StackTrace}");
+                _logger.LogError(ex, "Purchase failed for user {UserId} and event {EventId}", request.UserId, request.EventId);
                 // Rollback on any error
                 await _inventoryService.ReleaseReservationAsync(reservationId);
                 return ApiResponse<PurchaseTicketResponse>.Fail(500, $"Purchase failed: {ex.Message}");
@@ -192,198 +228,57 @@ public class TicketPurchaseService : ITicketPurchaseService
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Purchase failed: {ex.Message}");
+            _logger.LogError(ex, "Unexpected error in PurchaseTicketsAsync");
             return ApiResponse<PurchaseTicketResponse>.Fail(500, $"Purchase failed: {ex.Message}");
         }
     }
 
-    private async Task<bool> SendTicketPurchaseConfirmationAsync(PurchaseConfirmationRequest request)
+    private async Task<List<TicketDto>> GenerateTicketsWithQrCodesAsync(
+        Guid orderId,
+        List<TicketItemRequest> ticketItems)
     {
-        try
+        var tickets = new List<TicketDto>();
+
+        foreach (var item in ticketItems)
         {
-            Console.WriteLine($"[DEBUG] Starting email send process for user: {request.CustomerEmail}");
-            
-            if (string.IsNullOrEmpty(request.CustomerEmail))
+            for (int i = 0; i < item.Quantity; i++)
             {
-                Console.WriteLine("[WARNING] No email provided for user - skipping email send");
-                return false;
-            }
-
-            // Use the named NotificationService client
-            var httpClient = _httpClientFactory.CreateClient("NotificationService");
-            Console.WriteLine("[DEBUG] HTTP client created");
-
-            // Prepare ticket information for email
-            var ticketEmailInfos = new List<TicketEmailInfo>();
-            Console.WriteLine($"[DEBUG] Processing {request.Tickets.Count} tickets for email");
-            
-            foreach (var ticket in request.Tickets)
-            {
-                Console.WriteLine($"[DEBUG] Processing ticket: {ticket.TicketCode}");
-                // Get ticket type name from EventService
-                var ticketTypeInfo = await GetTicketTypeInfoAsync(ticket.TicketTypeId);
-                
-                ticketEmailInfos.Add(new TicketEmailInfo
+                var ticketResult = await _ticketService.CreateTicketAsync(new CreateTicketRequest
                 {
-                    TicketCode = ticket.TicketCode,
-                    QrCodeUrl = ticket.QrCodeUrl ?? "",
-                    TicketTypeName = ticketTypeInfo?.Name ?? "Standard Ticket",
-                    Price = ticketTypeInfo?.Price ?? 0
+                    OrderId = orderId,
+                    TicketTypeId = item.TicketTypeId
                 });
-                
-                Console.WriteLine($"[DEBUG] Added ticket info - Code: {ticket.TicketCode}, QR: {(!string.IsNullOrEmpty(ticket.QrCodeUrl) ? "Present" : "Missing")}");
+
+                if (!ticketResult.IsSuccess)
+                {
+                    _logger.LogWarning(
+                        "Failed to create ticket for Order {OrderId} and TicketType {TicketTypeId}: {Message}",
+                        orderId,
+                        item.TicketTypeId,
+                        ticketResult.Message);
+                    continue;
+                }
+
+                var qrCodeUrl = await _qrCodeService.GenerateQrCodeAsync(ticketResult.Data!.TicketCode);
+
+                if (!string.IsNullOrEmpty(qrCodeUrl))
+                {
+                    await _ticketService.UpdateTicketAsync(ticketResult.Data.Id, new UpdateTicketRequest
+                    {
+                        QrCodeUrl = qrCodeUrl,
+                        IsUsed = false
+                    });
+
+                    ticketResult.Data.QrCodeUrl = qrCodeUrl;
+                }
+
+                tickets.Add(ticketResult.Data);
             }
-
-            var emailRequest = new TicketPurchaseEmailRequest
-            {
-                Email = request.CustomerEmail,
-                CustomerName = request.CustomerName,
-                EventName = request.EventName,
-                EventDate = request.EventDate,
-                EventLocation = request.EventLocation,
-                OrderId = request.OrderId,
-                TotalAmount = request.TotalAmount,
-                PurchaseDate = DateTime.UtcNow,
-                Tickets = ticketEmailInfos
-            };
-
-            Console.WriteLine($"[DEBUG] Email request prepared for: {emailRequest.Email}");
-            Console.WriteLine($"[DEBUG] Event: {emailRequest.EventName}");
-            Console.WriteLine($"[DEBUG] Tickets count: {emailRequest.Tickets.Count}");
-
-            // Send to NotificationService - use relative path since base address is set
-            var notificationServiceUrl = "/api/Email/send-ticket-confirmation";
-            Console.WriteLine($"[DEBUG] Sending email to: {notificationServiceUrl}");
-            
-            var response = await httpClient.PostAsJsonAsync(notificationServiceUrl, emailRequest);
-            
-            Console.WriteLine($"[DEBUG] Email service response status: {response.StatusCode}");
-            
-            if (!response.IsSuccessStatusCode)
-            {
-                var error = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"[ERROR] Failed to send ticket confirmation email: Status={response.StatusCode}, Error={error}");
-                return false;
-            }
-
-            Console.WriteLine("[SUCCESS] Email sent successfully!");
-            return true;
         }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[ERROR] Exception in SendTicketPurchaseConfirmationAsync: {ex.Message}");
-            Console.WriteLine($"[ERROR] Stack trace: {ex.StackTrace}");
-            return false;
-        }
+
+        return tickets;
     }
 
-    private async Task<EventInfoDto?> GetEventInfoAsync(Guid eventId)
-    {
-        try
-        {
-            Console.WriteLine($"[DEBUG] Fetching event info from EventService for ID: {eventId}");
-            // Use the named EventService client
-            var httpClient = _httpClientFactory.CreateClient("EventService");
-            var eventServiceUrl = $"/api/Events/{eventId}";
-            Console.WriteLine($"[DEBUG] Event service URL: {eventServiceUrl}");
-            
-            var response = await httpClient.GetAsync(eventServiceUrl);
-            Console.WriteLine($"[DEBUG] Event service response status: {response.StatusCode}");
-            
-            if (response.IsSuccessStatusCode)
-            {
-                var jsonContent = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"[DEBUG] Event service raw response: {jsonContent}");
-                
-                var apiResponse = await response.Content.ReadFromJsonAsync<ApiResponse<EventInfoDto>>();
-                Console.WriteLine($"[DEBUG] Event service parsed response: {(apiResponse?.Data != null ? "SUCCESS" : "NULL")}");
-                return apiResponse?.Data;
-            }
-            else
-            {
-                var error = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"[WARNING] Event service failed: Status={response.StatusCode}, Error={error}");
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[ERROR] Exception getting event info: {ex.Message}");
-        }
-        
-        return null;
-    }
-
-    private async Task<UserInfoDto?> GetUserInfoAsync(Guid userId)
-    {
-        try
-        {
-            Console.WriteLine($"[DEBUG] Fetching user info from IdentityService for ID: {userId}");
-            // Use the named UserService client
-            var httpClient = _httpClientFactory.CreateClient("UserService");
-            var userServiceUrl = $"/api/Users/{userId}";
-            Console.WriteLine($"[DEBUG] User service URL: {userServiceUrl}");
-            
-            var response = await httpClient.GetAsync(userServiceUrl);
-            Console.WriteLine($"[DEBUG] User service response status: {response.StatusCode}");
-            
-            if (response.IsSuccessStatusCode)
-            {
-                var jsonContent = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"[DEBUG] User service raw response: {jsonContent}");
-                
-                var apiResponse = await response.Content.ReadFromJsonAsync<ApiResponse<UserInfoDto>>();
-                Console.WriteLine($"[DEBUG] User service parsed response: {(apiResponse?.Data != null ? "SUCCESS" : "NULL")}");
-                return apiResponse?.Data;
-            }
-            else
-            {
-                var error = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"[WARNING] User service failed: Status={response.StatusCode}, Error={error}");
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[ERROR] Exception getting user info: {ex.Message}");
-        }
-        
-        return null;
-    }
-
-    private async Task<TicketTypeInfoDto?> GetTicketTypeInfoAsync(Guid ticketTypeId)
-    {
-        try
-        {
-            Console.WriteLine($"[DEBUG] Fetching ticket type info from EventService for ID: {ticketTypeId}");
-            // Use the named EventService client
-            var httpClient = _httpClientFactory.CreateClient("EventService");
-            var ticketTypeServiceUrl = $"/api/TicketTypes/{ticketTypeId}";
-            Console.WriteLine($"[DEBUG] Ticket type service URL: {ticketTypeServiceUrl}");
-            
-            var response = await httpClient.GetAsync(ticketTypeServiceUrl);
-            Console.WriteLine($"[DEBUG] Ticket type service response status: {response.StatusCode}");
-            
-            if (response.IsSuccessStatusCode)
-            {
-                var jsonContent = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"[DEBUG] Ticket type service raw response: {jsonContent}");
-                
-                var apiResponse = await response.Content.ReadFromJsonAsync<ApiResponse<TicketTypeInfoDto>>();
-                Console.WriteLine($"[DEBUG] Ticket type service parsed response: {(apiResponse?.Data != null ? "SUCCESS" : "NULL")}");
-                return apiResponse?.Data;
-            }
-            else
-            {
-                var error = await response.Content.ReadAsStringAsync();
-                Console.WriteLine($"[WARNING] Ticket type service failed: Status={response.StatusCode}, Error={error}");
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[ERROR] Exception getting ticket type info: {ex.Message}");
-        }
-        
-        return null;
-    }
 }
 
 // DTOs for external service calls
