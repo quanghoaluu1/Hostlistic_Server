@@ -7,6 +7,7 @@ namespace EventService_Domain.Entities;
 
 public class Event : BaseClass
 {
+    public Guid OrganizerId { get; set; }
     public string? Title { get; set; } = string.Empty;
     public RichTextContent? Description { get; set; }
     public EventMode? EventMode { get; set; }
