@@ -39,6 +39,11 @@ public class EventRepository(EventServiceDbContext dbContext) : IEventRepository
         return dbContext.Events.Update(@event).Entity;
     }
 
+    public IQueryable<Event> GetQueryable()
+    {
+        return dbContext.Events.AsQueryable().AsNoTracking();
+    }
+
     public Task<bool> DeleteEventAsync(Guid eventId)
     {
         throw new NotImplementedException();

@@ -1,3 +1,5 @@
+using CloudinaryDotNet;
+using CloudinaryDotNet.Actions;
 using Common;
 using EventService_Application.DTOs;
 using EventService_Application.Interfaces;
@@ -8,20 +10,26 @@ using Mapster;
 
 namespace EventService_Application.Services;
 
-public class EventService(IEventRepository eventRepository, ITrackService trackService, ISessionService sessionService) : IEventService
+public class EventService(
+    IEventRepository eventRepository, 
+    ITrackService trackService, 
+    ISessionService sessionService, 
+    IEventTeamMemberRepository eventTeamMemberRepository) : IEventService
 {
-    public async Task<ApiResponse<EventResponseDto>> CreateEventAsync(EventRequestDto request)
+    public async Task<ApiResponse<EventResponseDto>> CreateEventAsync(EventRequestDto request, Guid organizerId)
     {
         var eventEntity = request.Adapt<Event>();
-        eventEntity.StartDate = request.StartDate == null 
-            ? null 
+        eventEntity.StartDate = request.StartDate == null
+            ? null
             : DateTime.SpecifyKind(request.StartDate.Value, DateTimeKind.Utc);
-        eventEntity.EndDate = request.EndDate == null 
-            ? null 
+        eventEntity.EndDate = request.EndDate == null
+            ? null
             : DateTime.SpecifyKind(request.EndDate.Value, DateTimeKind.Utc);
         eventEntity.EventStatus = EventStatus.Draft;
         eventEntity.IsPublic = false;
         eventEntity.Id = Guid.NewGuid();
+        eventEntity.OrganizerId = organizerId;
+
         var defaultTrack = new Track
         {
             Id = Guid.NewGuid(),
@@ -47,6 +55,25 @@ public class EventService(IEventRepository eventRepository, ITrackService trackS
         };
         defaultTrack.Sessions.Add(defaultSession);
         eventEntity.Tracks.Add(defaultTrack);
+
+        var organizerMember = new EventTeamMember
+        {
+            Id = Guid.NewGuid(),
+            UserId = organizerId,
+            EventId = eventEntity.Id,
+            Role = EventRole.Organizer,
+            Status = EventMemberStatus.Active,
+            InvitedAt = DateTime.UtcNow,
+            JoinedAt = DateTime.UtcNow,
+            Permissions = new Dictionary<string, bool>
+            {
+                { "can_checkin", true },
+                { "can_edit_event", true },
+                { "can_manage_members", true }
+            }
+        };
+        eventEntity.EventTeamMembers.Add(organizerMember);
+
         eventRepository.AddEventAsync(eventEntity);
         await eventRepository.SaveChangesAsync();
 
@@ -77,6 +104,64 @@ public class EventService(IEventRepository eventRepository, ITrackService trackS
         await eventRepository.SaveChangesAsync();
         var responseDto = eventEntity.Adapt<EventResponseDto>();
         return ApiResponse<EventResponseDto>.Success(200, "Event updated successfully", responseDto);
+    }
+
+    public async Task<ApiResponse<PagedResult<MyEventDto>>> GetMyEventAsync(Guid userId, MyEventQueryParams queryParams)
+    {
+        var asOrganizer =  eventRepository.GetQueryable()
+            .Where(e => e.OrganizerId == userId)
+            .Select(e => new MyEventDto(
+                e.Id,
+                e.Title,
+                e.CoverImageUrl,
+                e.StartDate.Value,
+                e.EndDate.Value,
+                e.EventMode.ToString(),
+                (int)e.EventStatus,
+                e.Location,
+                nameof(EventRole.Organizer),
+                e.CreatedAt
+            )).ToList();
+        
+        var asTeamMember = eventTeamMemberRepository.GetQueryableByUserId(userId)
+            .Select(m => new MyEventDto(
+                m.Event.Id,
+                m.Event.Title,
+                m.Event.CoverImageUrl,
+                m.Event.StartDate.Value,
+                m.Event.EndDate.Value,
+                m.Event.EventMode.ToString(),
+                (int)m.Event.EventStatus,
+                m.Event.Location,
+                m.Role.ToString(),
+                m.JoinedAt ?? m.InvitedAt
+            )).ToList();
+
+        var allEvents = asOrganizer.Concat(asTeamMember).AsEnumerable();
+
+        var query = asOrganizer.Union(asTeamMember);
+        if (queryParams.Role.HasValue)
+        {
+            var roleString = queryParams.Role.Value.ToString();
+            allEvents = allEvents.Where(e => e.MyRole == roleString);
+        }
+
+        if (queryParams.Status.HasValue)
+        {
+            allEvents = allEvents.Where(e => e.Status == queryParams.Status.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(queryParams.Search))
+        {
+            allEvents = allEvents.Where(e => e.Title.Contains(queryParams.Search, StringComparison.OrdinalIgnoreCase) || e.Location.Contains(queryParams.Search, StringComparison.OrdinalIgnoreCase));
+        }
+
+        var sorted = allEvents.OrderByDescending(e => e.StartDate).ToList();
+        var totalCount =  sorted.Count();
+        var items =  sorted.Skip((queryParams.Page - 1) * queryParams.PageSize).Take(queryParams.PageSize).ToList();
+        
+        var result = new PagedResult<MyEventDto>(items, totalCount, queryParams.Page, queryParams.PageSize);
+        return ApiResponse<PagedResult<MyEventDto>>.Success(200, "Success", result);
     }
 
     private void ApplyEventUpdate(Event eventEntity, EventRequestDto request)

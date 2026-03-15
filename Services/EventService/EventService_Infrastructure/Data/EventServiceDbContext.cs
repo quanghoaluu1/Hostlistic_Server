@@ -55,6 +55,7 @@ public class EventServiceDbContext : DbContext
                 .HasConversion<string>()
                     .HasMaxLength(50);
             
+            
             entity.HasOne(e => e.Venue)
                 .WithMany(v => v.Events)
                 .HasForeignKey(e => e.VenueId)
@@ -117,8 +118,13 @@ public class EventServiceDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             
+            entity.Property(e => e.Role).HasConversion<string>().HasMaxLength(50);
+            
             entity.Property(e => e.Permissions)
-                .HasColumnType("jsonb");
+                .HasColumnType("jsonb")
+                .HasConversion(
+                    v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                    v => JsonSerializer.Deserialize<Dictionary<string, bool>>(v, (JsonSerializerOptions?)null) ?? new Dictionary<string, bool>());
         });
 
         // EventTemplate configuration
