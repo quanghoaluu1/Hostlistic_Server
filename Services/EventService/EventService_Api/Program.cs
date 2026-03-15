@@ -146,6 +146,7 @@ builder.Services.AddScoped<IEventTemplateRepository, EventTemplateRepository>();
 builder.Services.AddScoped<ISponsorRepository, SponsorRepository>();
 builder.Services.AddScoped<ISponsorTierRepository, SponsorTierRepository>();
 builder.Services.AddScoped<ISponsorInteractionRepository, SponsorInteractionRepository>();
+builder.Services.AddScoped<IEventTeamMemberRepository, EventTeamMemberRepository>();
 
 // Register services
 builder.Services.AddScoped<ISessionService, SessionService>();

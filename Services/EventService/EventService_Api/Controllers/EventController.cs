@@ -1,5 +1,7 @@
+using System.Security.Claims;
 using EventService_Application.DTOs;
 using EventService_Application.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EventService_Api.Controllers;
@@ -9,9 +11,11 @@ namespace EventService_Api.Controllers;
 public class EventController(IEventService eventService, IPhotoService photoService) : ControllerBase
 {
     [HttpPost]
+    [Authorize]
     public async Task<IActionResult> CreateEventAsync([FromBody] EventRequestDto dto)
     {
-        var result = await eventService.CreateEventAsync(dto);
+        var organizerId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var result = await eventService.CreateEventAsync(dto, organizerId);
         return Ok(result);
     }
 
@@ -53,6 +57,22 @@ public class EventController(IEventService eventService, IPhotoService photoServ
         if (eventEntity.Data == null) return NotFound(eventEntity);
         var result = await eventService.UpdateEventAsync(eventId, dto, null);
         return Ok(result);
+    }
+
+    [HttpGet("mine")]
+    [Authorize]
+    public async Task<IActionResult> GetMyEvents([FromQuery] MyEventQueryParams queryParams)
+    {
+        var userId = GetCurrentUserId();
+        var result = await eventService.GetMyEventAsync(userId, queryParams);
+        if (!result.IsSuccess) return BadRequest(result);
+        return Ok(result);
+    }
+
+    private Guid GetCurrentUserId()
+    {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        return Guid.Parse(userIdClaim ?? throw new UnauthorizedAccessException("User ID not found in token"));
     }
     
 }
