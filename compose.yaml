@@ -83,6 +83,9 @@ services:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_HTTP_PORTS=8080
       - ConnectionStrings__DefaultConnection=${BOOKING_DB_CONNECTION}
+      - Jwt__Key=${JWT_SECRET_KEY}
+      - Jwt__Issuer=hostlistic
+      - Jwt__Audience=hostlistic
       - CloudinarySettings__CloudName=${CLOUDINARY_CLOUD_NAME}
       - CloudinarySettings__ApiKey=${CLOUDINARY_API_KEY}
       - CloudinarySettings__ApiSecret=${CLOUDINARY_API_SECRET}

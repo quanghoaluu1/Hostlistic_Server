@@ -57,29 +57,7 @@ builder.Services.AddCors(options =>
             .AllowCredentials();
     });
 });
-builder.Services.AddSwaggerGen(options =>
-{
-    options.SwaggerDoc("v1", new OpenApiInfo 
-    { 
-        Title = "Booking API", 
-        Version = "v1" 
-    });
-    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-    {
-        Name = "Authorization",
-        Type = SecuritySchemeType.Http,
-        Scheme = "bearer",
-        BearerFormat = "JWT",
-        In = ParameterLocation.Header,
-        Description = "Enter JWT Token here"
-    });
-    options.AddSecurityRequirement((document => new OpenApiSecurityRequirement
-    {
-        [new OpenApiSecuritySchemeReference("Bearer", document)] = [] 
-    }
-    ));
-    
-});
+
 builder.Services.AddDbContext<BookingServiceDbContext>(optionsAction =>
 {
     optionsAction.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
@@ -142,7 +120,7 @@ if (app.Environment.IsDevelopment())
         .AddPreferredSecuritySchemes("Bearer")
         .AddHttpAuthentication("Bearer", auth =>
         {
-            auth.Token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...";
+            auth.Token = "";
         }));
 }
 app.UseCors("Production");
