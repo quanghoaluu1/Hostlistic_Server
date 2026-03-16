@@ -4,6 +4,7 @@ using BookingService_Application.Services;
 using BookingService_Domain.Interfaces;
 using BookingService_Infrastructure.Data;
 using BookingService_Infrastructure.Repositories;
+using BookingService_Infrastructure.ServiceClients;
 using Common;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
@@ -71,6 +72,7 @@ builder.Services.AddScoped<ITicketPurchaseService, TicketPurchaseService>();
 builder.Services.AddScoped<IInventoryService, InventoryService>();
 builder.Services.AddScoped<IQrCodeService, QrCodeService>();
 builder.Services.AddScoped<IInventoryReservationRepository, InventoryReservationRepository>();
+builder.Services.AddScoped<IWalletRepository, WalletRepository>();
 
 // Register services
 builder.Services.AddScoped<IOrderService, OrderService>();
@@ -80,24 +82,26 @@ builder.Services.AddScoped<IPaymentMethodService, PaymentMethodService>();
 builder.Services.AddScoped<ITicketService, TicketService>();
 builder.Services.AddScoped<IPayoutRequestService, PayoutRequestService>();
 builder.Services.AddScoped<IPhotoService, PhotoService>();
+builder.Services.AddScoped<IWalletService, WalletService>();
+builder.Services.AddScoped<IEventServiceClient, EventServiceClient>();
+builder.Services.AddScoped<IUserServiceClient, UserServiceClient>();
+builder.Services.AddScoped<INotificationServiceClient, NotificationServiceClient>();
 
 builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
 
-builder.Services.AddHttpClient();
-
 builder.Services.AddHttpClient("EventService", client =>
 {
-    client.BaseAddress = new Uri("http://eventservice:8080");
+    client.BaseAddress = new Uri("http://localhost:5139");
 });
 
 builder.Services.AddHttpClient("NotificationService", client =>
 {
-    client.BaseAddress = new Uri("http://notificationservice:8080");
+    client.BaseAddress = new Uri("http://localhost:5097");
 });
 
 builder.Services.AddHttpClient("IdentityService", client =>
 {
-    client.BaseAddress = new Uri("http://identityservice:8080");
+    client.BaseAddress = new Uri("http://localhost:5049");
 });
 builder.Services.AddHealthChecks();
 
