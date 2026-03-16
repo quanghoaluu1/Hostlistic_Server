@@ -1,4 +1,4 @@
-﻿using NotificationService_Application.Dtos;
+using NotificationService_Application.Dtos;
 using NotificationService_Application.Interfaces;
 using Resend;
 using System.Text;
@@ -119,20 +119,22 @@ public class EmailService(IResend resend) : IEmailService
         {
             ticketsHtml.Append($@"
                 <div style='border: 2px dashed #667eea; border-radius: 12px; padding: 20px; margin-bottom: 15px; background: linear-gradient(135deg, #f8f9ff 0%, #f0f2ff 100%);'>
-                    <div style='display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap;'>
-                        <div style='flex: 1; min-width: 250px;'>
+                    <table role='presentation' cellpadding='0' cellspacing='0' border='0' width='100%' style='border-collapse: collapse;'>
+                      <tr>
+                        <td valign='top' style='padding-right: 15px;'>
                             <h4 style='margin: 0 0 10px 0; color: #333; font-size: 16px;'>🎟️ Vé #{index + 1}</h4>
                             <p style='margin: 5px 0; color: #666; font-size: 14px;'><strong>Loại vé:</strong> {ticket.TicketTypeName}</p>
                             <p style='margin: 5px 0; color: #666; font-size: 14px;'><strong>Giá:</strong> {ticket.Price:N0} VNĐ</p>
                             <p style='margin: 5px 0; color: #667eea; font-size: 14px; font-weight: bold;'><strong>Mã vé:</strong> {ticket.TicketCode}</p>
-                        </div>
-                        <div style='text-align: center; margin-top: 10px;'>
-                            {(string.IsNullOrEmpty(ticket.QrCodeUrl) ? "" : $@"
-                            <p style='margin: 0 0 10px 0; color: #666; font-size: 12px;'>Mã QR:</p>
-                            <img src='{ticket.QrCodeUrl}' alt='QR Code' style='width: 120px; height: 120px; border: 2px solid #667eea; border-radius: 8px; background-color: white; padding: 5px;' />
-                            <p style='margin: 10px 0 0 0; color: #666; font-size: 11px;'>Quét mã này tại cổng vào</p>")}
-                        </div>
-                    </div>
+                        </td>
+                        <td valign='top' align='center' style='width: 220px;'>
+                          {(string.IsNullOrEmpty(ticket.QrCodeUrl) ? "" : $@"
+                          <p style='margin: 0 0 10px 0; color: #666; font-size: 12px;'>Mã QR:</p>
+                          <img src='{ticket.QrCodeUrl}' alt='QR Code' style='display:block; width: 200px; max-width: 200px; height: auto; border: 2px solid #667eea; border-radius: 8px; background-color: #ffffff; padding: 6px;' />
+                          <p style='margin: 10px 0 0 0; color: #666; font-size: 11px;'>Quét mã này tại cổng vào</p>")}
+                        </td>
+                      </tr>
+                    </table>
                 </div>");
         }
 

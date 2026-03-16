@@ -1,4 +1,4 @@
-﻿using IdentityService_Application.DTOs;
+using IdentityService_Application.DTOs;
 using IdentityService_Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -28,6 +28,17 @@ public class UserController : ControllerBase
         var userId = GetCurrentUserId();
         var result = await _userService.GetUserProfileAsync(userId);
         if (!result.IsSuccess) return BadRequest(result);
+        return Ok(result);
+    }
+
+    // Internal use (e.g., BookingService) to resolve email/name for notifications.
+    // Keep this lightweight (no sensitive fields beyond what `UserProfileDto` already includes).
+    [AllowAnonymous]
+    [HttpGet("{userId:guid}")]
+    public async Task<IActionResult> GetUserById(Guid userId)
+    {
+        var result = await _userService.GetUserProfileAsync(userId);
+        if (!result.IsSuccess) return StatusCode(result.StatusCode, result);
         return Ok(result);
     }
 
