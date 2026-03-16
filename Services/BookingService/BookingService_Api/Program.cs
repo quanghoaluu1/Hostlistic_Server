@@ -1,4 +1,3 @@
-using System.Reflection;
 using BookingService_Application.Interfaces;
 using BookingService_Application.Services;
 using BookingService_Domain.Interfaces;
@@ -7,9 +6,13 @@ using BookingService_Infrastructure.Repositories;
 using BookingService_Infrastructure.ServiceClients;
 using Common;
 using Mapster;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using Scalar.AspNetCore;
+using System.Reflection;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,7 +21,31 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi(options => options.AddDocumentTransformer<BearerSecuritySchemeTransformer>());
-builder.Services.AddAuthentication().AddJwtBearer();
+
+var secretKey = builder.Configuration["Jwt:Key"];
+var issuer = builder.Configuration["Jwt:Issuer"];
+var audience = builder.Configuration["Jwt:Audience"];
+var key = Encoding.UTF8.GetBytes(secretKey);
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+}).AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(key),
+        ValidateIssuer = true,
+        ValidIssuer = issuer,
+        ValidateAudience = true,
+        ValidAudience = audience,
+        ValidateLifetime = true,
+        ClockSkew = TimeSpan.Zero
+    };
+});
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Production", policy =>
@@ -112,8 +139,8 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
     app.MapScalarApiReference(options => options
-        .AddPreferredSecuritySchemes("BearerAuth")
-        .AddHttpAuthentication("BearerAuth", auth =>
+        .AddPreferredSecuritySchemes("Bearer")
+        .AddHttpAuthentication("Bearer", auth =>
         {
             auth.Token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...";
         }));
