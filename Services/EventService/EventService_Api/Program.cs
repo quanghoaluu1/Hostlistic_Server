@@ -147,6 +147,7 @@ builder.Services.AddScoped<ISponsorRepository, SponsorRepository>();
 builder.Services.AddScoped<ISponsorTierRepository, SponsorTierRepository>();
 builder.Services.AddScoped<ISponsorInteractionRepository, SponsorInteractionRepository>();
 builder.Services.AddScoped<IEventTeamMemberRepository, EventTeamMemberRepository>();
+builder.Services.AddScoped<IFeedbackRepository, FeedbackRepository>();
 
 // Register services
 builder.Services.AddScoped<ISessionService, SessionService>();
@@ -163,6 +164,7 @@ builder.Services.AddScoped<IEventTemplateService, EventTemplateService>();
 builder.Services.AddScoped<ISponsorService, SponsorService>();
 builder.Services.AddScoped<ISponsorTierService, SponsorTierService>();
 builder.Services.AddScoped<ISponsorInteractionService, SponsorInteractionService>();
+builder.Services.AddScoped<IFeedbackService, FeedbackService>();
 builder.Services.AddHealthChecks();
 var app = builder.Build();
 
