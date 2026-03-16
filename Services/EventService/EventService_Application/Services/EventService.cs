@@ -124,6 +124,7 @@ public class EventService(
             )).ToList();
         
         var asTeamMember = eventTeamMemberRepository.GetQueryableByUserId(userId)
+            .Where(m => m.Role != EventRole.Organizer)
             .Select(m => new MyEventDto(
                 m.Event.Id,
                 m.Event.Title,
