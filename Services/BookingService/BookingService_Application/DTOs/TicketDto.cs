@@ -9,6 +9,10 @@ public class TicketDto
     public string QrCodeUrl { get; set; } = string.Empty;
     public DateTime IssuedDate { get; set; }
     public bool IsUsed { get; set; }
+
+    // Optional enrichments for email/UI (not persisted)
+    public string TicketTypeName { get; set; } = string.Empty;
+    public decimal Price { get; set; }
 }
 
 public class CreateTicketRequest

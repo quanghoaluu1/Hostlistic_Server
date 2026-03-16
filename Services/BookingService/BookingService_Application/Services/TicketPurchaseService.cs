@@ -177,6 +177,39 @@ public class TicketPurchaseService : ITicketPurchaseService
                 // 10. Generate tickets with QR codes
                 var tickets = await GenerateTicketsWithQrCodesAsync(orderResult.Data.Id, request.TicketItems);
 
+                // Enrich tickets with type name + price for email template
+                if (tickets.Count > 0)
+                {
+                    var unitPriceByType = request.TicketItems
+                        .GroupBy(x => x.TicketTypeId)
+                        .ToDictionary(g => g.Key, g => g.First().UnitPrice);
+
+                    var ticketTypeIds = tickets.Select(t => t.TicketTypeId).Distinct().ToList();
+                    var ticketTypeInfoById = new Dictionary<Guid, TicketTypeInfoDto>();
+
+                    foreach (var ticketTypeId in ticketTypeIds)
+                    {
+                        var info = await _eventServiceClient.GetTicketTypeInfoAsync(ticketTypeId);
+                        if (info is not null)
+                        {
+                            ticketTypeInfoById[ticketTypeId] = info;
+                        }
+                    }
+
+                    foreach (var t in tickets)
+                    {
+                        if (ticketTypeInfoById.TryGetValue(t.TicketTypeId, out var info))
+                        {
+                            t.TicketTypeName = info.Name;
+                        }
+
+                        if (unitPriceByType.TryGetValue(t.TicketTypeId, out var price))
+                        {
+                            t.Price = price;
+                        }
+                    }
+                }
+
                 // 11. Update order status
                 await _orderService.UpdateOrderAsync(orderResult.Data.Id, new UpdateOrderRequest
                 {
@@ -198,7 +231,7 @@ public class TicketPurchaseService : ITicketPurchaseService
                     OrderId = orderResult.Data.Id,
                     Tickets = tickets,
                     TotalAmount = totalAmount,
-                    EventName = eventInfo?.Name ?? "Unknown Event",
+                    EventName = eventInfo?.Title ?? "Unknown Event",
                     EventDate = eventInfo?.StartDate ?? DateTime.Now,
                     EventLocation = eventInfo?.Location ?? "TBD",
                     CustomerName = userInfo?.FullName ?? "Valued Customer",
@@ -284,7 +317,8 @@ public class TicketPurchaseService : ITicketPurchaseService
 // DTOs for external service calls
 public class EventInfoDto
 {
-    public string Name { get; set; } = string.Empty;
+    // EventService returns `EventResponseDto` with `Title`
+    public string Title { get; set; } = string.Empty;
     public DateTime StartDate { get; set; }
     public string Location { get; set; } = string.Empty;
 }

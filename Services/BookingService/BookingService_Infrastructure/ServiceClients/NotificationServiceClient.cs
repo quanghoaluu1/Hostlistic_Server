@@ -20,7 +20,8 @@ public class NotificationServiceClient : INotificationServiceClient
     {
         try
         {
-            if (string.IsNullOrEmpty(request.CustomerEmail))
+            var email = (request.CustomerEmail ?? string.Empty).Trim();
+            if (string.IsNullOrEmpty(email))
             {
                 _logger.LogWarning("Skipping ticket confirmation email because customer email is empty");
                 return false;
@@ -29,7 +30,27 @@ public class NotificationServiceClient : INotificationServiceClient
             var httpClient = _httpClientFactory.CreateClient("NotificationService");
             var url = "/api/Email/send-ticket-confirmation";
 
-            var response = await httpClient.PostAsJsonAsync(url, request);
+            // NotificationService expects `TicketPurchaseEmailRequest` shape (Email, PurchaseDate, Tickets with TicketTypeName, Price, ...)
+            var payload = new
+            {
+                Email = email,
+                CustomerName = request.CustomerName,
+                EventName = request.EventName,
+                EventDate = request.EventDate,
+                EventLocation = request.EventLocation,
+                OrderId = request.OrderId,
+                TotalAmount = request.TotalAmount,
+                PurchaseDate = DateTime.UtcNow,
+                Tickets = request.Tickets.Select(t => new
+                {
+                    TicketCode = t.TicketCode,
+                    QrCodeUrl = t.QrCodeUrl,
+                    TicketTypeName = t.TicketTypeName,
+                    Price = t.Price
+                }).ToList()
+            };
+
+            var response = await httpClient.PostAsJsonAsync(url, payload);
             if (!response.IsSuccessStatusCode)
             {
                 var error = await response.Content.ReadAsStringAsync();

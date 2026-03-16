@@ -1,4 +1,4 @@
-﻿using BookingService_Application.Interfaces;
+using BookingService_Application.Interfaces;
 using Microsoft.AspNetCore.Http;
 using QRCoder;
 using System;
@@ -25,7 +25,8 @@ namespace BookingService_Application.Services
                 var qrCodeData = qrGenerator.CreateQrCode(ticketCode, QRCodeGenerator.ECCLevel.Q);
                 var qrCode = new QRCode(qrCodeData);
 
-                using var qrCodeImage = qrCode.GetGraphic(20);
+                // Ensure a proper quiet zone (margin) for scanning reliability
+                using var qrCodeImage = qrCode.GetGraphic(20, System.Drawing.Color.Black, System.Drawing.Color.White, drawQuietZones: true);
                 using var stream = new MemoryStream();
                 qrCodeImage.Save(stream, ImageFormat.Png);
                 stream.Position = 0;

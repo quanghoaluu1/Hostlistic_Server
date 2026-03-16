@@ -1,4 +1,4 @@
-﻿using BookingService_Application.Interfaces;
+using BookingService_Application.Interfaces;
 using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
 using Microsoft.AspNetCore.Http;
@@ -23,11 +23,18 @@ namespace BookingService_Application.Services
             var uploadResult = new ImageUploadResult();
             if (file.Length <= 0) return uploadResult;
             await using var stream = file.OpenReadStream();
+
+            var isQrCode = file.FileName.StartsWith("qr-", StringComparison.OrdinalIgnoreCase);
+
             var uploadParams = new ImageUploadParams()
             {
                 File = new FileDescription(file.FileName, stream),
-                Transformation = new Transformation().Width(800).Height(500).Crop("fill").Gravity("face"),
-                Folder = "Booking_Service_Photos",
+                // For normal photos, we crop to a standard aspect ratio.
+                // For QR codes, NEVER crop/resize here (cropping breaks scannability and can cut modules).
+                Transformation = isQrCode
+                    ? null
+                    : new Transformation().Width(800).Height(500).Crop("fill").Gravity("face"),
+                Folder = isQrCode ? "Booking_Service_QRCodes" : "Booking_Service_Photos",
             };
             uploadResult = await _cloudinary.UploadAsync(uploadParams);
             return uploadResult;

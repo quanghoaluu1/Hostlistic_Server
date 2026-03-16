@@ -7,7 +7,7 @@ namespace BookingService_Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+//[Authorize]
 public class WalletsController : ControllerBase
 {
     private readonly IWalletService _walletService;

@@ -22,8 +22,9 @@ public class UserServiceClient : IUserServiceClient
     {
         try
         {
-            var httpClient = _httpClientFactory.CreateClient("UserService");
-            var url = $"/api/Users/{userId}";
+            var httpClient = _httpClientFactory.CreateClient("IdentityService");
+            // IdentityService controller is `UserController` (singular)
+            var url = $"/api/User/{userId}";
 
             var response = await httpClient.GetAsync(url);
             if (!response.IsSuccessStatusCode)

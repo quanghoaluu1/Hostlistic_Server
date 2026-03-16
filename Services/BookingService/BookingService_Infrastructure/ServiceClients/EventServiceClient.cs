@@ -23,7 +23,8 @@ public class EventServiceClient : IEventServiceClient
         try
         {
             var httpClient = _httpClientFactory.CreateClient("EventService");
-            var url = $"/api/Events/{eventId}";
+            // EventService controller is `EventController` (singular)
+            var url = $"/api/Event/{eventId}";
 
             var response = await httpClient.GetAsync(url);
             if (!response.IsSuccessStatusCode)

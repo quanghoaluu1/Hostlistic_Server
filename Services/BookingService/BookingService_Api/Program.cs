@@ -91,17 +91,17 @@ builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection(
 
 builder.Services.AddHttpClient("EventService", client =>
 {
-    client.BaseAddress = new Uri("http://eventservice:8080");
+    client.BaseAddress = new Uri("http://localhost:5139");
 });
 
 builder.Services.AddHttpClient("NotificationService", client =>
 {
-    client.BaseAddress = new Uri("http://notificationservice:8080");
+    client.BaseAddress = new Uri("http://localhost:5097");
 });
 
 builder.Services.AddHttpClient("IdentityService", client =>
 {
-    client.BaseAddress = new Uri("http://identityservice:8080");
+    client.BaseAddress = new Uri("http://localhost:5049");
 });
 builder.Services.AddHealthChecks();
 
