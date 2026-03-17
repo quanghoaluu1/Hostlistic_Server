@@ -1,5 +1,3 @@
-using CloudinaryDotNet;
-using CloudinaryDotNet.Actions;
 using Common;
 using EventService_Application.DTOs;
 using EventService_Application.Interfaces;
@@ -11,9 +9,9 @@ using Mapster;
 namespace EventService_Application.Services;
 
 public class EventService(
-    IEventRepository eventRepository, 
-    ITrackService trackService, 
-    ISessionService sessionService, 
+    IEventRepository eventRepository,
+    ITrackService trackService,
+    ISessionService sessionService,
     IEventTeamMemberRepository eventTeamMemberRepository) : IEventService
 {
     public async Task<ApiResponse<EventResponseDto>> CreateEventAsync(EventRequestDto request, Guid organizerId)
@@ -106,9 +104,12 @@ public class EventService(
         return ApiResponse<EventResponseDto>.Success(200, "Event updated successfully", responseDto);
     }
 
-    public async Task<ApiResponse<PagedResult<MyEventDto>>> GetMyEventAsync(Guid userId, MyEventQueryParams queryParams)
+    public async Task<ApiResponse<PagedResult<MyEventDto>>> GetMyEventAsync(
+    Guid userId,
+    MyEventQueryParams queryParams)
     {
-        var asOrganizer =  eventRepository.GetQueryable()
+        // Organizer
+        var organizerQuery = eventRepository.GetQueryable()
             .Where(e => e.OrganizerId == userId)
             .Select(e => new MyEventDto(
                 e.Id,
@@ -121,9 +122,10 @@ public class EventService(
                 e.Location,
                 nameof(EventRole.Organizer),
                 e.CreatedAt
-            )).ToList();
-        
-        var asTeamMember = eventTeamMemberRepository.GetQueryableByUserId(userId)
+            ));
+
+        // Team member
+        var memberQuery = eventTeamMemberRepository.GetQueryableByUserId(userId)
             .Where(m => m.Role != EventRole.Organizer)
             .Select(m => new MyEventDto(
                 m.Event.Id,
@@ -136,33 +138,40 @@ public class EventService(
                 m.Event.Location,
                 m.Role.ToString(),
                 m.JoinedAt ?? m.InvitedAt
-            )).ToList();
+            ));
 
-        var allEvents = asOrganizer.Concat(asTeamMember).AsEnumerable();
+        //Gộp query (vẫn là IQueryable)
+        var query = organizerQuery.Concat(memberQuery);
 
-        var query = asOrganizer.Union(asTeamMember);
+        // FILTER
         if (queryParams.Role.HasValue)
         {
-            var roleString = queryParams.Role.Value.ToString();
-            allEvents = allEvents.Where(e => e.MyRole == roleString);
+            var role = queryParams.Role.Value.ToString();
+            query = query.Where(e => e.MyRole == role);
         }
 
         if (queryParams.Status.HasValue)
         {
-            allEvents = allEvents.Where(e => e.Status == queryParams.Status.Value);
+            query = query.Where(e => e.Status == queryParams.Status.Value);
         }
 
         if (!string.IsNullOrWhiteSpace(queryParams.Search))
         {
-            allEvents = allEvents.Where(e => e.Title.Contains(queryParams.Search, StringComparison.OrdinalIgnoreCase) || e.Location.Contains(queryParams.Search, StringComparison.OrdinalIgnoreCase));
+            query = query.Where(e =>
+                e.Title.Contains(queryParams.Search) ||
+                e.Location.Contains(queryParams.Search));
         }
 
-        var sorted = allEvents.OrderByDescending(e => e.StartDate).ToList();
-        var totalCount =  sorted.Count();
-        var items =  sorted.Skip((queryParams.Page - 1) * queryParams.PageSize).Take(queryParams.PageSize).ToList();
-        
-        var result = new PagedResult<MyEventDto>(items, totalCount, queryParams.Page, queryParams.PageSize);
-        return ApiResponse<PagedResult<MyEventDto>>.Success(200, "Success", result);
+        // SORT (reuse extension)
+        query = query.ApplySorting(queryParams.SortBy);
+
+        // PAGING (reuse extension)
+        var result = await query.ToPagedResultAsync(
+            queryParams.Page,
+            queryParams.PageSize);
+
+        return ApiResponse<PagedResult<MyEventDto>>
+            .Success(200, "Success", result);
     }
 
     private void ApplyEventUpdate(Event eventEntity, EventRequestDto request)
