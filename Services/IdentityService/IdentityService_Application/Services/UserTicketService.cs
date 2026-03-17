@@ -1,5 +1,6 @@
-﻿using Common;
+using Common;
 using IdentityService_Application.Interfaces;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
@@ -12,11 +13,13 @@ namespace IdentityService_Application.Services
     {
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IConfiguration _configuration;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public UserTicketService(IHttpClientFactory httpClientFactory, IConfiguration configuration)
+        public UserTicketService(IHttpClientFactory httpClientFactory, IConfiguration configuration, IHttpContextAccessor httpContextAccessor)
         {
             _httpClientFactory = httpClientFactory;
             _configuration = configuration;
+            _httpContextAccessor = httpContextAccessor;
         }
         public async Task<ApiResponse<object>> GetUserOrdersAsync(Guid userId)
         {
@@ -24,6 +27,12 @@ namespace IdentityService_Application.Services
             {
                 var client = _httpClientFactory.CreateClient();
                 var bookingServiceUrl = _configuration["Services:BookingService"] ?? "http://localhost:5077";
+
+                var authHeader = _httpContextAccessor.HttpContext?.Request.Headers["Authorization"].ToString();
+                if (!string.IsNullOrEmpty(authHeader))
+                {
+                    client.DefaultRequestHeaders.Add("Authorization", authHeader);
+                }
 
                 var response = await client.GetAsync($"{bookingServiceUrl}/api/orders/user/{userId}");
 

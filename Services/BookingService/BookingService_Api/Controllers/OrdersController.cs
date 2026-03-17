@@ -33,6 +33,7 @@ public class OrdersController : ControllerBase
         return Ok(result);
     }
 
+    [AllowAnonymous]
     [HttpGet("user/{userId:guid}")]
     public async Task<IActionResult> GetOrdersByUserId(Guid userId)
     {
