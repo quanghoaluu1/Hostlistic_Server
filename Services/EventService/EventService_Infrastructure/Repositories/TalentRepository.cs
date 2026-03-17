@@ -35,11 +35,7 @@ namespace EventService_Infrastructure.Repositories
                 .ToListAsync();
         }
 
-        public async Task<PagedResult<Talent>> GetAllTalentsAsync(
-    string? search,
-    int pageNumber,
-    int pageSize,
-    string? sortBy = null)
+        public async Task<PagedResult<Talent>> GetAllTalentsAsync(string? search, int pageNumber, int pageSize, string? sortBy = null)
         {
             var query = _context.Talents
                 .Include(t => t.Lineups)
