@@ -13,6 +13,7 @@ public class GeminiProvider : IAiProvider
     private readonly Client _client;
     private readonly string _model;
     private readonly ILogger<GeminiProvider> _logger;
+    private const int ThinkingTokenBudget = 1024;
 
     public GeminiProvider(IConfiguration config, ILogger<GeminiProvider> logger)
     {
@@ -39,7 +40,11 @@ public class GeminiProvider : IAiProvider
                     },
                     Temperature = options.Temperature,
                     TopP = 0.9f,
-                    MaxOutputTokens = options.MaxTokens
+                    MaxOutputTokens = options.MaxTokens,
+                    ThinkingConfig = new ThinkingConfig
+                    {
+                        ThinkingBudget = 0
+                    }
                 },
                 cancellationToken: cancellationToken);
             var text = response.Candidates?[0]?.Content?.Parts?[0].Text;
@@ -55,10 +60,42 @@ public class GeminiProvider : IAiProvider
             }
             var candidate = response.Candidates[0];
             var finishReason = candidate.FinishReason;
-            if (finishReason.HasValue && finishReason != FinishReason.Stop && finishReason != FinishReason.FinishReasonUnspecified)
+            if (finishReason.HasValue)
             {
-                _logger.LogWarning("Gemini API returned finish reason {FinishReason}", candidate.FinishReason.Value);
-                throw new Exception($"Gemini API returned finish reason {finishReason.Value}");
+                var reason = finishReason.Value;
+
+                if (reason == FinishReason.Stop || reason == FinishReason.FinishReasonUnspecified)
+                {
+                    // ✅ Happy path — content is complete
+                }
+                else if (reason == FinishReason.MaxTokens)
+                {
+                    // ⚠️ Truncated but content is still usable
+                    _logger.LogWarning(
+                        "Gemini response truncated (MAX_TOKENS) for model {Model}. " +
+                        "Output may be incomplete. Consider increasing MaxOutputTokens.",
+                        _model);
+                }
+                else if (reason == FinishReason.Safety)
+                {
+                    throw new InvalidOperationException(
+                        "Content blocked by Gemini safety filters. " +
+                        "Try adjusting the prompt or tone.");
+                }
+                else if (reason == FinishReason.Recitation)
+                {
+                    throw new InvalidOperationException(
+                        "Content blocked due to recitation policy. " +
+                        "The generated text was too similar to training data.");
+                }
+                else
+                {
+                    _logger.LogWarning(
+                        "Gemini API returned unexpected finish reason {FinishReason}",
+                        reason);
+                    throw new Exception(
+                        $"Gemini API returned finish reason {reason}");
+                }
             }
             return new AiProviderResult(
                 Content: text,
