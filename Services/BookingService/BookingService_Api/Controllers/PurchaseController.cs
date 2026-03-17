@@ -1,11 +1,13 @@
 ﻿using BookingService_Application.DTOs;
 using BookingService_Application.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BookingService_Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class PurchaseController : ControllerBase
     {
         private readonly ITicketPurchaseService _purchaseService;
