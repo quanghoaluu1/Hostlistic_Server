@@ -108,51 +108,52 @@ public class EventService(
     Guid userId,
     MyEventQueryParams queryParams)
     {
-        // Organizer
+        // Project to an intermediate anonymous type using only DB-translatable expressions.
+        // Enum .ToString() causes client-side evaluation which breaks Concat (SQL UNION).
         var organizerQuery = eventRepository.GetQueryable()
             .Where(e => e.OrganizerId == userId)
-            .Select(e => new MyEventDto(
-                e.Id,
+            .Select(e => new
+            {
+                EventId = e.Id,
                 e.Title,
                 e.CoverImageUrl,
-                e.StartDate.Value,
-                e.EndDate.Value,
-                e.EventMode.ToString(),
-                (int)e.EventStatus,
+                StartDate = e.StartDate.Value,
+                EndDate = e.EndDate.Value,
+                EventModeValue = e.EventMode,
+                Status = e.EventStatus,
                 e.Location,
-                nameof(EventRole.Organizer),
-                e.CreatedAt
-            ));
+                RoleValue = (int)EventRole.Organizer,
+                JoinedAt = e.CreatedAt
+            });
 
-        // Team member
         var memberQuery = eventTeamMemberRepository.GetQueryableByUserId(userId)
             .Where(m => m.Role != EventRole.Organizer)
-            .Select(m => new MyEventDto(
-                m.Event.Id,
+            .Select(m => new
+            {
+                EventId = m.Event.Id,
                 m.Event.Title,
-                m.Event.CoverImageUrl,
-                m.Event.StartDate.Value,
-                m.Event.EndDate.Value,
-                m.Event.EventMode.ToString(),
-                (int)m.Event.EventStatus,
+                CoverImageUrl = m.Event.CoverImageUrl,
+                StartDate = m.Event.StartDate.Value,
+                EndDate = m.Event.EndDate.Value,
+                EventModeValue = m.Event.EventMode,
+                Status = m.Event.EventStatus,
                 m.Event.Location,
-                m.Role.ToString(),
-                m.JoinedAt ?? m.InvitedAt
-            ));
+                RoleValue = (int)m.Role,
+                JoinedAt = m.JoinedAt ?? m.InvitedAt
+            });
 
-        //Gộp query (vẫn là IQueryable)
         var query = organizerQuery.Concat(memberQuery);
 
         // FILTER
         if (queryParams.Role.HasValue)
         {
-            var role = queryParams.Role.Value.ToString();
-            query = query.Where(e => e.MyRole == role);
+            var roleValue = (int)queryParams.Role.Value;
+            query = query.Where(e => e.RoleValue == roleValue);
         }
 
-        if (queryParams.Status.HasValue)
+        if (queryParams.Status is not null)
         {
-            query = query.Where(e => e.Status == queryParams.Status.Value);
+            query = query.Where(e => e.Status.Equals(queryParams.Status));
         }
 
         if (!string.IsNullOrWhiteSpace(queryParams.Search))
@@ -162,13 +163,29 @@ public class EventService(
                 e.Location.Contains(queryParams.Search));
         }
 
-        // SORT (reuse extension)
+        // SORT
         query = query.ApplySorting(queryParams.SortBy);
 
-        // PAGING (reuse extension)
-        var result = await query.ToPagedResultAsync(
+        // PAGING
+        var paged = await query.ToPagedResultAsync(
             queryParams.Page,
             queryParams.PageSize);
+
+        // Map to MyEventDto after materialization (enum .ToString() is safe in memory)
+        var items = paged.Items.Select(e => new MyEventDto(
+            e.EventId,
+            e.Title,
+            e.CoverImageUrl,
+            e.StartDate,
+            e.EndDate,
+            ((EventMode)e.EventModeValue).ToString(),
+            e.Status.ToString(),
+            e.Location,
+            ((EventRole)e.RoleValue).ToString(),
+            e.JoinedAt
+        )).ToList();
+
+        var result = new PagedResult<MyEventDto>(items, paged.TotalItems, paged.CurrentPage, paged.PageSize);
 
         return ApiResponse<PagedResult<MyEventDto>>
             .Success(200, "Success", result);
