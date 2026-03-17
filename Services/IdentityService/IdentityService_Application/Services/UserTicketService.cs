@@ -2,6 +2,7 @@ using Common;
 using IdentityService_Application.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -14,19 +15,40 @@ namespace IdentityService_Application.Services
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly IConfiguration _configuration;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly IHostEnvironment _environment;
 
-        public UserTicketService(IHttpClientFactory httpClientFactory, IConfiguration configuration, IHttpContextAccessor httpContextAccessor)
+        public UserTicketService(
+            IHttpClientFactory httpClientFactory,
+            IConfiguration configuration,
+            IHttpContextAccessor httpContextAccessor,
+            IHostEnvironment environment)
         {
             _httpClientFactory = httpClientFactory;
             _configuration = configuration;
             _httpContextAccessor = httpContextAccessor;
+            _environment = environment;
         }
+
+        private string GetServiceBaseUrl(string configKey, string devDefault, string prodDefault)
+        {
+            var configured = _configuration[configKey];
+            if (!string.IsNullOrWhiteSpace(configured))
+            {
+                return configured.TrimEnd('/');
+            }
+
+            return (_environment.IsDevelopment() ? devDefault : prodDefault).TrimEnd('/');
+        }
+
         public async Task<ApiResponse<object>> GetUserOrdersAsync(Guid userId)
         {
             try
             {
                 var client = _httpClientFactory.CreateClient();
-                var bookingServiceUrl = _configuration["Services:BookingService"] ?? "http://localhost:5077";
+                var bookingServiceUrl = GetServiceBaseUrl(
+                    "Services:BookingService",
+                    "http://localhost:5077",
+                    "http://bookingservice:8080");
 
                 var authHeader = _httpContextAccessor.HttpContext?.Request.Headers["Authorization"].ToString();
                 if (!string.IsNullOrEmpty(authHeader))
@@ -76,7 +98,10 @@ namespace IdentityService_Application.Services
 
                 // Here you could make additional calls to the Event Service to get event details
                 var client = _httpClientFactory.CreateClient();
-                var eventServiceUrl = _configuration["Services:EventService"] ?? "http://localhost:5139";
+                var eventServiceUrl = GetServiceBaseUrl(
+                    "Services:EventService",
+                    "http://localhost:5139",
+                    "http://eventservice:8080");
 
                 // Process orders and enrich with event data
                 // This is a simplified example - you'd need to parse the orders JSON and make calls for each event
