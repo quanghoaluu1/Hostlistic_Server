@@ -1,5 +1,3 @@
-using CloudinaryDotNet;
-using CloudinaryDotNet.Actions;
 using Common;
 using EventService_Application.DTOs;
 using EventService_Application.Interfaces;
@@ -11,9 +9,9 @@ using Mapster;
 namespace EventService_Application.Services;
 
 public class EventService(
-    IEventRepository eventRepository, 
-    ITrackService trackService, 
-    ISessionService sessionService, 
+    IEventRepository eventRepository,
+    ITrackService trackService,
+    ISessionService sessionService,
     IEventTeamMemberRepository eventTeamMemberRepository) : IEventService
 {
     public async Task<ApiResponse<EventResponseDto>> CreateEventAsync(EventRequestDto request, Guid organizerId)
@@ -106,63 +104,91 @@ public class EventService(
         return ApiResponse<EventResponseDto>.Success(200, "Event updated successfully", responseDto);
     }
 
-    public async Task<ApiResponse<PagedResult<MyEventDto>>> GetMyEventAsync(Guid userId, MyEventQueryParams queryParams)
+    public async Task<ApiResponse<PagedResult<MyEventDto>>> GetMyEventAsync(
+    Guid userId,
+    MyEventQueryParams queryParams)
     {
-        var asOrganizer =  eventRepository.GetQueryable()
+        // Project to an intermediate anonymous type using only DB-translatable expressions.
+        // Enum .ToString() causes client-side evaluation which breaks Concat (SQL UNION).
+        var organizerQuery = eventRepository.GetQueryable()
             .Where(e => e.OrganizerId == userId)
-            .Select(e => new MyEventDto(
-                e.Id,
+            .Select(e => new
+            {
+                EventId = e.Id,
                 e.Title,
                 e.CoverImageUrl,
-                e.StartDate.Value,
-                e.EndDate.Value,
-                e.EventMode.ToString(),
-                (int)e.EventStatus,
+                StartDate = e.StartDate.Value,
+                EndDate = e.EndDate.Value,
+                EventModeValue = e.EventMode,
+                Status = e.EventStatus,
                 e.Location,
-                nameof(EventRole.Organizer),
-                e.CreatedAt
-            )).ToList();
-        
-        var asTeamMember = eventTeamMemberRepository.GetQueryableByUserId(userId)
+                RoleValue = (int)EventRole.Organizer,
+                JoinedAt = e.CreatedAt
+            });
+
+        var memberQuery = eventTeamMemberRepository.GetQueryableByUserId(userId)
             .Where(m => m.Role != EventRole.Organizer)
-            .Select(m => new MyEventDto(
-                m.Event.Id,
+            .Select(m => new
+            {
+                EventId = m.Event.Id,
                 m.Event.Title,
-                m.Event.CoverImageUrl,
-                m.Event.StartDate.Value,
-                m.Event.EndDate.Value,
-                m.Event.EventMode.ToString(),
-                (int)m.Event.EventStatus,
+                CoverImageUrl = m.Event.CoverImageUrl,
+                StartDate = m.Event.StartDate.Value,
+                EndDate = m.Event.EndDate.Value,
+                EventModeValue = m.Event.EventMode,
+                Status = m.Event.EventStatus,
                 m.Event.Location,
-                m.Role.ToString(),
-                m.JoinedAt ?? m.InvitedAt
-            )).ToList();
+                RoleValue = (int)m.Role,
+                JoinedAt = m.JoinedAt ?? m.InvitedAt
+            });
 
-        var allEvents = asOrganizer.Concat(asTeamMember).AsEnumerable();
+        var query = organizerQuery.Concat(memberQuery);
 
-        var query = asOrganizer.Union(asTeamMember);
+        // FILTER
         if (queryParams.Role.HasValue)
         {
-            var roleString = queryParams.Role.Value.ToString();
-            allEvents = allEvents.Where(e => e.MyRole == roleString);
+            var roleValue = (int)queryParams.Role.Value;
+            query = query.Where(e => e.RoleValue == roleValue);
         }
 
-        if (queryParams.Status.HasValue)
+        if (queryParams.Status is not null)
         {
-            allEvents = allEvents.Where(e => e.Status == queryParams.Status.Value);
+            query = query.Where(e => e.Status.Equals(queryParams.Status));
         }
 
         if (!string.IsNullOrWhiteSpace(queryParams.Search))
         {
-            allEvents = allEvents.Where(e => e.Title.Contains(queryParams.Search, StringComparison.OrdinalIgnoreCase) || e.Location.Contains(queryParams.Search, StringComparison.OrdinalIgnoreCase));
+            query = query.Where(e =>
+                e.Title.Contains(queryParams.Search) ||
+                e.Location.Contains(queryParams.Search));
         }
 
-        var sorted = allEvents.OrderByDescending(e => e.StartDate).ToList();
-        var totalCount =  sorted.Count();
-        var items =  sorted.Skip((queryParams.Page - 1) * queryParams.PageSize).Take(queryParams.PageSize).ToList();
-        
-        var result = new PagedResult<MyEventDto>(items, totalCount, queryParams.Page, queryParams.PageSize);
-        return ApiResponse<PagedResult<MyEventDto>>.Success(200, "Success", result);
+        // SORT
+        query = query.ApplySorting(queryParams.SortBy);
+
+        // PAGING
+        var paged = await query.ToPagedResultAsync(
+            queryParams.Page,
+            queryParams.PageSize);
+
+        // Map to MyEventDto after materialization (enum .ToString() is safe in memory)
+        var items = paged.Items.Select(e => new MyEventDto(
+            e.EventId,
+            e.Title,
+            e.CoverImageUrl,
+            e.StartDate,
+            e.EndDate,
+            ((EventMode)e.EventModeValue).ToString(),
+            e.Status.ToString(),
+            e.Location,
+            ((EventRole)e.RoleValue).ToString(),
+            e.JoinedAt
+        )).ToList();
+
+        var result = new PagedResult<MyEventDto>(items, paged.TotalItems, paged.CurrentPage, paged.PageSize);
+
+        return ApiResponse<PagedResult<MyEventDto>>
+            .Success(200, "Success", result);
     }
 
     private void ApplyEventUpdate(Event eventEntity, EventRequestDto request)

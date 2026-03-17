@@ -1,3 +1,4 @@
+using Common;
 using EventService_Domain.Enums;
 
 namespace EventService_Application.DTOs;
@@ -10,15 +11,14 @@ public record MyEventDto
     DateTime StartDate,
     DateTime EndDate,
     string EventMode,
-    int Status,
+    string Status,
     string? Location,
     string MyRole,       // "Organizer", "CoOrganizer", "Staff", "Attendee"
     DateTime JoinedAt
 );
-public record MyEventQueryParams(
-    EventRole? Role = null, 
-    int? Status = null, 
-    string? Search = null, 
-    int Page = 1,
-    int PageSize = 10
-    );
+public record MyEventQueryParams : BaseQueryParams
+{
+    public EventRole? Role { get; init; }
+    public string? Status { get; init; }
+    public string? Search { get; init; }
+}
