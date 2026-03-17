@@ -25,6 +25,7 @@ public record EventResponseDto(
     RichTextContent Description, 
     EventMode EventMode, 
     string EventTypeName,
+    Guid EventTypeId,
     DateTime StartDate, 
     DateTime EndDate, 
     string Location, 
