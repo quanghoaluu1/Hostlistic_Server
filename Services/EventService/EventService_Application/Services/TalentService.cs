@@ -32,6 +32,21 @@ namespace EventService_Application.Services
             return ApiResponse<List<TalentDto>>.Success(200, "Talents retrieved successfully", talentDtos);
         }
 
+        public async Task<ApiResponse<PagedResult<TalentDto>>> GetAllTalentsWPagingAsync(TalentSearchRequest? request)
+        {
+
+            var pagedTalents = await _talentRepository.GetAllTalentsAsync(request?.Name, request?.Page ?? 1, request?.PageSize ?? 10, request?.SortBy);
+            var talentDtos = pagedTalents.Items.Adapt<List<TalentDto>>();
+            var result = new PagedResult<TalentDto>
+             (
+                talentDtos,
+                pagedTalents.TotalItems,
+                pagedTalents.CurrentPage,
+                pagedTalents.PageSize
+            );
+            return ApiResponse<PagedResult<TalentDto>>.Success(200, "Talents retrieved successfully", result);
+        }
+
         public async Task<ApiResponse<TalentDto>> CreateTalentAsync(CreateTalentDto request)
         {
             if (string.IsNullOrWhiteSpace(request.Name))

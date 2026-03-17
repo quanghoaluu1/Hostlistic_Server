@@ -1,4 +1,5 @@
-﻿using EventService_Domain.Entities;
+﻿using Common;
+using EventService_Domain.Entities;
 
 namespace EventService_Domain.Interfaces
 {
@@ -6,6 +7,7 @@ namespace EventService_Domain.Interfaces
     {
         Task<Talent> GetTalentByIdAsync(Guid talentId);
         Task<IEnumerable<Talent>> GetAllTalentsAsync();
+        Task<PagedResult<Talent>> GetAllTalentsAsync(string? search, int pageNumber, int pageSize, string? sortBy = null);
         Task<Talent> AddTalentAsync(Talent talent);
         Task<Talent> UpdateTalentAsync(Talent talent);
         Task<bool> DeleteTalentAsync(Guid talentId);
