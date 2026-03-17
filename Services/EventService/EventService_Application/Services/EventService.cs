@@ -1,5 +1,3 @@
-using CloudinaryDotNet;
-using CloudinaryDotNet.Actions;
 using Common;
 using EventService_Application.DTOs;
 using EventService_Application.Interfaces;
@@ -11,9 +9,9 @@ using Mapster;
 namespace EventService_Application.Services;
 
 public class EventService(
-    IEventRepository eventRepository, 
-    ITrackService trackService, 
-    ISessionService sessionService, 
+    IEventRepository eventRepository,
+    ITrackService trackService,
+    ISessionService sessionService,
     IEventTeamMemberRepository eventTeamMemberRepository) : IEventService
 {
     public async Task<ApiResponse<EventResponseDto>> CreateEventAsync(EventRequestDto request, Guid organizerId)
@@ -106,63 +104,74 @@ public class EventService(
         return ApiResponse<EventResponseDto>.Success(200, "Event updated successfully", responseDto);
     }
 
-    public async Task<ApiResponse<PagedResult<MyEventDto>>> GetMyEventAsync(Guid userId, MyEventQueryParams p)
+    public async Task<ApiResponse<PagedResult<MyEventDto>>> GetMyEventAsync(
+    Guid userId,
+    MyEventQueryParams queryParams)
     {
-        var orgQuery = eventRepository.GetQueryable()
-            .Where(e => e.OrganizerId == userId);
-
-        if (p.Status.HasValue)
-            orgQuery = orgQuery.Where(e => e.EventStatus.Equals(p.Status.Value));
-
-        if (!string.IsNullOrWhiteSpace(p.Search))
-            orgQuery = orgQuery.Where(e => e.Title.Contains(p.Search));
-
-        var asOrganizer = p.Role.HasValue && p.Role.Value != EventRole.Organizer
-            ? new List<MyEventDto>()
-            : orgQuery.Select(e => new MyEventDto(
-                e.Id, e.Title, e.CoverImageUrl,
-                e.StartDate.Value, e.EndDate.Value,
+        // Organizer
+        var organizerQuery = eventRepository.GetQueryable()
+            .Where(e => e.OrganizerId == userId)
+            .Select(e => new MyEventDto(
+                e.Id,
+                e.Title,
+                e.CoverImageUrl,
+                e.StartDate.Value,
+                e.EndDate.Value,
                 e.EventMode.ToString(),
-                (int)e.EventStatus, e.Location,
+                (int)e.EventStatus,
+                e.Location,
                 nameof(EventRole.Organizer),
                 e.CreatedAt
-            )).ToList();
+            ));
 
+        // Team member
         var memberQuery = eventTeamMemberRepository.GetQueryableByUserId(userId)
-            .Where(m => m.Role != EventRole.Organizer);
-
-        if (p.Status.HasValue)
-            memberQuery = memberQuery.Where(m => m.Event.EventStatus.Equals(p.Status.Value));
-
-        if (!string.IsNullOrWhiteSpace(p.Search))
-            memberQuery = memberQuery.Where(m => m.Event.Title.Contains(p.Search));
-
-        if (p.Role.HasValue && p.Role.Value != EventRole.Organizer)
-            memberQuery = memberQuery.Where(m => m.Role == p.Role.Value);
-
-        var asTeamMember = p.Role.HasValue && p.Role.Value == EventRole.Organizer
-            ? new List<MyEventDto>()
-            : memberQuery.Select(m => new MyEventDto(
-                m.Event.Id, m.Event.Title, m.Event.CoverImageUrl,
-                m.Event.StartDate.Value, m.Event.EndDate.Value,
+            .Where(m => m.Role != EventRole.Organizer)
+            .Select(m => new MyEventDto(
+                m.Event.Id,
+                m.Event.Title,
+                m.Event.CoverImageUrl,
+                m.Event.StartDate.Value,
+                m.Event.EndDate.Value,
                 m.Event.EventMode.ToString(),
-                (int)m.Event.EventStatus, m.Event.Location,
+                (int)m.Event.EventStatus,
+                m.Event.Location,
                 m.Role.ToString(),
                 m.JoinedAt ?? m.InvitedAt
-            )).ToList();
+            ));
 
-        var allEvents = asOrganizer.Concat(asTeamMember)
-            .OrderByDescending(e => e.StartDate)
-            .ToList();
+        //Gộp query (vẫn là IQueryable)
+        var query = organizerQuery.Concat(memberQuery);
 
-        var totalCount = allEvents.Count;
-        var items = allEvents
-            .Skip((p.Page - 1) * p.PageSize)
-            .Take(p.PageSize)
-            .ToList();
+        // FILTER
+        if (queryParams.Role.HasValue)
+        {
+            var role = queryParams.Role.Value.ToString();
+            query = query.Where(e => e.MyRole == role);
+        }
 
-        var result = new PagedResult<MyEventDto>(items, totalCount, p.Page, p.PageSize);
-        return ApiResponse<PagedResult<MyEventDto>>.Success(200, "Success", result);
+        if (queryParams.Status.HasValue)
+        {
+            query = query.Where(e => e.Status == queryParams.Status.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(queryParams.Search))
+        {
+            query = query.Where(e =>
+                e.Title.Contains(queryParams.Search) ||
+                e.Location.Contains(queryParams.Search));
+        }
+
+        // SORT (reuse extension)
+        query = query.ApplySorting(queryParams.SortBy);
+
+        // PAGING (reuse extension)
+        var result = await query.ToPagedResultAsync(
+            queryParams.Page,
+            queryParams.PageSize);
+
+        return ApiResponse<PagedResult<MyEventDto>>
+            .Success(200, "Success", result);
     }
 
     private void ApplyEventUpdate(Event eventEntity, EventRequestDto request)
