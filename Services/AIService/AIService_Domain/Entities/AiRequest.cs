@@ -8,7 +8,7 @@ public class AiRequest
     public Guid Id { get; set; }
     public Guid EventId { get; set; }
     public Guid CreatedBy { get; set; }
-    public AiRequesttype RequestType { get; set; }
+    public AiRequestType RequestType { get; set; }
     public string? Tone { get; set; }              // formal, friendly, marketing
     public string Language { get; set; } = "en";   // en, vi
     public string? TargetAudience { get; set; }

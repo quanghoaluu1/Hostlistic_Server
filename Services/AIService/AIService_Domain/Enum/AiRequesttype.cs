@@ -1,6 +1,6 @@
 namespace AIService_Domain.Enum;
 
-public enum AiRequesttype
+public enum AiRequestType
 {
     GenerateTitle = 0,
     GenerateDescription = 1,
@@ -8,5 +8,6 @@ public enum AiRequesttype
     SuggestAgenda = 3,
     SummarizeFeedback = 4,
     AnalyzeReport = 5,
-    GenerateEmailContent = 6
+    GenerateEmailContent = 6,
+    GenerateSocialPost = 7,
 }
