@@ -40,7 +40,7 @@ namespace EventService_Application.Services
                 request.AvatarUrl =
                     "https://res.cloudinary.com/dvsiqkepf/image/upload/v1770737091/istockphoto-519078727-612x612_sspxxk.jpg";
             var talent = request.Adapt<Talent>();
-            talent.Id = new Guid();
+            talent.Id = Guid.CreateVersion7();
             await _talentRepository.AddTalentAsync(talent);
             await _talentRepository.SaveChangesAsync();
 
