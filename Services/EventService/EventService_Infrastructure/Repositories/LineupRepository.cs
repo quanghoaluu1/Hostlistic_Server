@@ -27,12 +27,12 @@ namespace EventService_Infrastructure.Repositories
 
         public async Task<List<Lineup>> GetAllLineupsAsync()
         {
-            return await _context.Lineups.Include(l => l.Talent).ToListAsync();
+            return await _context.Lineups.AsNoTracking().Include(l => l.Talent).ToListAsync();
         }
 
         public async Task<List<Lineup>> GetLineupsByEventIdAsync(Guid eventId)
         {
-            return await _context.Lineups.Include(l => l.Talent)
+            return await _context.Lineups.AsNoTracking().Include(l => l.Talent)
                 .Where(l => l.EventId == eventId)
                 .ToListAsync();
         }
