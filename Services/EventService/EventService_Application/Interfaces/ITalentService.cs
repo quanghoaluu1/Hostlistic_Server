@@ -9,6 +9,7 @@ namespace EventService_Application.Interfaces
         Task<ApiResponse<List<TalentDto>>> GetAllTalentsAsync();
         Task<ApiResponse<TalentDto>> CreateTalentAsync(CreateTalentDto request);
         Task<ApiResponse<TalentDto>> UpdateTalentAsync(Guid talentId, UpdateTalentDto request);
+        Task<ApiResponse<PagedResult<TalentDto>>> GetAllTalentsWPagingAsync(TalentSearchRequest? request);
         Task<ApiResponse<bool>> DeleteTalentAsync(Guid talentId);
 
     }

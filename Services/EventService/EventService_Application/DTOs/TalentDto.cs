@@ -1,4 +1,4 @@
-﻿using EventService_Domain.Entities;
+﻿using Common;
 
 namespace EventService_Application.DTOs
 {
@@ -37,6 +37,11 @@ namespace EventService_Application.DTOs
         public string? Organization
         { get; set; } = string.Empty;
         public string? Email { get; set; } = string.Empty;
+    }
+
+    public record TalentSearchRequest : BaseQueryParams
+    {
+        public string? Name { get; init; }
     }
 
 }

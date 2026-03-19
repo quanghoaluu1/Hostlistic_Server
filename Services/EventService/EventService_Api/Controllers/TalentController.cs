@@ -23,9 +23,9 @@ namespace EventService_Api.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAllTalents()
+        public async Task<IActionResult> GetAllTalents([FromQuery] TalentSearchRequest request)
         {
-            var result = await _talentService.GetAllTalentsAsync();
+            var result = await _talentService.GetAllTalentsWPagingAsync(request);
             if (!result.IsSuccess) return BadRequest(result);
             return Ok(result);
         }

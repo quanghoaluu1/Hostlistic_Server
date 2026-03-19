@@ -1,7 +1,5 @@
-using Common;
 using EventService_Domain.Entities;
 using EventService_Domain.Interfaces;
-using EventService_Domain.ModelExtension.EventExtension;
 using EventService_Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -44,25 +42,6 @@ public class EventRepository(EventServiceDbContext dbContext) : IEventRepository
     public IQueryable<Event> GetQueryable()
     {
         return dbContext.Events.AsQueryable().AsNoTracking();
-    }
-
-    public async Task<PagedResult<Event>> GetEventWithPaging(EventExtensionDto? request)
-    {
-        request ??= new EventExtensionDto();
-
-        var query = dbContext.Events.AsQueryable();
-
-        // FILTER
-        if (!string.IsNullOrWhiteSpace(request.Title))
-        {
-            query = query.Where(e => e.Title.Contains(request.Title));
-        }
-
-        // SORT
-        query = query.ApplySorting(request.SortBy);
-
-        // PAGING (reuse extension)
-        return await query.ToPagedResultAsync(request.Page, request.PageSize);
     }
 
     public Task<bool> DeleteEventAsync(Guid eventId)
