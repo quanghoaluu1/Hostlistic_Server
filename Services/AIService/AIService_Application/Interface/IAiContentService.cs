@@ -13,4 +13,9 @@ public interface IAiContentService
 
     Task<ApiResponse<EmailContentResponse>> GenerateEmailAsync(GenerateEmailRequest request, Guid organizerId,
         CancellationToken ct = default);
+    
+    Task<ApiResponse<SocialPostResponse>> GenerateSocialPostAsync(
+        GenerateSocialPostRequest request,
+        Guid organizerId,
+        CancellationToken ct = default);
 }

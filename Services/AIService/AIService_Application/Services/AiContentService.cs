@@ -23,15 +23,16 @@ public partial class AiContentService(
     ILogger<AiContentService> logger)
     : IAiContentService
 {
-    
-    public async Task<ApiResponse<AiContentResponse>> GenerateDescriptionAsync(GenerateDescriptionRequest request, Guid userId, CancellationToken ct = default)
+
+    public async Task<ApiResponse<AiContentResponse>> GenerateDescriptionAsync(GenerateDescriptionRequest request,
+        Guid userId, CancellationToken ct = default)
     {
         var aiRequest = new AiRequest()
         {
             Id = Guid.NewGuid(),
             EventId = request.EventId,
             CreatedBy = userId,
-            RequestType = AiRequesttype.GenerateDescription,
+            RequestType = AiRequestType.GenerateDescription,
             Tone = request.Tone,
             Language = request.Language,
             TargetAudience = request.TargetAudience,
@@ -42,15 +43,17 @@ public partial class AiContentService(
         };
         aiRequestRepository.Add(aiRequest);
         await aiRequestRepository.SaveChangesAsync(ct);
-        var eventEntity = await eventServiceClient.GetEventByIdAsync(request.EventId, ct) ?? throw new Exception("Event not found");
-        var template = promptTemplateRepository.GetByKeyAsync(PromptTemplateKey.EventDescription, ct).Result ?? throw new Exception("Event description prompt template not found");
+        var eventEntity = await eventServiceClient.GetEventByIdAsync(request.EventId, ct) ??
+                          throw new Exception("Event not found");
+        var template = promptTemplateRepository.GetByKeyAsync(PromptTemplateKey.EventDescription, ct).Result ??
+                       throw new Exception("Event description prompt template not found");
         // var systemPrompt = PromptBuilder.BuildSystemPrompt(request.Language);
         // var userPrompt = PromptBuilder.BuildDescriptionPrompt(request);
         var systemPrompt = template.SystemPrompt;
         var userPrompt = template.UserPromptTemplate;
         var parameters = promptTemplateEngine.BuildParametersFromEvent(eventEntity);
         var parameterTone = promptTemplateEngine.AddToneAndLanguage(parameters, request.Tone, request.Language);
-       
+
         if (!string.IsNullOrEmpty(request.TargetAudience))
             parameters["target_audience"] = request.TargetAudience;
         if (!string.IsNullOrEmpty(request.Objectives))
@@ -64,15 +67,16 @@ public partial class AiContentService(
 
         try
         {
-            logger.LogInformation("Generating description for event {EventId}, tone = {Tone}, language = {Language}", request.EventId, request.Tone, request.Language);
+            logger.LogInformation("Generating description for event {EventId}, tone = {Tone}, language = {Language}",
+                request.EventId, request.Tone, request.Language);
             var result = await aiProvider.GenerateContentAsync(systemPrompt, userPrompt, new AiRequestOptions()
             {
                 MaxTokens = template.DefaultMaxTokens,
                 Temperature = template.DefaultTemperature,
             }, ct);
             sw.Stop();
-            
-            var htmlContent = SanitizeHtml(result.Content);
+
+            var htmlContent = promptTemplateEngine.SanitizeHtml(result.Content);
             var plainContent = StripHtmlTags(result.Content);
 
             var generatedContent = new AiGeneratedContent()
@@ -120,13 +124,14 @@ public partial class AiContentService(
             aiRequest.Status = AiRequestStatus.Failed;
             aiRequest.ErrorMessage = ex.Message;
             aiRequest.CompletedAt = DateTime.UtcNow;
-                await aiRequestRepository.SaveChangesAsync(CancellationToken.None);
+            await aiRequestRepository.SaveChangesAsync(CancellationToken.None);
             logger.LogError(ex, "Failed to generate description for event {EventId}", request.EventId);
             return ApiResponse<AiContentResponse>.Fail(500, "Failed to generate description");
-        }   
+        }
     }
 
-    public async Task<ApiResponse<EmailContentResponse>> GenerateEmailAsync(GenerateEmailRequest request, Guid organizerId,
+    public async Task<ApiResponse<EmailContentResponse>> GenerateEmailAsync(GenerateEmailRequest request,
+        Guid organizerId,
         CancellationToken ct = default)
     {
         var eventEntity = await eventServiceClient.GetEventByIdAsync(request.EventId, ct);
@@ -139,8 +144,9 @@ public partial class AiContentService(
             "post_event_thankyou" => PromptTemplateKey.PostEventThankyou,
             _ => throw new BadHttpRequestException($"Unknown email type: {request.EmailType}")
         };
-        var template = await promptTemplateRepository.GetByKeyAsync(templateType, ct) ?? throw new Exception($"Template {templateType} not found");
-        var parameters = BuildEmailParameters(eventEntity, request);
+        var template = await promptTemplateRepository.GetByKeyAsync(templateType, ct) ??
+                       throw new Exception($"Template {templateType} not found");
+        var parameters = promptTemplateEngine.BuildEmailParameters(eventEntity, request);
         var renderedUserPrompt = promptTemplateEngine.Render(template.UserPromptTemplate, parameters);
 
         var aiRequest = new AiRequest()
@@ -148,7 +154,7 @@ public partial class AiContentService(
             Id = Guid.NewGuid(),
             EventId = request.EventId,
             CreatedBy = organizerId,
-            RequestType = AiRequesttype.GenerateEmailContent,
+            RequestType = AiRequestType.GenerateEmailContent,
             Tone = request.Tone,
             Language = request.Language,
             TargetAudience = request.RecipientType ?? "general",
@@ -167,7 +173,7 @@ public partial class AiContentService(
                     MaxTokens = template.DefaultMaxTokens,
                 }, ct);
             sw.Stop();
-            var (subjectLine, htmlBody) = ParseEmailResponse(aiResult.Content);
+            var (subjectLine, htmlBody) = promptTemplateEngine.ParseEmailResponse(aiResult.Content);
             var plainTextBody = StripHtmlTags(htmlBody);
             var aiContent = new AiGeneratedContent()
             {
@@ -220,15 +226,120 @@ public partial class AiContentService(
         }
     }
 
-    private static string SanitizeHtml(string raw)
+    public async Task<ApiResponse<SocialPostResponse>> GenerateSocialPostAsync(GenerateSocialPostRequest request,
+        Guid organizerId, CancellationToken ct = default)
     {
-        var cleaned = Regex.Replace(raw, @"^```html?\s*\n?", "", RegexOptions.Multiline);
-        cleaned = Regex.Replace(cleaned, @"\n?```\s*$", "", RegexOptions.Multiline);
-        cleaned = Regex.Replace(cleaned, @"<\/?(html|head|body|div)[^>]*>", "",
-            RegexOptions.IgnoreCase);
-        cleaned = Regex.Replace(cleaned, @">\s+<", "><");
-        return cleaned.Trim();
+        var eventEntity = await eventServiceClient.GetEventByIdAsync(request.EventId, ct);
+        if (eventEntity is null)
+        {
+            return ApiResponse<SocialPostResponse>.Fail(404, "Event not found");
+        }
+
+        var template = await promptTemplateRepository.GetByKeyAsync(PromptTemplateKey.SocialMediaPost, ct);
+        if (template is null)
+        {
+            return ApiResponse<SocialPostResponse>.Fail(404, "Social media post template not found");
+        }
+
+        var parameters = promptTemplateEngine.BuildSocialPostParameters(eventEntity, request);
+        var renderedUserPrompt = promptTemplateEngine.Render(template.UserPromptTemplate, parameters);
+
+        var aiRequest = new AiRequest
+        {
+            Id = Guid.NewGuid(),
+            EventId = request.EventId,
+            CreatedBy = organizerId,
+            RequestType = AiRequestType.GenerateSocialPost,
+            Tone = request.Tone,
+            Language = request.Language,
+            TargetAudience = request.Platform,
+            AdditionalContext = request.KeyHighlights,
+            Status = AiRequestStatus.Pending,
+            CreatedAt = DateTime.UtcNow
+        };
+        aiRequestRepository.Add(aiRequest);
+        await aiRequestRepository.SaveChangesAsync(ct);
+
+        var sw = Stopwatch.StartNew();
+        try
+        {
+            logger.LogInformation("Generating social post for event {EventId}, tone = {Tone}, language = {Language}",
+                request.EventId, request.Tone, request.Language);
+            var aiResult = await aiProvider.GenerateContentAsync(
+                template.SystemPrompt,
+                renderedUserPrompt,
+                new AiRequestOptions()
+                {
+                    Temperature = template.DefaultTemperature,
+                    MaxTokens = template.DefaultMaxTokens,
+                }, ct);
+            sw.Stop();
+
+            var (postContent, hashtags) =
+                promptTemplateEngine.ParseSocialPostResponse(aiResult.Content, request.Hashtags);
+
+            var fullText = string.IsNullOrEmpty(hashtags) ? postContent : $"{postContent} {hashtags}";
+            var charCount = fullText.Length;
+            var platformLimit = promptTemplateEngine.GetPlatformCharacterLimit(request.Platform);
+            var exceedsLimit = platformLimit > 0 && charCount > platformLimit;
+
+            var aiContent = new AiGeneratedContent
+            {
+                Id = Guid.NewGuid(),
+                RequestId = aiRequest.Id,
+                HtmlContent = postContent, // Social post is plain text, store in HtmlContent for consistency
+                PlainContent = fullText,
+                Model = aiResult.Model,
+                PromptTokens = aiResult.PromptTokens,
+                CompletionTokens = aiResult.CompletionTokens,
+                LatencyMs = sw.ElapsedMilliseconds,
+                CreatedAt = DateTime.UtcNow
+            };
+            aiGeneratedContentRepository.Add(aiContent);
+
+            aiRequest.Status = AiRequestStatus.Completed;
+            aiRequest.CompletedAt = DateTime.UtcNow;
+            aiRequestRepository.Update(aiRequest);
+            await aiRequestRepository.SaveChangesAsync(ct);
+
+            var response = new SocialPostResponse
+            {
+                ContentId = aiContent.Id,
+                RequestId = aiRequest.Id,
+                PostContent = postContent,
+                Hashtags = hashtags,
+                Platform = request.Platform,
+                Length = request.Length,
+                Tone = request.Tone,
+                Language = request.Language,
+                CharacterCount = charCount,
+                ExceedsLimit = exceedsLimit,
+                Model = aiResult.Model,
+                TokensUsed = aiResult.CompletionTokens,
+                GenerationTimeMs = sw.ElapsedMilliseconds
+            };
+
+            return ApiResponse<SocialPostResponse>.Success(
+                200, "Social post generated successfully", response);
+        }
+        catch (Exception ex)
+        {
+            sw.Stop();
+            aiRequest.Status = AiRequestStatus.Failed;
+            aiRequest.ErrorMessage = ex.Message;
+            aiRequest.CompletedAt = DateTime.UtcNow;
+            aiRequestRepository.Update(aiRequest);
+            await aiRequestRepository.SaveChangesAsync(CancellationToken.None);
+
+            logger.LogError(ex,
+                "Failed to generate social post for event {EventId}, platform={Platform}",
+                request.EventId, request.Platform);
+
+            return ApiResponse<SocialPostResponse>.Fail(500,
+                "Failed to generate social media post");
+        }
     }
+
     private static string StripHtmlTags(string html)
     {
         var text = Regex.Replace(html, @"<br\s*/?>", "\n");
@@ -237,77 +348,4 @@ public partial class AiContentService(
         text = Regex.Replace(text, @"\n{3,}", "\n\n");
         return text.Trim();
     }
-
-    private Dictionary<string, string> BuildEmailParameters(EventDetailDto eventEntity, GenerateEmailRequest request)
-    {
-        var parameters = new Dictionary<string, string>()
-        {
-            // Auto-fill từ Event entity
-            ["event_title"] = eventEntity.Title,
-            ["event_type"] = eventEntity.EventTypeName.ToString(),
-            ["event_date"] = eventEntity.StartDate.Value.ToString("MMMM dd, yyyy"),
-            ["event_time"] = eventEntity.StartDate.Value.ToString("hh:mm tt"),
-            ["event_location"] = eventEntity.Location ?? "TBD",
-            ["event_mode"] = eventEntity.EventMode,
-            ["registration_link"] = $"https://hostlistic.tech/events/{eventEntity.Id}/register",
-
-            // Từ request
-            ["tone"] = request.Tone,
-            ["language"] = request.Language,
-            ["recipient_type"] = request.RecipientType ?? "general attendees",
-            ["target_audience"] = request.TargetAudience ?? "",
-            ["selling_points"] = request.SellingPoints ?? "",
-            ["reminder_type"] = request.EmailType.Replace("reminder_", ""),
-        };
-        var talents = eventEntity.Tracks.SelectMany(t => t.Sessions).SelectMany(t => t.Talents).Select(s => $"{s.Name} ({s.Type}").Distinct();
-        parameters["talents"] = talents?.Any() is true ? string.Join(", ", talents) : "TBA";
-        var topics = eventEntity.Tracks
-            .Select(t => $"{t.Name}: {string.Join(", ", t.Sessions.Select(s => s.Title))}")
-            .Take(5);
-
-        parameters["key_topics"] = topics.Any()
-            ? string.Join(" | ", topics)
-            : "";
-        
-        // Optional fields
-        if (!string.IsNullOrEmpty(request.EarlyBirdDeadline))
-            parameters["early_bird_deadline"] = request.EarlyBirdDeadline;
-        if (!string.IsNullOrEmpty(request.EarlyBirdDiscount))
-            parameters["early_bird_discount"] = request.EarlyBirdDiscount;
-        if (!string.IsNullOrEmpty(request.TicketPrice))
-            parameters["ticket_price"] = request.TicketPrice;
-        if (!string.IsNullOrEmpty(request.CheckinInstructions))
-            parameters["checkin_instructions"] = request.CheckinInstructions;
-        if (!string.IsNullOrEmpty(request.PreparationNotes))
-            parameters["preparation_notes"] = request.PreparationNotes;
-        if (!string.IsNullOrEmpty(request.AgendaHighlights))
-            parameters["agenda_highlights"] = request.AgendaHighlights;
-        if (!string.IsNullOrEmpty(request.AttendeeName))
-            parameters["attendee_name"] = request.AttendeeName;
-        if (!string.IsNullOrEmpty(request.TicketType))
-            parameters["ticket_type"] = request.TicketType;
-
-        return parameters;
-    }
-
-    private (string subject, string htmlBody) ParseEmailResponse(string rawContent)
-    {
-        var sanitized = SanitizeHtml(rawContent);
-        var subjectMatch = MyRegex().Match(sanitized);
-        var subject = subjectMatch.Success ? subjectMatch.Groups[1].Value.Trim() : "You're Invited!";
-        var body = sanitized;
-        if (subjectMatch.Success)
-        {
-            body = sanitized.Substring(subjectMatch.Index + subjectMatch.Length).Trim();
-        }
-
-        if (!body.TrimStart().StartsWith("<div>", StringComparison.OrdinalIgnoreCase))
-        {
-            body = $"<div>{body}</div>";
-        }
-        return (subject, body);
-    }
-
-    [GeneratedRegex(@"SUBJECT:\s*(.+?)(?:\n|<br|<\/?\w)", RegexOptions.IgnoreCase, "en-US")]
-    private static partial Regex MyRegex();
 }
