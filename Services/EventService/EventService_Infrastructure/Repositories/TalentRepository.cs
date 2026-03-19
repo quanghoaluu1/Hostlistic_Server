@@ -1,4 +1,5 @@
-﻿using EventService_Domain.Entities;
+﻿using Common;
+using EventService_Domain.Entities;
 using EventService_Domain.Interfaces;
 using EventService_Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -32,6 +33,25 @@ namespace EventService_Infrastructure.Repositories
             return await _context.Talents
                 .Include(t => t.Lineups)
                 .ToListAsync();
+        }
+
+        public async Task<PagedResult<Talent>> GetAllTalentsAsync(string? search, int pageNumber, int pageSize, string? sortBy = null)
+        {
+            var query = _context.Talents
+                .Include(t => t.Lineups)
+                .AsQueryable();
+
+            // FILTER
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                query = query.Where(t => t.Name.Contains(search));
+            }
+
+            // SORT (reuse extension)
+            query = query.ApplySorting(sortBy);
+
+            // PAGING (reuse extension)
+            return await query.ToPagedResultAsync(pageNumber, pageSize);
         }
 
         public async Task<Talent> GetTalentByIdAsync(Guid talentId)
