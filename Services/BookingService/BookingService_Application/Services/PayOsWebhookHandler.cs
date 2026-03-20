@@ -18,13 +18,13 @@ public class PayOsWebhookHandler(
     ILogger<PayOsWebhookHandler> logger
     ) : IPayOsWebhookHandler
 {
-    public async Task<ApiResponse<bool>> HandlePaymentSuccessAsync(PayOsWebhookDataDto webhookData)
+    public async Task<ApiResponse<bool>> HandlePaymentSuccessAsync(PayOsVerifiedPaymentData data)
     {
-        var orderResponse = await orderService.GetOrderByPayOsCodeAsync(webhookData.OrderCode);
+        var orderResponse = await orderService.GetOrderByPayOsCodeAsync(data.OrderCode);
         var order = orderResponse.Data;
         if (order is null)
         {
-            logger.LogError("Order not found for PayOS orderCode {OrderCode}", webhookData.OrderCode);
+            logger.LogError("Order not found for PayOS orderCode {OrderCode}", data.OrderCode);
             return ApiResponse<bool>.Fail(404, "Order not found");
         }
 
@@ -40,7 +40,7 @@ public class PayOsWebhookHandler(
             await paymentService.UpdatePaymentAsync(pendingPayment.Id, new UpdatePaymentRequest()
             {
                 Status = PaymentStatus.Completed,
-                TransactionId = webhookData.Reference
+                TransactionId = data.Reference
             });
         }
         var reservationId = ExtractReservationId(order.Notes);
@@ -60,7 +60,8 @@ public class PayOsWebhookHandler(
         await orderService.UpdateOrderAsync(order.Id, new DTOs.UpdateOrderRequest
         {
             Status = OrderStatus.Confirmed,
-            Notes = $"PayOS payment confirmed. Ref: {webhookData.Reference}"
+            Notes = $"PayOS payment confirmed. Ref: {data.Reference}",
+            OrderCode = data.OrderCode,
         });
         _ = Task.Run(async () =>
         {
@@ -72,7 +73,7 @@ public class PayOsWebhookHandler(
                 {
                     UserId = order.UserId,
                     OrderId = order.Id,
-                    TotalAmount = (decimal)webhookData.Amount,
+                    TotalAmount = (decimal)data.Amount,
                     EventName = eventInfo?.Title ?? "Unknown Event",
                     EventDate = eventInfo?.StartDate ?? DateTime.Now,
                     EventLocation = eventInfo?.Location ?? "TBD",

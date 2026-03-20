@@ -24,3 +24,18 @@ public class PayOsWebhookDataDto
     public string CounterAccountName { get; set; } = string.Empty;
     public string CounterAccountNumber { get; set; } = string.Empty;
 }
+
+public class PayOsWebhookResult
+{
+    public bool IsVerified { get; set; }
+    public bool IsSuccess { get; set; }
+    public PayOsVerifiedPaymentData? Data { get; set; }
+}
+
+public class PayOsVerifiedPaymentData
+{
+    public long OrderCode { get; set; }
+    public long Amount { get; set; }
+    public string Reference { get; set; } = string.Empty;
+    public string TransactionDateTime { get; set; } = string.Empty;
+}

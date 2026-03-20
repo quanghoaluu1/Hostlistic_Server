@@ -34,5 +34,16 @@ namespace BookingService_Api.Controllers
                 return BadRequest(result);
             return Ok(result);
         }
+
+        [HttpPost("payos")]
+        public async Task<IActionResult> PurchasePayOs([FromBody] PurchaseTicketRequest request)
+        {
+            var result = await _purchaseService.InitiatePayOsPurchaseAsync(request);
+            if (!result.IsSuccess)
+            {
+                return BadRequest(result);
+            }
+            return Ok(result);
+        }
     }
 }
