@@ -25,6 +25,13 @@ public class EventController(IEventService eventService, IPhotoService photoServ
         var result = await eventService.GetAllEventsAsync();
         return Ok(result);
     }
+    
+    [HttpGet("paged")]
+    public async Task<IActionResult> GetPublicEventsAsync([FromQuery] PublicEventQueryParams queryParams)
+    {
+        var result = await eventService.GetPublicEventsAsync(queryParams);
+        return Ok(result);
+    }
 
     [HttpGet("{eventId:guid}")]
     public async Task<IActionResult> GetEventByIdAsync(Guid eventId)

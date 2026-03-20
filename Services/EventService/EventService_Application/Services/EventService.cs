@@ -190,6 +190,90 @@ public class EventService(
         return ApiResponse<PagedResult<MyEventDto>>
             .Success(200, "Success", result);
     }
+    
+    public async Task<ApiResponse<PagedResult<PublicEventDto>>> GetPublicEventsAsync(
+    PublicEventQueryParams queryParams)
+{
+    // Start from AsNoTracking queryable (defined in repository)
+    var query = eventRepository.GetQueryable()
+        .Where(e => e.IsPublic == true
+                  && e.EventStatus != EventStatus.Draft);
+
+    // FILTER: search by title or location
+    if (!string.IsNullOrWhiteSpace(queryParams.Search))
+    {
+        var search = queryParams.Search.Trim().ToLower();
+        query = query.Where(e =>
+            e.Title!.ToLower().Contains(search) ||
+            e.Location!.ToLower().Contains(search));
+    }
+
+    // FILTER: event mode
+    if (queryParams.EventMode.HasValue)
+    {
+        query = query.Where(e => e.EventMode == queryParams.EventMode.Value);
+    }
+
+    // FILTER: event type
+    if (queryParams.EventTypeId.HasValue)
+    {
+        query = query.Where(e => e.EventTypeId == queryParams.EventTypeId.Value);
+    }
+
+    // FILTER: specific status (default shows all non-Draft)
+    if (queryParams.Status.HasValue)
+    {
+        query = query.Where(e => e.EventStatus == queryParams.Status.Value);
+    }
+
+    // PROJECT to lightweight DTO before sorting/paging
+    // This ensures SQL only selects needed columns + single JOIN to EventType
+    var projected = query.Select(e => new
+    {
+        e.Id,
+        e.Title,
+        e.CoverImageUrl,
+        e.StartDate,
+        e.EndDate,
+        e.Location,
+        EventModeValue = e.EventMode,
+        StatusValue = e.EventStatus,
+        EventTypeName = e.EventType != null ? e.EventType.Name : null,
+        e.TotalCapacity,
+        e.IsPublic
+    });
+
+    // SORT
+    projected = projected.ApplySorting(queryParams.SortBy);
+
+    // PAGING
+    var paged = await projected.ToPagedResultAsync(
+        queryParams.Page,
+        queryParams.PageSize);
+
+    // Map to DTO after materialization (enum .ToString() safe in memory)
+    var items = paged.Items.Select(e => new PublicEventDto(
+        e.Id,
+        e.Title ?? string.Empty,
+        e.CoverImageUrl,
+        e.StartDate,
+        e.EndDate,
+        e.Location,
+        e.EventModeValue.HasValue
+            ? e.EventModeValue.Value.ToString()
+            : "Offline",
+        e.StatusValue.ToString(),
+        e.EventTypeName,
+        e.TotalCapacity,
+        e.IsPublic ?? false
+    )).ToList();
+
+    var result = new PagedResult<PublicEventDto>(
+        items, paged.TotalItems, paged.CurrentPage, paged.PageSize);
+
+    return ApiResponse<PagedResult<PublicEventDto>>
+        .Success(200, "Public events retrieved successfully", result);
+}
 
     private void ApplyEventUpdate(Event eventEntity, EventRequestDto request)
     {
