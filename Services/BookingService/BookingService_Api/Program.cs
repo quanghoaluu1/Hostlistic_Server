@@ -94,19 +94,23 @@ builder.Services.AddScoped<INotificationServiceClient, NotificationServiceClient
 
 builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
 
+var eventServiceUrl = builder.Configuration["ServiceUrls:EventService"] ?? "http://localhost:5139";
+var notificationServiceUrl = builder.Configuration["ServiceUrls:NotificationService"] ?? "http://localhost:5097";
+var identityServiceUrl = builder.Configuration["ServiceUrls:IdentityService"] ?? "http://localhost:5049";
+
 builder.Services.AddHttpClient("EventService", client =>
 {
-    client.BaseAddress = new Uri("http://localhost:5139");
+    client.BaseAddress = new Uri(eventServiceUrl.TrimEnd('/'));
 });
 
 builder.Services.AddHttpClient("NotificationService", client =>
 {
-    client.BaseAddress = new Uri("http://localhost:5097");
+    client.BaseAddress = new Uri(notificationServiceUrl.TrimEnd('/'));
 });
 
 builder.Services.AddHttpClient("IdentityService", client =>
 {
-    client.BaseAddress = new Uri("http://localhost:5049");
+    client.BaseAddress = new Uri(identityServiceUrl.TrimEnd('/'));
 });
 builder.Services.AddHealthChecks();
 
