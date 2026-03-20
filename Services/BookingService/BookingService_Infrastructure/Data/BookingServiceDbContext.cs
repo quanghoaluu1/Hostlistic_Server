@@ -18,7 +18,7 @@ public class BookingServiceDbContext : DbContext
     public DbSet<InventoryReservation> InventoryReservations => Set<InventoryReservation>();
     public DbSet<Wallet> Wallets => Set<Wallet>();
     public DbSet<Transaction> Transactions => Set<Transaction>();
-
+    public DbSet<EventSettlement> EventSettlements => Set<EventSettlement>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -43,6 +43,10 @@ public class BookingServiceDbContext : DbContext
                 .WithOne()
                 .HasForeignKey(p => p.OrderId)
                 .OnDelete(DeleteBehavior.Cascade);
+            
+            entity.HasIndex(e => e.OrderCode)
+                .IsUnique()
+                .HasFilter("\"OrderCode\" IS NOT NULL");
         });
 
         // OrderDetail configuration
@@ -105,6 +109,10 @@ public class BookingServiceDbContext : DbContext
             entity.HasKey(e => e.Id);
         });
         modelBuilder.Entity<Transaction>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+        });
+        modelBuilder.Entity<EventSettlement>(entity =>
         {
             entity.HasKey(e => e.Id);
         });

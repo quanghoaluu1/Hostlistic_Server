@@ -13,6 +13,7 @@ using Microsoft.OpenApi;
 using Scalar.AspNetCore;
 using System.Reflection;
 using System.Text;
+using PayOS;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -78,6 +79,10 @@ builder.Services.AddScoped<IInventoryService, InventoryService>();
 builder.Services.AddScoped<IQrCodeService, QrCodeService>();
 builder.Services.AddScoped<IInventoryReservationRepository, InventoryReservationRepository>();
 builder.Services.AddScoped<IWalletRepository, WalletRepository>();
+builder.Services.AddScoped<IEventSettlementRepository, EventSettlementRepository>();
+builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
+builder.Services.AddScoped<IEventSettlementRepository, EventSettlementRepository>();
+builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
 
 // Register services
 builder.Services.AddScoped<IOrderService, OrderService>();
@@ -91,6 +96,10 @@ builder.Services.AddScoped<IWalletService, WalletService>();
 builder.Services.AddScoped<IEventServiceClient, EventServiceClient>();
 builder.Services.AddScoped<IUserServiceClient, UserServiceClient>();
 builder.Services.AddScoped<INotificationServiceClient, NotificationServiceClient>();
+builder.Services.AddScoped<IUserPlanServiceClient, UserPlanServiceClient>();
+builder.Services.AddScoped<IPayOsService, PayOsService>();
+builder.Services.AddScoped<IPayOsWebhookHandler, PayOsWebhookHandler>();
+builder.Services.AddScoped<ISettlementService, SettlementService>();
 
 builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
 
@@ -111,6 +120,19 @@ builder.Services.AddHttpClient("NotificationService", client =>
 builder.Services.AddHttpClient("IdentityService", client =>
 {
     client.BaseAddress = new Uri(identityServiceUrl.TrimEnd('/'));
+});
+
+builder.Services.AddSingleton(sp =>
+{
+    var config = sp.GetRequiredService<IConfiguration>();
+    return new PayOSClient(new PayOSOptions
+    {
+        ClientId = config["PayOS:ClientId"]!,
+        ApiKey = config["PayOS:ApiKey"]!,
+        ChecksumKey = config["PayOS:ChecksumKey"]!,
+        TimeoutMs = 30000,
+        MaxRetries = 2
+    });
 });
 builder.Services.AddHealthChecks();
 

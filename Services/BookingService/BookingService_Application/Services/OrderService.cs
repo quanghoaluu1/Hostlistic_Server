@@ -26,6 +26,15 @@ public class OrderService : IOrderService
         return ApiResponse<OrderDto>.Success(200, "Order retrieved successfully", orderDto);
     }
 
+    public async Task<ApiResponse<OrderDto>> GetOrderByPayOsCodeAsync(long orderCode)
+    {
+        var order = await _orderRepository.GetOrderByOrderCodeAsync(orderCode);
+        if (order is null)
+            return ApiResponse<OrderDto>.Fail(404, "Order not found");
+        var orderDto = order.Adapt<OrderDto>();
+        return ApiResponse<OrderDto>.Success(200, "Order retrieved successfully", orderDto);
+    }
+
     public async Task<ApiResponse<IEnumerable<OrderDto>>> GetOrdersByEventIdAsync(Guid eventId)
     {
         var orders = await _orderRepository.GetOrdersByEventIdAsync(eventId);

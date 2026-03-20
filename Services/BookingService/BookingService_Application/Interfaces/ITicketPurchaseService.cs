@@ -10,5 +10,9 @@ namespace BookingService_Application.Interfaces
     {
         Task<ApiResponse<PurchaseTicketResponse>> PurchaseTicketsAsync(PurchaseTicketRequest request);
         Task<ApiResponse<InventoryCheckResponse>> CheckTicketAvailabilityAsync(InventoryCheckRequest request);
+
+        Task<List<TicketDto>> GenerateTicketsWithQrCodesAsync(
+            Guid orderId,
+            List<TicketItemRequest> ticketItems);
     }
 }

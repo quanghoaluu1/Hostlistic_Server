@@ -18,6 +18,7 @@ public class UserPlanRepository(IdentityServiceDbContext dbContext) : IUserPlanR
     {
         var query = dbContext.UserPlans
             .AsNoTracking()
+            .Include(x => x.SubscriptionPlan)
             .Where(x => x.UserId == userId);
 
         if (onlyActive)

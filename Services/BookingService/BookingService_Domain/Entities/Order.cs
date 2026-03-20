@@ -9,6 +9,7 @@ public class Order
     public Guid UserId { get; set; }
     public DateTime OrderDate { get; set; } = DateTime.UtcNow;
     public OrderStatus Status { get; set; }
+    public long? OrderCode { get; set; }
     public string? Notes { get; set; } 
     
     // Navigation properties to children
