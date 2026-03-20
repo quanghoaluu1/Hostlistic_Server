@@ -43,6 +43,10 @@ public class BookingServiceDbContext : DbContext
                 .WithOne()
                 .HasForeignKey(p => p.OrderId)
                 .OnDelete(DeleteBehavior.Cascade);
+            
+            entity.HasIndex(e => e.OrderCode)
+                .IsUnique()
+                .HasFilter("\"OrderCode\" IS NOT NULL");
         });
 
         // OrderDetail configuration

@@ -1,4 +1,5 @@
 using BookingService_Domain.Entities;
+using BookingService_Domain.Enum;
 using BookingService_Domain.Interfaces;
 using BookingService_Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -41,6 +42,24 @@ public class OrderRepository : IOrderRepository
             .Include(o => o.Payments)
             .Where(o => o.UserId == userId)
             .ToListAsync();
+    }
+
+    public async Task<IEnumerable<Order>> GetConfirmedOrdersByEventIdAsync(Guid eventId)
+    {
+        return await _context.Orders.Include(o => o.OrderDetails)
+            .Include(o => o.Tickets)
+            .Include(o => o.Payments)
+            .Where(o => o.EventId == eventId)
+            .Where(o => o.Status == OrderStatus.Confirmed)
+            .ToListAsync();
+    }
+
+    public async Task<Order?> GetOrderByOrderCodeAsync(long orderCode)
+    {
+        return await _context.Orders.Include(o => o.OrderDetails)
+            .Include(o => o.Tickets)
+            .Include(o => o.Payments)
+            .FirstOrDefaultAsync(o => o.OrderCode == orderCode);
     }
 
     public async Task<Order> AddOrderAsync(Order order)

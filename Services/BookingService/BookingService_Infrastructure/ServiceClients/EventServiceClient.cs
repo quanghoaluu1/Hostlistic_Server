@@ -68,5 +68,25 @@ public class EventServiceClient : IEventServiceClient
             return null;
         }
     }
+    
+    public async Task<EventSettlementInfoDto?> GetEventSettlementInfoAsync(Guid eventId)
+    {
+        try
+        {
+            var httpClient = _httpClientFactory.CreateClient("EventService");
+            var response = await httpClient.GetAsync($"/api/Event/{eventId}");
+
+            if (!response.IsSuccessStatusCode) return null;
+
+            var apiResponse = await response.Content
+                .ReadFromJsonAsync<ApiResponse<EventSettlementInfoDto>>();
+            return apiResponse?.Data;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting settlement info for event {EventId}", eventId);
+            return null;
+        }
+    }
 }
 

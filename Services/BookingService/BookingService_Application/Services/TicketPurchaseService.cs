@@ -1,8 +1,11 @@
 using Common;
 using BookingService_Application.DTOs;
+using BookingService_Application.DTOs.PayOs;
 using BookingService_Application.Interfaces;
 using BookingService_Domain.Enum;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using PayOS.Models.V2.PaymentRequests;
 
 namespace BookingService_Application.Services;
 
@@ -17,7 +20,10 @@ public class TicketPurchaseService : ITicketPurchaseService
     private readonly IEventServiceClient _eventServiceClient;
     private readonly IUserServiceClient _userServiceClient;
     private readonly INotificationServiceClient _notificationServiceClient;
+    private readonly IPayOsService _payOsService;
+    private static IConfiguration _configuration;
     private readonly ILogger<TicketPurchaseService> _logger;
+    
 
     public TicketPurchaseService(
         IOrderService orderService,
@@ -29,6 +35,8 @@ public class TicketPurchaseService : ITicketPurchaseService
         IEventServiceClient eventServiceClient,
         IUserServiceClient userServiceClient,
         INotificationServiceClient notificationServiceClient,
+        IPayOsService payOsService,
+        IConfiguration configuration,
         ILogger<TicketPurchaseService> logger)
     {
         _orderService = orderService;
@@ -40,8 +48,12 @@ public class TicketPurchaseService : ITicketPurchaseService
         _eventServiceClient = eventServiceClient;
         _userServiceClient = userServiceClient;
         _notificationServiceClient = notificationServiceClient;
+        _payOsService = payOsService;
+        _configuration = configuration;
         _logger = logger;
     }
+    private readonly string _returnBaseUrl = _configuration["FrontEndUrl"] ?? "http://localhost:3000/";
+
 
     public async Task<ApiResponse<InventoryCheckResponse>> CheckTicketAvailabilityAsync(InventoryCheckRequest request)
     {
@@ -266,7 +278,133 @@ public class TicketPurchaseService : ITicketPurchaseService
         }
     }
 
-    private async Task<List<TicketDto>> GenerateTicketsWithQrCodesAsync(
+    public async Task<ApiResponse<PayOsCheckoutResponse>> InitiatePayOsPurchaseAsync(PurchaseTicketRequest request)
+    {
+        try
+        {
+            _logger.LogInformation("Starting ticket purchase for user {UserId} and event {EventId}", request.UserId,
+                request.EventId);
+
+            // 1. Validate ticket availability
+            var availabilityCheck = await _inventoryService.CheckAvailabilityAsync(request.TicketItems);
+            if (!availabilityCheck.IsSuccess || !availabilityCheck.Data!.IsAvailable)
+            {
+                _logger.LogWarning("Ticket availability check failed for event {EventId}: {Message}", request.EventId,
+                    availabilityCheck.Data?.Message ?? "Tickets not available");
+                return ApiResponse<PayOsCheckoutResponse>.Fail(400,
+                    availabilityCheck.Data?.Message ?? "Tickets not available");
+            }
+
+            // 2. Reserve inventory temporarily
+            var reservationId = await _inventoryService.ReserveInventoryAsync(request.TicketItems);
+
+            try
+            {
+                // 3. Calculate total amount
+                var totalAmount = request.TicketItems.Sum(x => x.UnitPrice * x.Quantity);
+                
+                // 5. Create order
+                var orderRequest = new CreateOrderRequest
+                {
+                    EventId = request.EventId,
+                    UserId = request.UserId,
+                    Notes = request.Notes,
+                    OrderDetails = request.TicketItems.Select(item => new CreateOrderDetailRequest
+                    {
+                        TicketTypeId = item.TicketTypeId,
+                        Quantity = item.Quantity,
+                        UnitPrice = item.UnitPrice
+                    }).ToList()
+                };
+
+                var orderResult = await _orderService.CreateOrderAsync(orderRequest);
+                if (!orderResult.IsSuccess)
+                {
+                    _logger.LogWarning("Order creation failed for user {UserId}: {Message}", request.UserId,
+                        orderResult.Message);
+                    await _inventoryService.ReleaseReservationAsync(reservationId);
+                    return ApiResponse<PayOsCheckoutResponse>.Fail(400, orderResult.Message);
+                }
+
+                // 6. Create payment record for wallet transaction
+                var paymentResult = await _paymentService.CreatePaymentAsync(new CreatePaymentRequest
+                {
+                    OrderId = orderResult.Data!.Id,
+                    PaymentMethodId = request.PaymentMethodId,
+                    Amount = totalAmount,
+                    Gateway = "PayOs"
+                });
+
+                if (!paymentResult.IsSuccess)
+                {
+                    _logger.LogWarning("Payment creation failed for order {OrderId}: {Message}", orderResult.Data.Id,
+                        paymentResult.Message);
+                    await _orderService.UpdateOrderAsync(orderResult.Data.Id, new UpdateOrderRequest
+                    {
+                        Status = OrderStatus.Cancelled,
+                        Notes = "Payment failed"
+                    });
+                    await _inventoryService.ReleaseReservationAsync(reservationId);
+                    return ApiResponse<PayOsCheckoutResponse>.Fail(400, paymentResult.Message);
+                }
+
+                var orderCode = GenerateOrderCode();
+                await _orderService.UpdateOrderAsync(orderResult.Data.Id, new UpdateOrderRequest()
+                {
+                    Status = OrderStatus.Pending,
+                    Notes = $"ReservationId:{reservationId} PayOsCode:{orderCode}"
+                });
+                
+                var payOsRequest = new CreatePayOsPaymentRequest()
+                {
+                    OrderCode = orderCode,
+                    Amount = (long)totalAmount,
+                    Description = $"HOSTLISTIC {request.EventId.ToString()[..8].ToUpper()}",
+                    Items = request.TicketItems.Select(ti => new PayOsItemDto
+                    {
+                        Name = ti.TicketTypeName ?? "Ticket",
+                        Quantity = ti.Quantity,
+                        Price = ti.UnitPrice
+                    }).ToList()
+                };
+
+                var payOsResult = await _payOsService.CreatePaymentLinkAsync(payOsRequest);
+                if (payOsResult is null)
+                {
+                    // Rollback
+                    await _orderService.UpdateOrderAsync(orderResult.Data.Id, new UpdateOrderRequest
+                    {
+                        Status = OrderStatus.Cancelled,
+                        Notes = "PayOS payment link creation failed"
+                    });
+                    await _inventoryService.ReleaseReservationAsync(reservationId);
+                    return ApiResponse<PayOsCheckoutResponse>.Fail(502, "Failed to create payment link");
+                }
+                return ApiResponse<PayOsCheckoutResponse>.Success(200, "Payment link created", new PayOsCheckoutResponse
+                {
+                    CheckoutUrl = payOsResult.CheckoutUrl,
+                    QrCode = payOsResult.QrCode,
+                    OrderId = orderResult.Data.Id,
+                    OrderCode = orderCode,
+                    ExpiresInMinutes = 15
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Purchase failed for user {UserId} and event {EventId}", request.UserId, request.EventId);
+                // Rollback on any error
+                await _inventoryService.ReleaseReservationAsync(reservationId);
+                return ApiResponse<PayOsCheckoutResponse>.Fail(500, $"Purchase failed: {ex.Message}");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error in PurchaseTicketsAsync");
+            return ApiResponse<PayOsCheckoutResponse>.Fail(500, $"Purchase failed: {ex.Message}");
+        }
+    }
+
+    public async Task<List<TicketDto>> GenerateTicketsWithQrCodesAsync(
         Guid orderId,
         List<TicketItemRequest> ticketItems)
     {
@@ -312,6 +450,15 @@ public class TicketPurchaseService : ITicketPurchaseService
         return tickets;
     }
 
+    
+    private static long GenerateOrderCode()
+    {
+        // PayOS orderCode phải là số nguyên dương, max 9007199254740991 
+        // Dùng timestamp (ms) + random 3 digits
+        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        var random = Random.Shared.Next(100, 999);
+        return timestamp * 1000 + random;
+    }
 }
 
 // DTOs for external service calls
@@ -333,4 +480,11 @@ public class TicketTypeInfoDto
 {
     public string Name { get; set; } = string.Empty;
     public decimal Price { get; set; }
+}
+public class EventSettlementInfoDto
+{
+    public Guid EventId { get; set; }
+    public Guid OrganizerId { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public int EventStatus { get; set; }
 }
