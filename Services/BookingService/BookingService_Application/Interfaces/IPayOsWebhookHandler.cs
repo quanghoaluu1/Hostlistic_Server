@@ -5,5 +5,5 @@ namespace BookingService_Application.Interfaces;
 
 public interface IPayOsWebhookHandler
 {
-    Task<ApiResponse<bool>> HandlePaymentSuccessAsync(PayOsWebhookDataDto webhookData);
+    Task<ApiResponse<bool>> HandlePaymentSuccessAsync(PayOsVerifiedPaymentData data);
 }

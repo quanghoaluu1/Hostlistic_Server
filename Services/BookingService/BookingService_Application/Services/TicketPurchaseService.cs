@@ -21,7 +21,6 @@ public class TicketPurchaseService : ITicketPurchaseService
     private readonly IUserServiceClient _userServiceClient;
     private readonly INotificationServiceClient _notificationServiceClient;
     private readonly IPayOsService _payOsService;
-    private static IConfiguration _configuration;
     private readonly ILogger<TicketPurchaseService> _logger;
     
 
@@ -36,7 +35,6 @@ public class TicketPurchaseService : ITicketPurchaseService
         IUserServiceClient userServiceClient,
         INotificationServiceClient notificationServiceClient,
         IPayOsService payOsService,
-        IConfiguration configuration,
         ILogger<TicketPurchaseService> logger)
     {
         _orderService = orderService;
@@ -49,10 +47,8 @@ public class TicketPurchaseService : ITicketPurchaseService
         _userServiceClient = userServiceClient;
         _notificationServiceClient = notificationServiceClient;
         _payOsService = payOsService;
-        _configuration = configuration;
         _logger = logger;
     }
-    private readonly string _returnBaseUrl = _configuration["FrontEndUrl"] ?? "http://localhost:3000/";
 
 
     public async Task<ApiResponse<InventoryCheckResponse>> CheckTicketAvailabilityAsync(InventoryCheckRequest request)
@@ -352,7 +348,8 @@ public class TicketPurchaseService : ITicketPurchaseService
                 await _orderService.UpdateOrderAsync(orderResult.Data.Id, new UpdateOrderRequest()
                 {
                     Status = OrderStatus.Pending,
-                    Notes = $"ReservationId:{reservationId} PayOsCode:{orderCode}"
+                    Notes = $"ReservationId:{reservationId} PayOsCode:{orderCode}",
+                    OrderCode = orderCode
                 });
                 
                 var payOsRequest = new CreatePayOsPaymentRequest()

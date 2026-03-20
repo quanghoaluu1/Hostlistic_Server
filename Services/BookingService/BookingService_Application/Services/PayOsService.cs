@@ -1,4 +1,5 @@
-﻿using BookingService_Application.DTOs;
+﻿using System.Text.Json;
+using BookingService_Application.DTOs;
 using BookingService_Application.DTOs.PayOs;
 using BookingService_Application.Interfaces;
 using Microsoft.Extensions.Configuration;
@@ -129,6 +130,42 @@ public class PayOsService(
         {
             logger.LogError(ex, "Failed to cancel PayOS payment for orderCode {OrderCode}", orderCode);
             return false;
+        }
+    }
+    
+    public async Task<PayOsWebhookResult?> HandleWebhookAsync(string rawJson)
+    {
+        try
+        {
+            // Deserialize bằng SDK types — giữ nguyên data gốc
+            var webhook = JsonSerializer.Deserialize<Webhook>(rawJson, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            if (webhook?.Data is null || webhook.Data.OrderCode == 0)
+                return null; // Ping request
+
+            // SDK verify trên đúng object gốc — signature khớp
+            var verified = await payOsClient.Webhooks.VerifyAsync(webhook);
+
+            return new PayOsWebhookResult
+            {
+                IsVerified = true,
+                IsSuccess = webhook.Code == "00",
+                Data = new PayOsVerifiedPaymentData
+                {
+                    OrderCode = verified.OrderCode,
+                    Amount = verified.Amount,
+                    Reference = verified.Reference,
+                    TransactionDateTime = verified.TransactionDateTime
+                }
+            };
+        }
+        catch (PayOSException ex)
+        {
+            logger.LogWarning("Webhook verification failed: {Message}", ex.Message);
+            return new PayOsWebhookResult { IsVerified = false };
         }
     }
 }

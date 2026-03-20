@@ -1,7 +1,9 @@
-﻿using BookingService_Application.DTOs;
+﻿using System.Text.Json;
+using BookingService_Application.DTOs;
 using BookingService_Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PayOS.Models.Webhooks;
 
 namespace BookingService_Api.Controllers;
 
@@ -15,28 +17,34 @@ public class PayOsWebhookController(
     ) : ControllerBase
 {
     [HttpPost]
-    public async Task<IActionResult> HandleWebhook([FromBody] PayOsWebhookPayload payload)
+    public async Task<IActionResult> HandleWebhook()
     {
-        logger.LogInformation("PayOS webhook received, orderCode: {OrderCode}",
-            payload.Data?.OrderCode);
+        Request.EnableBuffering();
+        Request.Body.Position = 0;
+        var rawBody = await new StreamReader(Request.Body).ReadToEndAsync();
+        Request.Body.Position = 0;
 
-        // 1. SDK verify signature
-        var verifiedData = await payOsService.VerifyWebhookAsync(payload);
-        if (verifiedData is null)
+        logger.LogInformation("PayOS raw payload: {Payload}", rawBody);
+
+        // Controller chỉ gọi interface — không biết PayOSClient
+        var result = await payOsService.HandleWebhookAsync(rawBody);
+
+        if (result is null)
+        {
+            logger.LogInformation("Webhook ping or non-payment event");
+            return Ok();
+        }
+
+        if (!result.IsVerified)
         {
             logger.LogWarning("Invalid webhook signature");
             return Unauthorized();
         }
 
-        // 2. Chỉ xử lý payment thành công
-        if (payload.Code != "00")
+        if (result.IsSuccess)
         {
-            logger.LogInformation("Non-success webhook code: {Code}", payload.Code);
-            return Ok();
+            await webhookHandler.HandlePaymentSuccessAsync(result.Data!);
         }
-
-        // 3. Process
-        await webhookHandler.HandlePaymentSuccessAsync(payload.Data!);
 
         return Ok();
     }
