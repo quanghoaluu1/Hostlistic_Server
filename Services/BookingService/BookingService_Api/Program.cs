@@ -20,6 +20,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 
 builder.Services.AddControllers();
+builder.Services.AddHttpContextAccessor();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi(options => options.AddDocumentTransformer<BearerSecuritySchemeTransformer>());
 
@@ -100,6 +101,7 @@ builder.Services.AddScoped<IUserPlanServiceClient, UserPlanServiceClient>();
 builder.Services.AddScoped<IPayOsService, PayOsService>();
 builder.Services.AddScoped<IPayOsWebhookHandler, PayOsWebhookHandler>();
 builder.Services.AddScoped<ISettlementService, SettlementService>();
+builder.Services.AddScoped<ISubscriptionPurchaseService, SubscriptionPurchaseService>();
 
 builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
 
