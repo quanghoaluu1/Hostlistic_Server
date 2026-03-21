@@ -27,5 +27,5 @@ public class UpdateOrderRequest
 {
     public OrderStatus Status { get; set; }
     public string? Notes { get; set; }
-    public long OrderCode { get; set; }
+    public long? OrderCode { get; set; }
 }

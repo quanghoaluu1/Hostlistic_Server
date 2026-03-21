@@ -81,7 +81,8 @@ public class OrderService : IOrderService
         // Update properties
         existingOrder.Status = request.Status;
         existingOrder.Notes = request.Notes;
-        existingOrder.OrderCode = request.OrderCode;
+        if (request.OrderCode is not null)
+            existingOrder.OrderCode = request.OrderCode;
 
         await _orderRepository.UpdateOrderAsync(existingOrder);
         await _orderRepository.SaveChangesAsync();
