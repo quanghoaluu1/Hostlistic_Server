@@ -1,5 +1,4 @@
 using System.IdentityModel.Tokens.Jwt;
-using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text;
 using Common;
@@ -17,7 +16,7 @@ using NotificationService_Application.Interfaces;
 
 namespace IdentityService_Application.Services;
 
-public class AuthService(IUserRepository userRepository, IRefreshTokenRepository refreshTokenRepository, IConfiguration configuration, IOtpService otpService, IHttpClientFactory httpClientFactory)
+public class AuthService(IUserRepository userRepository, IRefreshTokenRepository refreshTokenRepository, IConfiguration configuration, IOtpService otpService, INotificationServiceClient notificationServiceClient)
     : IAuthService
 {
     public async Task<ApiResponse<bool>> RegisterAsync(RegisterRequest request)
@@ -68,9 +67,7 @@ public class AuthService(IUserRepository userRepository, IRefreshTokenRepository
         }
 
         var otp = await otpService.GenerateOtpAsync(email);
-        var client = httpClientFactory.CreateClient();
-        var emailRequest = new {Email = email, Otp = otp};
-        await client.PostAsJsonAsync("http://localhost:5097/api/Email/send-email-otp", emailRequest);
+        await notificationServiceClient.SendOtpEmailAsync(email, otp);
         return ApiResponse<AuthResponse>.Success(200, "Otp sent successfully", null);
     }
 

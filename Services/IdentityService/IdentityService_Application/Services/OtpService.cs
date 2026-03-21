@@ -1,12 +1,12 @@
-﻿using System.Net.Http.Json;
-using Common;
+﻿using Common;
 using IdentityService_Application.DTOs;
+using IdentityService_Application.Interfaces;
 using NotificationService_Application.Interfaces;
 using StackExchange.Redis;
 
 namespace IdentityService_Application.Services;
 
-public class OtpService(IConnectionMultiplexer redis, IHttpClientFactory httpClientFactory) : IOtpService
+public class OtpService(IConnectionMultiplexer redis, INotificationServiceClient notificationServiceClient) : IOtpService
 {
     private readonly IDatabase _redisDb = redis.GetDatabase();
     private readonly TimeSpan _expiry = TimeSpan.FromMinutes(5);
@@ -20,9 +20,7 @@ public class OtpService(IConnectionMultiplexer redis, IHttpClientFactory httpCli
                 return ApiResponse<string>.Fail(400, "Email is required");
             }
             var otp = await GenerateOtpAsync(request.Email);
-            var client = httpClientFactory.CreateClient();
-            var emailRequest = new {Email = request.Email, Otp = otp};
-            await client.PostAsJsonAsync("http://localhost:5097/api/Email/send-email-otp", emailRequest);
+            await notificationServiceClient.SendOtpEmailAsync(request.Email, otp);
             return ApiResponse<string>.Success(200, "Otp sent successfully", null);
         }
         catch (Exception e)
