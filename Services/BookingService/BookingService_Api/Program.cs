@@ -13,6 +13,8 @@ using Microsoft.OpenApi;
 using Scalar.AspNetCore;
 using System.Reflection;
 using System.Text;
+using BookingService_Api.Hubs;
+using BookingService_Api.Services;
 using PayOS;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -66,6 +68,7 @@ builder.Services.AddDbContext<BookingServiceDbContext>(optionsAction =>
 var config = TypeAdapterConfig.GlobalSettings;
 config.Scan(Assembly.GetExecutingAssembly());
 builder.Services.AddSingleton(config);
+builder.Services.AddSignalR();
 
 // Register repositories
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
@@ -99,6 +102,7 @@ builder.Services.AddScoped<INotificationServiceClient, NotificationServiceClient
 builder.Services.AddScoped<IUserPlanServiceClient, UserPlanServiceClient>();
 builder.Services.AddScoped<IPayOsService, PayOsService>();
 builder.Services.AddScoped<IPayOsWebhookHandler, PayOsWebhookHandler>();
+builder.Services.AddScoped<IPaymentNotifier, SignalRPaymentNotifier>();
 builder.Services.AddScoped<ISettlementService, SettlementService>();
 
 builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
@@ -157,5 +161,6 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapHealthChecks("/health");
+app.MapHub<PaymentHub>("/hubs/payment");
 
 app.Run();

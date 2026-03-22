@@ -15,6 +15,7 @@ public class PayOsWebhookHandler(
     IEventServiceClient eventServiceClient,
     IUserServiceClient userServiceClient,
     INotificationServiceClient notificationServiceClient,
+    IPaymentNotifier paymentNotifier,
     ILogger<PayOsWebhookHandler> logger
     ) : IPayOsWebhookHandler
 {
@@ -57,12 +58,66 @@ public class PayOsWebhookHandler(
             UnitPrice = od.UnitPrice
         }).ToList();
         var tickets = await ticketPurchaseService.GenerateTicketsWithQrCodesAsync(order.Id, orderDetails);
+        if (tickets.Count > 0)
+        {
+            var unitPriceByType = orderDetails
+                .GroupBy(x => x.TicketTypeId)
+                .ToDictionary(g => g.Key, g => g.First().UnitPrice);
+            var ticketTypeIds = tickets.Select(t => t.TicketTypeId).Distinct().ToList();
+            var ticketTypeInfoById = new Dictionary<Guid, TicketTypeInfoDto>();
+            foreach (var ticketTypeId in ticketTypeIds)
+            {
+                var info = await eventServiceClient.GetTicketTypeInfoAsync(ticketTypeId);
+                if (info is not null)
+                {
+                    ticketTypeInfoById[ticketTypeId] = info;
+                }
+            }
+
+            foreach (var ticket in tickets)
+            {
+                if (ticketTypeInfoById.TryGetValue(ticket.TicketTypeId, out var info))
+                {
+                    ticket.TicketTypeName = info.Name;
+                }
+                if (unitPriceByType.TryGetValue(ticket.TicketTypeId, out var price))
+                {
+                    ticket.Price = price;
+                }
+            }
+        }
         await orderService.UpdateOrderAsync(order.Id, new DTOs.UpdateOrderRequest
         {
             Status = OrderStatus.Confirmed,
             Notes = $"PayOS payment confirmed. Ref: {data.Reference}",
             OrderCode = data.OrderCode,
         });
+
+        try
+        {
+            await paymentNotifier.NotifyPaymentConfirmedAsync(order.Id, new PaymentConfirmedPayload
+            {
+                OrderId = order.Id,
+                OrderCode = data.OrderCode,
+                Status = "Confirmed",
+                TotalAmount = (decimal)data.Amount,
+                Tickets = tickets.Select(t => new TicketSummaryDto
+                {
+                    Id = t.Id,
+                    TicketCode = t.TicketCode,
+                    TicketTypeName = t.TicketTypeName,
+                    QrCodeUrl = t.QrCodeUrl,
+                    Price = t.Price
+                }).ToList()
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex,
+                "Failed to push SignalR notification for order {OrderId}. " +
+                "Client can use polling fallback.", order.Id);
+        }
+        
         _ = Task.Run(async () =>
         {
             try
