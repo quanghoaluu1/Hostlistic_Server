@@ -56,6 +56,7 @@ public class OrderService : IOrderService
 
         var order = request.Adapt<Order>();
         order.Status = BookingService_Domain.Enum.OrderStatus.Pending;
+        order.OrderDetails.Clear();
 
         // Create order details
         foreach (var detailRequest in request.OrderDetails)
