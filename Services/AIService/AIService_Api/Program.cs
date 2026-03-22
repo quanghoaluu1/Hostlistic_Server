@@ -34,7 +34,8 @@ builder.Services.AddScoped<IPromptTemplateRepository, PromptTemplateRepository>(
 builder.Services.AddScoped<IPromptTemplateService, PromptTemplateService>();
 builder.Services.AddScoped<IPromptTemplateEngine, PromptTemplateEngine>();
 builder.Services.AddScoped<IEventServiceClient, EventServiceClient>();
-var eventServiceUrl = builder.Configuration["Services:EventService"];
+// Same config keys as BookingService (ServiceUrls:*). Use IsNullOrWhiteSpace — empty string is not null.
+var eventServiceUrl = builder.Configuration["ServiceUrls:EventService"];
 if (string.IsNullOrWhiteSpace(eventServiceUrl))
     eventServiceUrl = "http://localhost:5139";
 
@@ -44,8 +45,7 @@ builder.Services.AddHttpClient<IEventServiceClient, EventServiceClient>(client =
     client.Timeout = TimeSpan.FromSeconds(10);
 });
 
-// Empty string in appsettings.json does not trigger ?? — must use IsNullOrWhiteSpace or Uri throws.
-var identityServiceUrl = builder.Configuration["Services:IdentityService"];
+var identityServiceUrl = builder.Configuration["ServiceUrls:IdentityService"];
 if (string.IsNullOrWhiteSpace(identityServiceUrl))
     identityServiceUrl = "http://localhost:5049";
 
