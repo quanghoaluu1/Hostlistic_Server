@@ -16,20 +16,18 @@ public class TicketPurchaseService : ITicketPurchaseService
     private readonly IPaymentService _paymentService;
     private readonly IWalletService _walletService;
     private readonly IInventoryService _inventoryService;
-    private readonly IQrCodeService _qrCodeService;
     private readonly IEventServiceClient _eventServiceClient;
     private readonly IUserServiceClient _userServiceClient;
     private readonly INotificationServiceClient _notificationServiceClient;
     private readonly IPayOsService _payOsService;
     private readonly ILogger<TicketPurchaseService> _logger;
-    
+
 
     public TicketPurchaseService(
         IOrderService orderService,
         ITicketService ticketService,
         IPaymentService paymentService,
         IInventoryService inventoryService,
-        IQrCodeService qrCodeService,
         IWalletService walletService,
         IEventServiceClient eventServiceClient,
         IUserServiceClient userServiceClient,
@@ -41,7 +39,6 @@ public class TicketPurchaseService : ITicketPurchaseService
         _ticketService = ticketService;
         _paymentService = paymentService;
         _inventoryService = inventoryService;
-        _qrCodeService = qrCodeService;
         _walletService = walletService;
         _eventServiceClient = eventServiceClient;
         _userServiceClient = userServiceClient;
@@ -428,20 +425,7 @@ public class TicketPurchaseService : ITicketPurchaseService
                     continue;
                 }
 
-                var qrCodeUrl = await _qrCodeService.GenerateQrCodeAsync(ticketResult.Data!.TicketCode);
-
-                if (!string.IsNullOrEmpty(qrCodeUrl))
-                {
-                    await _ticketService.UpdateTicketAsync(ticketResult.Data.Id, new UpdateTicketRequest
-                    {
-                        QrCodeUrl = qrCodeUrl,
-                        IsUsed = false
-                    });
-
-                    ticketResult.Data.QrCodeUrl = qrCodeUrl;
-                }
-
-                tickets.Add(ticketResult.Data);
+                tickets.Add(ticketResult.Data!);
             }
         }
 

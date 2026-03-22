@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+namespace BookingService_Application.Interfaces;
 
-namespace BookingService_Application.Interfaces
+public interface IQrCodeService
 {
-    public interface IQrCodeService
-    {
-        Task<string> GenerateQrCodeAsync(string ticketCode);
-    }
+    Task<string> GenerateQrCodeAsync(string ticketCode);
 }

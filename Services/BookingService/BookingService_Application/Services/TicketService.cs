@@ -10,10 +10,12 @@ namespace BookingService_Application.Services;
 public class TicketService : ITicketService
 {
     private readonly ITicketRepository _ticketRepository;
+    private readonly IQrCodeService _qrCodeService;
 
-    public TicketService(ITicketRepository ticketRepository)
+    public TicketService(ITicketRepository ticketRepository, IQrCodeService qrCodeService)
     {
         _ticketRepository = ticketRepository;
+        _qrCodeService = qrCodeService;
     }
 
     public async Task<ApiResponse<TicketDto>> GetTicketByIdAsync(Guid ticketId)
@@ -47,7 +49,8 @@ public class TicketService : ITicketService
     {
         var ticket = request.Adapt<Ticket>();
 
-        await _ticketRepository.AddTicketAsync(ticket);
+        await _ticketRepository.AddTicketAsync(ticket); // sets ticket.Id and ticket.TicketCode
+        ticket.QrCodeUrl = await _qrCodeService.GenerateQrCodeAsync(ticket.TicketCode);
         await _ticketRepository.SaveChangesAsync();
 
         var ticketDto = ticket.Adapt<TicketDto>();
