@@ -355,6 +355,7 @@ public class TicketPurchaseService : ITicketPurchaseService
                 var payOsRequest = new CreatePayOsPaymentRequest()
                 {
                     OrderCode = orderCode,
+                    OrderId = orderResult.Data.Id,
                     Amount = (long)totalAmount,
                     Description = $"HOSTLISTIC {request.EventId.ToString()[..8].ToUpper()}",
                     Items = request.TicketItems.Select(ti => new PayOsItemDto
