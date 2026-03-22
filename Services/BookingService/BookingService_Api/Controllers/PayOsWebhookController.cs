@@ -26,7 +26,6 @@ public class PayOsWebhookController(
 
         logger.LogInformation("PayOS raw payload: {Payload}", rawBody);
 
-        // Controller chỉ gọi interface — không biết PayOSClient
         var result = await payOsService.HandleWebhookAsync(rawBody);
 
         if (result is null)
@@ -49,4 +48,29 @@ public class PayOsWebhookController(
         return Ok();
     }
 
+    [HttpPost("test-push/{orderId}")]
+    public async Task<IActionResult> TestPush(
+        Guid orderId,
+        [FromServices] IPaymentNotifier notifier)
+    {
+        await notifier.NotifyPaymentConfirmedAsync(orderId, new PaymentConfirmedPayload
+        {
+            OrderId = orderId,
+            OrderCode = 123456789,
+            Status = "Confirmed",
+            TotalAmount = 500000,
+            Tickets =
+            [
+                new TicketSummaryDto
+                {
+                    Id = Guid.NewGuid(),
+                    TicketCode = "TKT-TEST001",
+                    TicketTypeName = "VIP",
+                    QrCodeUrl = "https://via.placeholder.com/200",
+                    Price = 500000
+                }
+            ]
+        });
+        return Ok("Pushed!");
+    }
 }
