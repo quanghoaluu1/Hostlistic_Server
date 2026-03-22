@@ -1,9 +1,11 @@
 using System.Text;
 using AIService_Application.Interface;
 using AIService_Application.Services;
+using AIService_Api.Filters;
 using AIService_Domain.Interfaces;
 using AIService_Infrastructure.Data;
 using AIService_Infrastructure.Repositories;
+using AIService_Infrastructure.ServiceClients;
 using Common;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -15,6 +17,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 
 builder.Services.AddControllers();
+builder.Services.AddHttpContextAccessor();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi(options =>
 {
@@ -31,11 +34,30 @@ builder.Services.AddScoped<IPromptTemplateRepository, PromptTemplateRepository>(
 builder.Services.AddScoped<IPromptTemplateService, PromptTemplateService>();
 builder.Services.AddScoped<IPromptTemplateEngine, PromptTemplateEngine>();
 builder.Services.AddScoped<IEventServiceClient, EventServiceClient>();
+var eventServiceUrl = builder.Configuration["Services:EventService"];
+if (string.IsNullOrWhiteSpace(eventServiceUrl))
+    eventServiceUrl = "http://localhost:5139";
+
 builder.Services.AddHttpClient<IEventServiceClient, EventServiceClient>(client =>
 {
-    client.BaseAddress = new Uri(builder.Configuration["Services:EventService"]!);
+    client.BaseAddress = new Uri(eventServiceUrl.TrimEnd('/'));
     client.Timeout = TimeSpan.FromSeconds(10);
 });
+
+// Empty string in appsettings.json does not trigger ?? — must use IsNullOrWhiteSpace or Uri throws.
+var identityServiceUrl = builder.Configuration["Services:IdentityService"];
+if (string.IsNullOrWhiteSpace(identityServiceUrl))
+    identityServiceUrl = "http://localhost:5049";
+
+builder.Services.AddHttpClient("IdentityService", client =>
+{
+    client.BaseAddress = new Uri(identityServiceUrl.TrimEnd('/'));
+    client.Timeout = TimeSpan.FromSeconds(15);
+});
+
+builder.Services.AddScoped<IUserPlanServiceClient, UserPlanServiceClient>();
+builder.Services.AddScoped<IAiPlanEntitlementService, AiPlanEntitlementService>();
+builder.Services.AddScoped<RequireAiSubscriptionFilter>();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Production", policy =>
