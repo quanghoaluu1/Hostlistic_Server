@@ -42,6 +42,7 @@ services:
       - CloudinarySettings__CloudName=${CLOUDINARY_CLOUD_NAME}
       - CloudinarySettings__ApiKey=${CLOUDINARY_API_KEY}
       - CloudinarySettings__ApiSecret=${CLOUDINARY_API_SECRET}
+      - ServiceUrls__IdentityService=http://identityservice:8080
       - Google__ClientId=${GOOGLE_CLIENT_ID}
       - Services__BookingService=http://bookingservice:8080
       - Services__EventService=http://eventservice:8080
@@ -139,7 +140,8 @@ services:
       - Jwt__Audience=hostlistic
       - Gemini__ApiKey=${GEMINI_API_KEY}
       - Gemini__Model=gemini-3-flash-preview
-      - Services__EventService=http://eventservice:8080
+      - ServiceUrls__EventService=http://eventservice:8080
+      - ServiceUrls__IdentityService=http://identityservice:8080
     networks:
       - hostlistic_net
     restart: unless-stopped

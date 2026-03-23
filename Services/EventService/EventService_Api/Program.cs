@@ -5,6 +5,7 @@ using EventService_Application.Services;
 using EventService_Domain.Interfaces;
 using EventService_Infrastructure.Data;
 using EventService_Infrastructure.Repositories;
+using EventService_Infrastructure.ServiceClients;
 using Mapster;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
@@ -24,6 +25,7 @@ builder.Services.AddControllers()
     {
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 builder.Services.Configure<ApiBehaviorOptions>(options =>
@@ -165,6 +167,14 @@ builder.Services.AddScoped<ISponsorService, SponsorService>();
 builder.Services.AddScoped<ISponsorTierService, SponsorTierService>();
 builder.Services.AddScoped<ISponsorInteractionService, SponsorInteractionService>();
 builder.Services.AddScoped<IFeedbackService, FeedbackService>();
+builder.Services.AddScoped<IUserPlanServiceClient, UserPlanServiceClient>();
+
+var identityServiceUrl = builder.Configuration["ServiceUrls:IdentityService"] ?? "http://localhost:5049";
+builder.Services.AddHttpClient("IdentityService", client =>
+{
+    client.BaseAddress = new Uri(identityServiceUrl.TrimEnd('/'));
+});
+
 builder.Services.AddHealthChecks();
 var app = builder.Build();
 
