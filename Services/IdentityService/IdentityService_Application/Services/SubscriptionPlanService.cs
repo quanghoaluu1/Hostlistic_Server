@@ -12,7 +12,7 @@ public class SubscriptionPlanService(ISubscriptionPlanRepository repository) : I
     public async Task<ApiResponse<SubscriptionPlanDto>> CreateAsync(CreateSubscriptionPlanDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Name) ||
-            dto.DurationInMonths <= 0 ||
+            dto.DurationInDays <= 0 ||
             dto.MaxEvents < 0 ||
             dto.MaxAttendeesPerEvent <= 0 ||
             dto.CommissionRate < 0 || dto.CommissionRate > 1)
@@ -60,8 +60,8 @@ public class SubscriptionPlanService(ISubscriptionPlanRepository repository) : I
             entity.Price = dto.Price.Value;
         if (!string.IsNullOrWhiteSpace(dto.Description))
             entity.Description = dto.Description;
-        if (dto.DurationInMonths.HasValue && dto.DurationInMonths > 0)
-            entity.DurationInMonths = dto.DurationInMonths.Value;
+        if (dto.DurationInDays.HasValue && dto.DurationInDays > 0)
+            entity.DurationInDays = dto.DurationInDays.Value;
         if (dto.MaxEvents.HasValue && dto.MaxEvents >= 0)
             entity.MaxEvents = dto.MaxEvents.Value;
         if (dto.MaxAttendeesPerEvent.HasValue && dto.MaxAttendeesPerEvent > 0)

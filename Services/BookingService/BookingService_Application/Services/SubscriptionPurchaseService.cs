@@ -61,7 +61,7 @@ public class SubscriptionPurchaseService(
         await walletRepository.SaveChangesAsync();
 
         var now = DateTime.UtcNow;
-        var endDate = now.AddMonths(Math.Max(1, plan.DurationInMonths));
+        var endDate = now.AddDays(Math.Max(1, plan.DurationInDays));
 
         var createdUserPlan = await userPlanServiceClient.CreateUserPlanAsync(new CreateUserPlanRequest
         {

@@ -14,9 +14,6 @@ public class UserPlanService(IUserPlanRepository userPlanRepository, ISubscripti
         if (dto.UserId == Guid.Empty || dto.SubscriptionPlanId == Guid.Empty)
             return ApiResponse<UserPlanDto>.Fail(400, "Thiếu UserId hoặc SubscriptionPlanId");
 
-        if (dto.StartDate == default)
-            dto.StartDate = DateTime.UtcNow;
-
         var plan = await subscriptionPlanRepository.GetByIdAsync(dto.SubscriptionPlanId);
         if (plan == null || !plan.IsActive)
             return ApiResponse<UserPlanDto>.Fail(400, "Gói không tồn tại hoặc không hoạt động");
@@ -24,14 +21,15 @@ public class UserPlanService(IUserPlanRepository userPlanRepository, ISubscripti
         var existingActives = await userPlanRepository.GetByUserIdAsync(dto.UserId, true);
         if (existingActives.Any(x => x.SubscriptionPlanId == dto.SubscriptionPlanId))
             return ApiResponse<UserPlanDto>.Fail(400, "User đã có gói này đang hoạt động");
-
+        var startDate = DateTime.UtcNow;
+        var endDate = startDate.AddDays(plan.DurationInDays);
         var entity = new UserPlan
         {
             Id = Guid.NewGuid(),
             UserId = dto.UserId,
             SubscriptionPlanId = dto.SubscriptionPlanId,
-            StartDate = dto.StartDate,
-            EndDate = dto.EndDate,
+            StartDate = startDate,
+            EndDate = endDate,
             IsActive = true
         };
 

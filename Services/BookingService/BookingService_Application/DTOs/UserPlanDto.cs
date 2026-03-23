@@ -6,7 +6,7 @@ public class SubscriptionPlanDto
     public string Name { get; set; } = string.Empty;
     public decimal Price { get; set; }
     public string Description { get; set; } = string.Empty;
-    public int DurationInMonths { get; set; }
+    public int DurationInDays { get; set; }
     public int MaxEvents { get; set; }
     public int MaxAttendeesPerEvent { get; set; }
     public float CommissionRate { get; set; }
