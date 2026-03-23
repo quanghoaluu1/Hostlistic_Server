@@ -14,6 +14,7 @@ public class SubscriptionPlanService(ISubscriptionPlanRepository repository) : I
         if (string.IsNullOrWhiteSpace(dto.Name) ||
             dto.DurationInMonths <= 0 ||
             dto.MaxEvents < 0 ||
+            dto.MaxAttendeesPerEvent <= 0 ||
             dto.CommissionRate < 0 || dto.CommissionRate > 1)
         {
             return ApiResponse<SubscriptionPlanDto>.Fail(400, "Dữ liệu gói không hợp lệ");
@@ -63,6 +64,8 @@ public class SubscriptionPlanService(ISubscriptionPlanRepository repository) : I
             entity.DurationInMonths = dto.DurationInMonths.Value;
         if (dto.MaxEvents.HasValue && dto.MaxEvents >= 0)
             entity.MaxEvents = dto.MaxEvents.Value;
+        if (dto.MaxAttendeesPerEvent.HasValue && dto.MaxAttendeesPerEvent > 0)
+            entity.MaxAttendeesPerEvent = dto.MaxAttendeesPerEvent.Value;
         if (dto.CommissionRate.HasValue && dto.CommissionRate is >= 0 and <= 1)
             entity.CommissionRate = dto.CommissionRate.Value;
         if (dto.HasAiAccess.HasValue)
