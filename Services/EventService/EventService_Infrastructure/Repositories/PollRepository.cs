@@ -1,7 +1,7 @@
-﻿using EventService_Domain.Entities;
+﻿using Common;
+using EventService_Domain.Entities;
 using EventService_Domain.Interfaces;
 using EventService_Infrastructure.Data;
-using Microsoft.EntityFrameworkCore;
 
 namespace EventService_Infrastructure.Repositories
 {
@@ -32,10 +32,11 @@ namespace EventService_Infrastructure.Repositories
             return await _context.Polls.FindAsync(pollId);
         }
 
-        public async Task<IEnumerable<Poll>> GetPollsBySessionIdAsync(Guid sessionId)
+        public async Task<PagedResult<Poll>> GetPollsBySessionIdAsync(Guid sessionId, int pageNumber, int pageSize, string? sortBy = null)
         {
-            return await _context.Polls
-                .Where(p => p.SessionId == sessionId).ToListAsync();
+            var query = _context.Polls.Where(p => p.SessionId == sessionId).AsQueryable();
+            query = query.ApplySorting(sortBy);
+            return await query.ToPagedResultAsync(pageNumber, pageSize);
         }
 
         public async Task<Poll> UpdatePollAsync(Poll poll)

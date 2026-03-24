@@ -26,25 +26,46 @@ public class SessionService : ISessionService
         return ApiResponse<SessionDto>.Success(200, "Session retrieved successfully", sessionDto);
     }
 
-    public async Task<ApiResponse<IEnumerable<SessionDto>>> GetSessionsByEventIdAsync(Guid eventId)
+    public async Task<ApiResponse<PagedResult<SessionDto>>> GetSessionsByEventIdAsync(Guid eventId, BaseQueryParams request)
     {
-        var sessions = await _sessionRepository.GetSessionsByEventIdAsync(eventId);
-        var sessionDtos = sessions.Adapt<IEnumerable<SessionDto>>();
-        return ApiResponse<IEnumerable<SessionDto>>.Success(200, "Sessions retrieved successfully", sessionDtos);
+        var sessions = await _sessionRepository.GetSessionsByEventIdAsync(eventId, request);
+        var sessionDtos = sessions.Adapt<List<SessionDto>>();
+        var result = new PagedResult<SessionDto>
+            (
+                sessionDtos,
+                sessions.TotalItems,
+                sessions.CurrentPage,
+                sessions.PageSize
+            );
+        return ApiResponse<PagedResult<SessionDto>>.Success(200, "Sessions retrieved successfully", result);
     }
 
-    public async Task<ApiResponse<IEnumerable<SessionDto>>> GetSessionsByTrackIdAsync(Guid trackId)
+    public async Task<ApiResponse<PagedResult<SessionDto>>> GetSessionsByTrackIdAsync(Guid trackId, BaseQueryParams request)
     {
-        var sessions = await _sessionRepository.GetSessionsByTrackIdAsync(trackId);
-        var sessionDtos = sessions.Adapt<IEnumerable<SessionDto>>();
-        return ApiResponse<IEnumerable<SessionDto>>.Success(200, "Sessions retrieved successfully", sessionDtos);
+        var sessions = await _sessionRepository.GetSessionsByTrackIdAsync(trackId, request);
+        var sessionDtos = sessions.Adapt<List<SessionDto>>();
+        var result = new PagedResult<SessionDto>
+            (
+                sessionDtos,
+                sessions.TotalItems,
+                sessions.CurrentPage,
+                sessions.PageSize
+            );
+        return ApiResponse<PagedResult<SessionDto>>.Success(200, "Sessions retrieved successfully", result);
     }
 
-    public async Task<ApiResponse<IEnumerable<SessionDto>>> GetSessionsByVenueIdAsync(Guid venueId)
+    public async Task<ApiResponse<PagedResult<SessionDto>>> GetSessionsByVenueIdAsync(Guid venueId, BaseQueryParams request)
     {
-        var sessions = await _sessionRepository.GetSessionsByVenueIdAsync(venueId);
-        var sessionDtos = sessions.Adapt<IEnumerable<SessionDto>>();
-        return ApiResponse<IEnumerable<SessionDto>>.Success(200, "Sessions retrieved successfully", sessionDtos);
+        var sessions = await _sessionRepository.GetSessionsByVenueIdAsync(venueId, request);
+        var sessionDtos = sessions.Adapt<List<SessionDto>>();
+        var result = new PagedResult<SessionDto>
+            (
+                sessionDtos,
+                sessions.TotalItems,
+                sessions.CurrentPage,
+                sessions.PageSize
+            );
+        return ApiResponse<PagedResult<SessionDto>>.Success(200, "Sessions retrieved successfully", result);
     }
 
     public async Task<ApiResponse<SessionDto>> CreateSessionAsync(CreateSessionRequest request)

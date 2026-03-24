@@ -93,7 +93,7 @@ public class EventService(
         (
             dtos,
             events.TotalItems,
-            events.TotalPages,
+            events.CurrentPage,
             events.PageSize
         );
         return ApiResponse<PagedResult<EventResponseDto>>.Success(200, "Events retrieved successfully", pagedResult);

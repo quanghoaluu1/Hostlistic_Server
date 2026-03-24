@@ -1,4 +1,5 @@
-﻿using EventService_Domain.Entities;
+﻿using Common;
+using EventService_Domain.Entities;
 using EventService_Domain.Interfaces;
 using EventService_Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -22,21 +23,26 @@ public class SessionBookingRepository : ISessionBookingRepository
     }
 
     //Lấy danh sách các lượt đặt chỗ theo Session
-    public async Task<IEnumerable<SessionBooking>> GetSessionBookingsBySessionIdAsync(Guid sessionId)
+    public async Task<PagedResult<SessionBooking>> GetSessionBookingsBySessionIdAsync(Guid sessionId, int pageNumber, int pageSize, string? sortBy = null)
     {
-        return await _context.SessionBookings
+        var query = _context.SessionBookings
             .Include(sb => sb.Session)
             .Where(sb => sb.SessionId == sessionId)
-            .ToListAsync();
+            .AsQueryable();
+        query = query.ApplySorting(sortBy);//BookingDate
+        return await query.ToPagedResultAsync(pageNumber, pageSize);
+
     }
 
     //Lấy danh sách các lượt đặt chỗ của một người dùng
-    public async Task<IEnumerable<SessionBooking>> GetSessionBookingsByUserIdAsync(Guid userId)
+    public async Task<PagedResult<SessionBooking>> GetSessionBookingsByUserIdAsync(Guid userId, int pageNumber, int pageSize, string? sortBy = null)
     {
-        return await _context.SessionBookings
+        var query = _context.SessionBookings
             .Include(sb => sb.Session)
             .Where(sb => sb.UserId == userId)
-            .ToListAsync();
+            .AsQueryable();
+        query = query.ApplySorting(sortBy);//BookingDate
+        return await query.ToPagedResultAsync(pageNumber, pageSize);
     }
 
     //Lấy thông tin đặt chỗ của user cho một session cụ thể

@@ -1,3 +1,4 @@
+using Common;
 using EventService_Domain.Entities;
 using EventService_Domain.Interfaces;
 using EventService_Infrastructure.Data;
@@ -23,31 +24,37 @@ public class SessionRepository : ISessionRepository
             .FirstOrDefaultAsync(s => s.Id == sessionId);
     }
 
-    public async Task<IEnumerable<Session>> GetSessionsByEventIdAsync(Guid eventId)
+    public async Task<PagedResult<Session>> GetSessionsByEventIdAsync(Guid eventId, BaseQueryParams request)
     {
-        return await _context.Sessions
+        var query = _context.Sessions
             .Include(s => s.Venue)
             .Include(s => s.Track)
             .Where(s => s.EventId == eventId)
-            .ToListAsync();
+            .AsQueryable();
+        query = query.ApplySorting(request.SortBy);
+        return await query.ToPagedResultAsync(request.Page, request.PageSize);
     }
 
-    public async Task<IEnumerable<Session>> GetSessionsByTrackIdAsync(Guid trackId)
+    public async Task<PagedResult<Session>> GetSessionsByTrackIdAsync(Guid trackId, BaseQueryParams request)
     {
-        return await _context.Sessions
+        var query = _context.Sessions
             .Include(s => s.Event)
             .Include(s => s.Venue)
             .Where(s => s.TrackId == trackId)
-            .ToListAsync();
+            .AsQueryable();
+        query = query.ApplySorting(request.SortBy);
+        return await query.ToPagedResultAsync(request.Page, request.PageSize);
     }
 
-    public async Task<IEnumerable<Session>> GetSessionsByVenueIdAsync(Guid venueId)
+    public async Task<PagedResult<Session>> GetSessionsByVenueIdAsync(Guid venueId, BaseQueryParams request)
     {
-        return await _context.Sessions
+        var query = _context.Sessions
             .Include(s => s.Event)
             .Include(s => s.Track)
             .Where(s => s.VenueId == venueId)
-            .ToListAsync();
+            .AsQueryable();
+        query = query.ApplySorting(request.SortBy);
+        return await query.ToPagedResultAsync(request.Page, request.PageSize);
     }
 
     public async Task<Session> AddSessionAsync(Session session)

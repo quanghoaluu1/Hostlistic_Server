@@ -1,3 +1,4 @@
+using Common;
 using EventService_Application.DTOs;
 using EventService_Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -26,17 +27,17 @@ public class SessionBookingsController : ControllerBase
     }
 
     [HttpGet("session/{sessionId:guid}")]
-    public async Task<IActionResult> GetSessionBookingsBySessionId(Guid sessionId)
+    public async Task<IActionResult> GetSessionBookingsBySessionId(Guid sessionId, [FromQuery] BaseQueryParams request)
     {
-        var result = await _sessionBookingService.GetSessionBookingsBySessionIdAsync(sessionId);
+        var result = await _sessionBookingService.GetSessionBookingsBySessionIdAsync(sessionId, request);
         if (!result.IsSuccess) return BadRequest(result);
         return Ok(result);
     }
 
     [HttpGet("user/{userId:guid}")]
-    public async Task<IActionResult> GetSessionBookingsByUserId(Guid userId)
+    public async Task<IActionResult> GetSessionBookingsByUserId(Guid userId, [FromQuery] BaseQueryParams requst)
     {
-        var result = await _sessionBookingService.GetSessionBookingsByUserIdAsync(userId);
+        var result = await _sessionBookingService.GetSessionBookingsByUserIdAsync(userId, requst);
         if (!result.IsSuccess) return BadRequest(result);
         return Ok(result);
     }

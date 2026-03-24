@@ -119,11 +119,18 @@ namespace EventService_Application.Services
             return ApiResponse<PollDto>.Success(200, "Poll retrieved successfully.", pollDto);
         }
 
-        public async Task<ApiResponse<List<PollDto>>> GetPollsBySessionIdAsync(Guid sessionId)
+        public async Task<ApiResponse<PagedResult<PollDto>>> GetPollsBySessionIdAsync(Guid sessionId, BaseQueryParams request)
         {
-            var polls = await _pollRepository.GetPollsBySessionIdAsync(sessionId);
+            var polls = await _pollRepository.GetPollsBySessionIdAsync(sessionId, request.Page, request.PageSize, request.SortBy);
             var pollDtos = polls.Adapt<List<PollDto>>();
-            return ApiResponse<List<PollDto>>.Success(200, "Polls retrieved successfully.", pollDtos);
+            var pagedResult = new PagedResult<PollDto>
+            (
+                pollDtos,
+                polls.TotalItems,
+                polls.TotalPages,
+                polls.PageSize
+            );
+            return ApiResponse<PagedResult<PollDto>>.Success(200, "Polls retrieved successfully.", pagedResult);
         }
 
         public async Task<ApiResponse<PollDto>> UpdatePollAsync(Guid pollId, UpdatePollRequest request)

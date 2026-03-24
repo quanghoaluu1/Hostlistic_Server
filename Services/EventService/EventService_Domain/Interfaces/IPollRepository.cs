@@ -1,4 +1,5 @@
-﻿using EventService_Domain.Entities;
+﻿using Common;
+using EventService_Domain.Entities;
 
 namespace EventService_Domain.Interfaces
 {
@@ -7,7 +8,7 @@ namespace EventService_Domain.Interfaces
         Task<Poll> AddPollAsync(Poll poll);
         Task<bool> DeletePollAsync(Poll poll);
         Task<Poll?> GetPollByIdAsync(Guid pollId);
-        Task<IEnumerable<Poll>> GetPollsBySessionIdAsync(Guid sessionId);
+        Task<PagedResult<Poll>> GetPollsBySessionIdAsync(Guid sessionId, int pageNumber, int pageSize, string? sortBy = null)
         Task<Poll> UpdatePollAsync(Poll poll);
     }
 }

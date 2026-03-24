@@ -8,7 +8,7 @@ namespace EventService_Application.Interfaces
         Task<ApiResponse<PollDto>> AddPollAsync(CreatePollRequest request);
         Task<ApiResponse<bool>> DeletePollAsync(Guid pollId);
         Task<ApiResponse<PollDto>> GetPollByIdAsync(Guid pollId);
-        Task<ApiResponse<List<PollDto>>> GetPollsBySessionIdAsync(Guid sessionId);
+        Task<ApiResponse<PagedResult<PollDto>>> GetPollsBySessionIdAsync(Guid sessionId, BaseQueryParams request);
         Task<ApiResponse<PollDto>> UpdatePollAsync(Guid pollId, UpdatePollRequest request);
     }
 }

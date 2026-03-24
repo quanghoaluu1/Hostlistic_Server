@@ -1,6 +1,6 @@
+using Common;
 using EventService_Application.DTOs;
 using EventService_Application.Interfaces;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EventService_Api.Controllers;
@@ -26,25 +26,25 @@ public class SessionsController : ControllerBase
     }
 
     [HttpGet("event/{eventId:guid}")]
-    public async Task<IActionResult> GetSessionsByEventId(Guid eventId)
+    public async Task<IActionResult> GetSessionsByEventId(Guid eventId, [FromQuery] BaseQueryParams request)
     {
-        var result = await _sessionService.GetSessionsByEventIdAsync(eventId);
+        var result = await _sessionService.GetSessionsByEventIdAsync(eventId, request);
         if (!result.IsSuccess) return BadRequest(result);
         return Ok(result);
     }
 
     [HttpGet("track/{trackId:guid}")]
-    public async Task<IActionResult> GetSessionsByTrackId(Guid trackId)
+    public async Task<IActionResult> GetSessionsByTrackId(Guid trackId, [FromQuery] BaseQueryParams request)
     {
-        var result = await _sessionService.GetSessionsByTrackIdAsync(trackId);
+        var result = await _sessionService.GetSessionsByTrackIdAsync(trackId, request);
         if (!result.IsSuccess) return BadRequest(result);
         return Ok(result);
     }
 
     [HttpGet("venue/{venueId:guid}")]
-    public async Task<IActionResult> GetSessionsByVenueId(Guid venueId)
+    public async Task<IActionResult> GetSessionsByVenueId(Guid venueId, [FromQuery] BaseQueryParams request)
     {
-        var result = await _sessionService.GetSessionsByVenueIdAsync(venueId);
+        var result = await _sessionService.GetSessionsByVenueIdAsync(venueId, request);
         if (!result.IsSuccess) return BadRequest(result);
         return Ok(result);
     }

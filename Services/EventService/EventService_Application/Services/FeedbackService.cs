@@ -68,7 +68,7 @@ namespace EventService_Application.Services
                 (
                     feedbackDtos,
                     feedbacks.TotalItems,
-                    feedbacks.TotalPages,
+                    feedbacks.CurrentPage,
                     feedbacks.PageSize
                 );
             return ApiResponse<PagedResult<FeedbackDto>>.Success(200, "Retrieved feedbacks successfully.", result);
@@ -82,7 +82,7 @@ namespace EventService_Application.Services
                 (
                     feedbackDtos,
                     feedbacks.TotalItems,
-                    feedbacks.TotalPages,
+                    feedbacks.CurrentPage,
                     feedbacks.PageSize
                 );
             return ApiResponse<PagedResult<FeedbackDto>>.Success(200, "Retrieved feedbacks successfully.", result);
@@ -96,7 +96,7 @@ namespace EventService_Application.Services
                 (
                     feedbackDtos,
                     feedbacks.TotalItems,
-                    feedbacks.TotalPages,
+                    feedbacks.CurrentPage,
                     feedbacks.PageSize
                 );
             return ApiResponse<PagedResult<FeedbackDto>>.Success(200, "Retrieved all feedbacks successfully.", result);

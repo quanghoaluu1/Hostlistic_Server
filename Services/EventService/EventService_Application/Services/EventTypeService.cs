@@ -41,7 +41,7 @@ public class EventTypeService(IEventTypeRepository eventTypeRepository) : IEvent
         (
              eventTypeDtos,
              pagedEventTypes.TotalItems,
-             pagedEventTypes.TotalPages,
+             pagedEventTypes.CurrentPage,
              pagedEventTypes.PageSize
         );
 

@@ -28,18 +28,32 @@ public class SessionBookingService : ISessionBookingService
         return ApiResponse<SessionBookingDto>.Success(200, "Session booking retrieved successfully", sessionBookingDto);
     }
 
-    public async Task<ApiResponse<IEnumerable<SessionBookingDto>>> GetSessionBookingsBySessionIdAsync(Guid sessionId)
+    public async Task<ApiResponse<PagedResult<SessionBookingDto>>> GetSessionBookingsBySessionIdAsync(Guid sessionId, BaseQueryParams request)
     {
-        var sessionBookings = await _sessionBookingRepository.GetSessionBookingsBySessionIdAsync(sessionId);
-        var sessionBookingDtos = sessionBookings.Adapt<IEnumerable<SessionBookingDto>>();
-        return ApiResponse<IEnumerable<SessionBookingDto>>.Success(200, "Session bookings retrieved successfully", sessionBookingDtos);
+        var sessionBookings = await _sessionBookingRepository.GetSessionBookingsBySessionIdAsync(sessionId, request.Page, request.PageSize, request.SortBy);
+        var sessionBookingDtos = sessionBookings.Adapt<List<SessionBookingDto>>();
+        var result = new PagedResult<SessionBookingDto>
+            (
+                sessionBookingDtos,
+                sessionBookings.TotalItems,
+                sessionBookings.TotalPages,
+                sessionBookings.PageSize
+            );
+        return ApiResponse<PagedResult<SessionBookingDto>>.Success(200, "Session bookings retrieved successfully", result);
     }
 
-    public async Task<ApiResponse<IEnumerable<SessionBookingDto>>> GetSessionBookingsByUserIdAsync(Guid userId)
+    public async Task<ApiResponse<PagedResult<SessionBookingDto>>> GetSessionBookingsByUserIdAsync(Guid userId, BaseQueryParams request)
     {
-        var sessionBookings = await _sessionBookingRepository.GetSessionBookingsByUserIdAsync(userId);
-        var sessionBookingDtos = sessionBookings.Adapt<IEnumerable<SessionBookingDto>>();
-        return ApiResponse<IEnumerable<SessionBookingDto>>.Success(200, "Session bookings retrieved successfully", sessionBookingDtos);
+        var sessionBookings = await _sessionBookingRepository.GetSessionBookingsByUserIdAsync(userId, request.Page, request.PageSize, request.SortBy);
+        var sessionBookingDtos = sessionBookings.Adapt<List<SessionBookingDto>>();
+        var result = new PagedResult<SessionBookingDto>
+            (
+                sessionBookingDtos,
+                sessionBookings.TotalItems,
+                sessionBookings.TotalPages,
+                sessionBookings.PageSize
+            );
+        return ApiResponse<PagedResult<SessionBookingDto>>.Success(200, "Session bookings retrieved successfully", result);
     }
 
     public async Task<ApiResponse<SessionBookingDto>> CreateSessionBookingAsync(CreateSessionBookingRequest request)

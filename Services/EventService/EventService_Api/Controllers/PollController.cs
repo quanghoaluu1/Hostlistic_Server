@@ -1,4 +1,5 @@
-﻿using EventService_Application.DTOs;
+﻿using Common;
+using EventService_Application.DTOs;
 using EventService_Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
@@ -43,9 +44,9 @@ namespace EventService_Api.Controllers
         }
 
         [HttpGet("polls/{sessionId:guid}")]
-        public async Task<IActionResult> GetPollsBySessionIdAsync(Guid sessionId)
+        public async Task<IActionResult> GetPollsBySessionIdAsync(Guid sessionId, [FromQuery] BaseQueryParams request)
         {
-            var result = await _pollService.GetPollsBySessionIdAsync(sessionId);
+            var result = await _pollService.GetPollsBySessionIdAsync(sessionId, request);
             if (result.IsSuccess)
             {
                 return Ok(result);
