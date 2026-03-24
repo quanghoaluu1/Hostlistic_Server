@@ -5,10 +5,10 @@ namespace EventService_Application.Interfaces
 {
     public interface IVenueService
     {
-        Task<ApiResponse<VenueDto>> CreateVenueAsync(CreateVenueDto createVenueDto);
-        Task<ApiResponse<VenueDto>> GetVenueByIdAsync(Guid id);
-        Task<ApiResponse<IEnumerable<VenueDto>>> GetAllVenuesAsync();
-        Task<ApiResponse<VenueDto>> UpdateVenueAsync(Guid id, CreateVenueDto updateVenueDto);
-        Task<ApiResponse<bool>> DeleteVenueAsync(Guid id);
+        Task<ApiResponse<VenueResponse>> CreateAsync(Guid eventId, CreateVenueRequest request);
+        Task<ApiResponse<VenueResponse>> GetByIdAsync(Guid eventId, Guid venueId);
+        Task<ApiResponse<IReadOnlyList<VenueResponse>>> GetByEventIdAsync(Guid eventId);
+        Task<ApiResponse<VenueResponse>> UpdateAsync(Guid eventId, Guid venueId, UpdateVenueRequest request);
+        Task<ApiResponse<bool>> DeleteAsync(Guid eventId, Guid venueId);
     }
 }

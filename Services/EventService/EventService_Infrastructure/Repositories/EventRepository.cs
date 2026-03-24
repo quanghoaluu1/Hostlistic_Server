@@ -14,7 +14,7 @@ public class EventRepository(EventServiceDbContext dbContext) : IEventRepository
             .ThenInclude(s => s.Lineups)
             .ThenInclude(l => l.Talent)
             .Include(e => e.EventType)
-            .Include(e => e.Venue).ToListAsync();
+            .ToListAsync();
     }
 
     public async Task<Event?> GetEventByIdAsync(Guid eventId)
@@ -24,7 +24,6 @@ public class EventRepository(EventServiceDbContext dbContext) : IEventRepository
                 .ThenInclude(t => t.Sessions)
             .ThenInclude(s => s.Lineups)
             .ThenInclude(l => l.Talent)
-            .Include(e => e.Venue)
             .Include(e => e.EventType)
             .FirstOrDefaultAsync(e => e.Id == eventId);
     }

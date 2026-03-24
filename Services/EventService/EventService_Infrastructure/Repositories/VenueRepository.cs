@@ -13,6 +13,35 @@ namespace EventService_Infrastructure.Repositories
             _context = context;
         }
 
+        public async Task<Venue?> GetByIdWithinEventAsync(Guid eventId, Guid venueId)
+        {
+            return await _context.Venues
+                .AsNoTracking()
+                .FirstOrDefaultAsync(v => v.Id == venueId && v.EventId == eventId);
+        }
+        public async Task<Venue?> GetByIdWithinEventForUpdateAsync(Guid eventId, Guid venueId)
+        {
+            return await _context.Venues
+                .FirstOrDefaultAsync(v => v.Id == venueId && v.EventId == eventId);
+            // NO AsNoTracking → EF tracks changes
+        }
+        public async Task<IReadOnlyList<Venue>> GetByEventIdAsync(Guid eventId)
+        {
+            return await _context.Venues
+                .AsNoTracking()
+                .Where(v => v.EventId == eventId)
+                .OrderBy(v => v.Name)
+                .ToListAsync();
+        }
+
+        public async Task<bool> ExistsByNameAsync(Guid eventId, string name, Guid? excludeVenueId = null)
+        {
+            return await _context.Venues
+                .AnyAsync(v => v.EventId == eventId
+                               && v.Name == name
+                               && (excludeVenueId == null || v.Id != excludeVenueId));
+        }
+
         public async Task<Venue> AddVenueAsync(Venue venue)
         {
             _context.Venues.Add(venue);
