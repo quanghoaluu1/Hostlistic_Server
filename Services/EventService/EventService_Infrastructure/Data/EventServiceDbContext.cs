@@ -105,6 +105,7 @@ public class EventServiceDbContext : DbContext
                 .WithOne(st => st.Event)
                 .HasForeignKey(st => st.EventId)
                 .OnDelete(DeleteBehavior.Cascade);
+            
         });
 
         // EventType configuration
@@ -159,6 +160,7 @@ public class EventServiceDbContext : DbContext
                 .WithOne(s => s.Track)
                 .HasForeignKey(s => s.TrackId)
                 .OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(e => new { e.EventId, e.SortOrder });
         });
 
         // Session configuration
@@ -200,12 +202,25 @@ public class EventServiceDbContext : DbContext
                 .WithOne(tt => tt.Session)
                 .HasForeignKey(tt => tt.SessionId)
                 .OnDelete(DeleteBehavior.SetNull);
+            
+            entity.HasIndex(e => new { e.TrackId, e.StartTime, e.EndTime })
+                .HasDatabaseName("IX_Sessions_TrackId_TimeRange");
+            entity.HasIndex(e => new { e.VenueId, e.StartTime, e.EndTime })
+                .HasDatabaseName("IX_Sessions_VenueId_TimeRange")
+                .HasFilter("\"VenueId\" IS NOT NULL"); // Partial index — skip online sessions
+            entity.HasIndex(e => new { e.EventId, e.StartTime, e.SortOrder })
+                .HasDatabaseName("IX_Sessions_EventId_Ordering");
         });
 
         // SessionBooking configuration
         modelBuilder.Entity<SessionBooking>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.UserId, e.SessionId })
+                .IsUnique()
+                .HasDatabaseName("IX_SessionBookings_UserId_SessionId");
+            entity.HasIndex(e => new { e.SessionId, e.Status })
+                .HasDatabaseName("IX_SessionBookings_SessionId_Status");
         });
 
         // Lineup configuration

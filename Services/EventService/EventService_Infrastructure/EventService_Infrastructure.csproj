@@ -18,6 +18,7 @@
     </ItemGroup>
     
     <ItemGroup>
+      <Folder Include="Interfaces\" />
       <Folder Include="Migrations\" />
     </ItemGroup>
 </Project>

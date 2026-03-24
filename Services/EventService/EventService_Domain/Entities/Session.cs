@@ -16,6 +16,7 @@ public class Session
     public int? TotalCapacity { get; set; }
     public SessionStatus Status { get; set; } = SessionStatus.Scheduled;
     public QaMode? QaMode { get; set; }
+    public int SortOrder { get; set; }
 
     // Navigation properties to parent
     [ForeignKey("EventId")]

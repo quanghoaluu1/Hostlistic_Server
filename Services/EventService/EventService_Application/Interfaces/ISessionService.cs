@@ -5,11 +5,14 @@ namespace EventService_Application.Interfaces;
 
 public interface ISessionService
 {
-    Task<ApiResponse<SessionDto>> GetSessionByIdAsync(Guid sessionId);
+    Task<ApiResponse<SessionDto>> GetSessionByIdAsync(Guid eventId, Guid sessionId);
     Task<ApiResponse<IEnumerable<SessionDto>>> GetSessionsByEventIdAsync(Guid eventId);
-    Task<ApiResponse<IEnumerable<SessionDto>>> GetSessionsByTrackIdAsync(Guid trackId);
+    Task<ApiResponse<IEnumerable<SessionDto>>> GetSessionsByTrackIdAsync(Guid eventId, Guid trackId);
     Task<ApiResponse<IEnumerable<SessionDto>>> GetSessionsByVenueIdAsync(Guid venueId);
-    Task<ApiResponse<SessionDto>> CreateSessionAsync(CreateSessionRequest request);
-    Task<ApiResponse<SessionDto>> UpdateSessionAsync(Guid sessionId, UpdateSessionRequest request);
-    Task<ApiResponse<bool>> DeleteSessionAsync(Guid sessionId);
+
+    Task<ApiResponse<SessionDto>> UpdateSessionStatusAsync(
+        Guid eventId, Guid sessionId, UpdateSessionStatusRequest request);
+    Task<ApiResponse<SessionDto>> CreateSessionAsync(Guid eventId, CreateSessionRequest request);
+    Task<ApiResponse<SessionDto>> UpdateSessionAsync(Guid eventId, Guid sessionId, UpdateSessionRequest request);
+    Task<ApiResponse<bool>> DeleteSessionAsync(Guid eventId, Guid sessionId);
 }

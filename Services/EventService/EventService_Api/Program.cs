@@ -15,6 +15,7 @@ using Scalar.AspNetCore;
 using System.Reflection;
 using System.Text;
 using System.Text.Json.Serialization;
+using EventService_Infrastructure.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -150,6 +151,7 @@ builder.Services.AddScoped<ISponsorTierRepository, SponsorTierRepository>();
 builder.Services.AddScoped<ISponsorInteractionRepository, SponsorInteractionRepository>();
 builder.Services.AddScoped<IEventTeamMemberRepository, EventTeamMemberRepository>();
 builder.Services.AddScoped<IFeedbackRepository, FeedbackRepository>();
+builder.Services.AddScoped<IAgendaService, AgendaService>();
 
 // Register services
 builder.Services.AddScoped<ISessionService, SessionService>();
@@ -168,6 +170,7 @@ builder.Services.AddScoped<ISponsorTierService, SponsorTierService>();
 builder.Services.AddScoped<ISponsorInteractionService, SponsorInteractionService>();
 builder.Services.AddScoped<IFeedbackService, FeedbackService>();
 builder.Services.AddScoped<IUserPlanServiceClient, UserPlanServiceClient>();
+builder.Services.AddScoped<IAgendaRepository, AgendaRepository>();
 
 var identityServiceUrl = builder.Configuration["ServiceUrls:IdentityService"] ?? "http://localhost:5049";
 builder.Services.AddHttpClient("IdentityService", client =>
