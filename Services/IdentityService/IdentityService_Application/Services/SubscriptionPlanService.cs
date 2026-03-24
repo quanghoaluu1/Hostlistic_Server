@@ -12,8 +12,9 @@ public class SubscriptionPlanService(ISubscriptionPlanRepository repository) : I
     public async Task<ApiResponse<SubscriptionPlanDto>> CreateAsync(CreateSubscriptionPlanDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Name) ||
-            dto.DurationInMonths <= 0 ||
+            dto.DurationInDays <= 0 ||
             dto.MaxEvents < 0 ||
+            dto.MaxAttendeesPerEvent <= 0 ||
             dto.CommissionRate < 0 || dto.CommissionRate > 1)
         {
             return ApiResponse<SubscriptionPlanDto>.Fail(400, "Dữ liệu gói không hợp lệ");
@@ -59,10 +60,12 @@ public class SubscriptionPlanService(ISubscriptionPlanRepository repository) : I
             entity.Price = dto.Price.Value;
         if (!string.IsNullOrWhiteSpace(dto.Description))
             entity.Description = dto.Description;
-        if (dto.DurationInMonths.HasValue && dto.DurationInMonths > 0)
-            entity.DurationInMonths = dto.DurationInMonths.Value;
+        if (dto.DurationInDays.HasValue && dto.DurationInDays > 0)
+            entity.DurationInDays = dto.DurationInDays.Value;
         if (dto.MaxEvents.HasValue && dto.MaxEvents >= 0)
             entity.MaxEvents = dto.MaxEvents.Value;
+        if (dto.MaxAttendeesPerEvent.HasValue && dto.MaxAttendeesPerEvent > 0)
+            entity.MaxAttendeesPerEvent = dto.MaxAttendeesPerEvent.Value;
         if (dto.CommissionRate.HasValue && dto.CommissionRate is >= 0 and <= 1)
             entity.CommissionRate = dto.CommissionRate.Value;
         if (dto.HasAiAccess.HasValue)

@@ -22,6 +22,56 @@ namespace BookingService_Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("BookingService_Domain.Entities.EventSettlement", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("EventId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("GrossRevenue")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("NetRevenue")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("OrganizerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("PlatformFeeAmount")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("PlatformFeePercent")
+                        .HasColumnType("numeric");
+
+                    b.Property<DateTime?>("SettledAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TotalOrders")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TotalTicketsSold")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("WalletId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("EventSettlements");
+                });
+
             modelBuilder.Entity("BookingService_Domain.Entities.InventoryReservation", b =>
                 {
                     b.Property<Guid>("Id")
@@ -67,6 +117,9 @@ namespace BookingService_Infrastructure.Migrations
                     b.Property<string>("Notes")
                         .HasColumnType("text");
 
+                    b.Property<long?>("OrderCode")
+                        .HasColumnType("bigint");
+
                     b.Property<DateTime>("OrderDate")
                         .HasColumnType("timestamp with time zone");
 
@@ -77,6 +130,10 @@ namespace BookingService_Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("OrderCode")
+                        .IsUnique()
+                        .HasFilter("\"OrderCode\" IS NOT NULL");
 
                     b.ToTable("Orders");
                 });

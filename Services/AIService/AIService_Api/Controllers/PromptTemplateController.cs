@@ -1,8 +1,10 @@
 using AIService_Application.DTOs.Requests;
 using AIService_Application.DTOs.Responses;
 using AIService_Application.Interface;
+using AIService_Api.Filters;
 using AIService_Domain.Enum;
 using Common;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AIService_Api.Controllers;
@@ -10,6 +12,8 @@ namespace AIService_Api.Controllers;
 [ApiController]
 [Route("api/prompt-templates")]
 [Produces("application/json")]
+[Authorize]
+[ServiceFilter(typeof(RequireAiSubscriptionFilter))]
 public class PromptTemplateController(
     IPromptTemplateService promptTemplateService,
     ILogger<PromptTemplateController> logger) : ControllerBase

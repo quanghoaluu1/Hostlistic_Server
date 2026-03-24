@@ -28,4 +28,11 @@ public class OrderDetailRepository : IOrderDetailRepository
             .Where(od => od.OrderId == orderId)
             .ToListAsync();
     }
+
+    public async Task<IEnumerable<OrderDetail>> GetByOrderIds(List<Guid> orderIds)
+    {
+        return await _context.OrderDetails.Include(od => od.Order)
+            .Where(od => orderIds.Contains(od.OrderId))
+            .ToListAsync();
+    }
 }

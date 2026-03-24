@@ -1,6 +1,6 @@
 namespace Common;
 
-public record Message
+public record BookingMessage
 (
     Guid OrderId,
     Guid EventId,

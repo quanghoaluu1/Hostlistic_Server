@@ -5,6 +5,7 @@ using EventService_Application.Services;
 using EventService_Domain.Interfaces;
 using EventService_Infrastructure.Data;
 using EventService_Infrastructure.Repositories;
+using EventService_Infrastructure.ServiceClients;
 using Mapster;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
@@ -14,6 +15,7 @@ using Scalar.AspNetCore;
 using System.Reflection;
 using System.Text;
 using System.Text.Json.Serialization;
+using EventService_Infrastructure.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,6 +26,7 @@ builder.Services.AddControllers()
     {
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 builder.Services.Configure<ApiBehaviorOptions>(options =>
@@ -148,6 +151,7 @@ builder.Services.AddScoped<ISponsorTierRepository, SponsorTierRepository>();
 builder.Services.AddScoped<ISponsorInteractionRepository, SponsorInteractionRepository>();
 builder.Services.AddScoped<IEventTeamMemberRepository, EventTeamMemberRepository>();
 builder.Services.AddScoped<IFeedbackRepository, FeedbackRepository>();
+builder.Services.AddScoped<IAgendaService, AgendaService>();
 
 // Register services
 builder.Services.AddScoped<ISessionService, SessionService>();
@@ -165,6 +169,15 @@ builder.Services.AddScoped<ISponsorService, SponsorService>();
 builder.Services.AddScoped<ISponsorTierService, SponsorTierService>();
 builder.Services.AddScoped<ISponsorInteractionService, SponsorInteractionService>();
 builder.Services.AddScoped<IFeedbackService, FeedbackService>();
+builder.Services.AddScoped<IUserPlanServiceClient, UserPlanServiceClient>();
+builder.Services.AddScoped<IAgendaRepository, AgendaRepository>();
+
+var identityServiceUrl = builder.Configuration["ServiceUrls:IdentityService"] ?? "http://localhost:5049";
+builder.Services.AddHttpClient("IdentityService", client =>
+{
+    client.BaseAddress = new Uri(identityServiceUrl.TrimEnd('/'));
+});
+
 builder.Services.AddHealthChecks();
 var app = builder.Build();
 

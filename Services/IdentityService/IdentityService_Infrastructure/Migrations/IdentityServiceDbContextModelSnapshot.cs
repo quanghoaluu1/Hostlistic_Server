@@ -146,6 +146,9 @@ namespace IdentityService_Infrastructure.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
+                    b.Property<int>("MaxAttendeesPerEvent")
+                        .HasColumnType("integer");
+
                     b.Property<int>("MaxEvents")
                         .HasColumnType("integer");
 

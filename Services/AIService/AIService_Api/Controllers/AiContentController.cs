@@ -2,6 +2,7 @@ using System.Security.Claims;
 using AIService_Application.DTOs.Requests;
 using AIService_Application.DTOs.Responses;
 using AIService_Application.Interface;
+using AIService_Api.Filters;
 using Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -11,6 +12,8 @@ namespace AIService_Api.Controllers;
 [ApiController]
 [Route("api/ai")]
 [Produces("application/json")]
+[Authorize]
+[ServiceFilter(typeof(RequireAiSubscriptionFilter))]
 public class AiContentController(IAiContentService aiContentService, ILogger<AiContentController> logger) : ControllerBase
 {
     [HttpPost("generate-description")]

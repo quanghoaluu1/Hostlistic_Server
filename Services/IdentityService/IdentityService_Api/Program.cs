@@ -84,8 +84,17 @@ builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection(
 var config = TypeAdapterConfig.GlobalSettings;
 config.Scan(Assembly.GetExecutingAssembly());
 builder.Services.AddSingleton(config);
-builder.Services.AddHttpClient();
+builder.Services.AddHttpClient("NotificationService", client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["Services:NotificationService"] ?? "http://notificationservice:8080");
+});
+builder.Services.AddHttpClient("BookingService", client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["Services:BookingService"] ?? "http://bookingservice:8080");
+});
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<INotificationServiceClient, NotificationServiceClient>();
+builder.Services.AddScoped<IBookingServiceClient, BookingServiceClient>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IOtpService, OtpService>();
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();

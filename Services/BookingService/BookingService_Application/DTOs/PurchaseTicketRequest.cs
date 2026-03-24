@@ -17,6 +17,7 @@ namespace BookingService_Application.DTOs
     public class TicketItemRequest
     {
         public Guid TicketTypeId { get; set; }
+        public string TicketTypeName { get; set; } = string.Empty;
         public int Quantity { get; set; }
         public decimal UnitPrice { get; set; }
     }

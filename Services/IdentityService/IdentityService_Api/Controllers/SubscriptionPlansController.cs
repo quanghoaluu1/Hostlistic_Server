@@ -19,6 +19,7 @@ public class SubscriptionPlansController(ISubscriptionPlanService service) : Con
     }
 
     [HttpGet]
+    [AllowAnonymous]
     public async Task<IActionResult> GetAll([FromQuery] bool includeInactive = false)
     {
         var result = await service.GetAllAsync(includeInactive);
@@ -26,6 +27,7 @@ public class SubscriptionPlansController(ISubscriptionPlanService service) : Con
     }
 
     [HttpGet("{id:guid}")]
+    [AllowAnonymous]
     public async Task<IActionResult> GetById(Guid id)
     {
         var result = await service.GetByIdAsync(id);

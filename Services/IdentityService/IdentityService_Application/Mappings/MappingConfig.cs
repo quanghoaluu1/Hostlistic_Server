@@ -16,5 +16,8 @@ public class MappingConfig : IRegister
             .Map(dest => dest.CreatedAt, src => DateTime.UtcNow);
         config.NewConfig<User, UserDto>()
             .Map(dest => dest.FullName, src => src.FullName);
+
+        config.NewConfig<UserPlan, UserPlanDto>()
+            .Map(dest => dest.SubscriptionPlan, src => src.SubscriptionPlan.Adapt<SubscriptionPlanDto>());
     }
 }

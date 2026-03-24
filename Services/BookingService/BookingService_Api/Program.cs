@@ -13,12 +13,16 @@ using Microsoft.OpenApi;
 using Scalar.AspNetCore;
 using System.Reflection;
 using System.Text;
+using BookingService_Api.Hubs;
+using BookingService_Api.Services;
+using PayOS;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
 builder.Services.AddControllers();
+builder.Services.AddHttpContextAccessor();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi(options => options.AddDocumentTransformer<BearerSecuritySchemeTransformer>());
 
@@ -65,6 +69,7 @@ builder.Services.AddDbContext<BookingServiceDbContext>(optionsAction =>
 var config = TypeAdapterConfig.GlobalSettings;
 config.Scan(Assembly.GetExecutingAssembly());
 builder.Services.AddSingleton(config);
+builder.Services.AddSignalR();
 
 // Register repositories
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
@@ -78,6 +83,10 @@ builder.Services.AddScoped<IInventoryService, InventoryService>();
 builder.Services.AddScoped<IQrCodeService, QrCodeService>();
 builder.Services.AddScoped<IInventoryReservationRepository, InventoryReservationRepository>();
 builder.Services.AddScoped<IWalletRepository, WalletRepository>();
+builder.Services.AddScoped<IEventSettlementRepository, EventSettlementRepository>();
+builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
+builder.Services.AddScoped<IEventSettlementRepository, EventSettlementRepository>();
+builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
 
 // Register services
 builder.Services.AddScoped<IOrderService, OrderService>();
@@ -91,12 +100,25 @@ builder.Services.AddScoped<IWalletService, WalletService>();
 builder.Services.AddScoped<IEventServiceClient, EventServiceClient>();
 builder.Services.AddScoped<IUserServiceClient, UserServiceClient>();
 builder.Services.AddScoped<INotificationServiceClient, NotificationServiceClient>();
+builder.Services.AddScoped<IUserPlanServiceClient, UserPlanServiceClient>();
+builder.Services.AddScoped<IPayOsService, PayOsService>();
+builder.Services.AddScoped<IPayOsWebhookHandler, PayOsWebhookHandler>();
+builder.Services.AddScoped<IPaymentNotifier, SignalRPaymentNotifier>();
+builder.Services.AddScoped<ISettlementService, SettlementService>();
+builder.Services.AddScoped<ISubscriptionPurchaseService, SubscriptionPurchaseService>();
 
 builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
 
-var eventServiceUrl = builder.Configuration["ServiceUrls:EventService"] ?? "http://localhost:5139";
-var notificationServiceUrl = builder.Configuration["ServiceUrls:NotificationService"] ?? "http://localhost:5097";
-var identityServiceUrl = builder.Configuration["ServiceUrls:IdentityService"] ?? "http://localhost:5049";
+// IsNullOrWhiteSpace: empty appsettings values are not null, so ?? alone is not enough.
+var eventServiceUrl = builder.Configuration["ServiceUrls:EventService"];
+if (string.IsNullOrWhiteSpace(eventServiceUrl))
+    eventServiceUrl = "http://localhost:5139";
+var notificationServiceUrl = builder.Configuration["ServiceUrls:NotificationService"];
+if (string.IsNullOrWhiteSpace(notificationServiceUrl))
+    notificationServiceUrl = "http://localhost:5097";
+var identityServiceUrl = builder.Configuration["ServiceUrls:IdentityService"];
+if (string.IsNullOrWhiteSpace(identityServiceUrl))
+    identityServiceUrl = "http://localhost:5049";
 
 builder.Services.AddHttpClient("EventService", client =>
 {
@@ -111,6 +133,19 @@ builder.Services.AddHttpClient("NotificationService", client =>
 builder.Services.AddHttpClient("IdentityService", client =>
 {
     client.BaseAddress = new Uri(identityServiceUrl.TrimEnd('/'));
+});
+
+builder.Services.AddSingleton(sp =>
+{
+    var config = sp.GetRequiredService<IConfiguration>();
+    return new PayOSClient(new PayOSOptions
+    {
+        ClientId = config["PayOS:ClientId"]!,
+        ApiKey = config["PayOS:ApiKey"]!,
+        ChecksumKey = config["PayOS:ChecksumKey"]!,
+        TimeoutMs = 30000,
+        MaxRetries = 2
+    });
 });
 builder.Services.AddHealthChecks();
 
@@ -135,5 +170,6 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapHealthChecks("/health");
+app.MapHub<PaymentHub>("/hubs/payment");
 
 app.Run();

@@ -12,10 +12,29 @@ public class EventService(
     IEventRepository eventRepository,
     ITrackService trackService,
     ISessionService sessionService,
-    IEventTeamMemberRepository eventTeamMemberRepository) : IEventService
+    IEventTeamMemberRepository eventTeamMemberRepository,
+    IUserPlanServiceClient userPlanServiceClient) : IEventService
 {
     public async Task<ApiResponse<EventResponseDto>> CreateEventAsync(EventRequestDto request, Guid organizerId)
     {
+        var entitlement = await GetActiveEntitlementAsync(organizerId);
+        if (!entitlement.IsSuccess)
+            return ApiResponse<EventResponseDto>.Fail(403, entitlement.Message);
+
+        var currentEventCount = eventRepository.GetQueryable()
+            .Count(e => e.OrganizerId == organizerId && e.EventStatus != EventStatus.Cancelled);
+        if (currentEventCount >= entitlement.MaxEvents)
+        {
+            return ApiResponse<EventResponseDto>.Fail(403,
+                $"Plan limit reached: max events = {entitlement.MaxEvents}");
+        }
+
+        if (request.TotalCapacity.HasValue && request.TotalCapacity.Value > entitlement.MaxAttendeesPerEvent)
+        {
+            return ApiResponse<EventResponseDto>.Fail(403,
+                $"Plan limit reached: max attendees per event = {entitlement.MaxAttendeesPerEvent}");
+        }
+
         var eventEntity = request.Adapt<Event>();
         eventEntity.StartDate = request.StartDate == null
             ? null
@@ -96,6 +115,17 @@ public class EventService(
         var eventEntity = await eventRepository.GetEventByIdAsync(eventId);
         if (eventEntity == null)
             return ApiResponse<EventResponseDto>.Fail(404, "Event not found");
+
+        var entitlement = await GetActiveEntitlementAsync(eventEntity.OrganizerId);
+        if (!entitlement.IsSuccess)
+            return ApiResponse<EventResponseDto>.Fail(403, entitlement.Message);
+
+        if (request.TotalCapacity.HasValue && request.TotalCapacity.Value > entitlement.MaxAttendeesPerEvent)
+        {
+            return ApiResponse<EventResponseDto>.Fail(403,
+                $"Plan limit reached: max attendees per event = {entitlement.MaxAttendeesPerEvent}");
+        }
+
         ApplyEventUpdate(eventEntity, request);
         eventEntity.CoverImagePublicId = publicId;
         eventRepository.UpdateEventAsync(eventEntity);
@@ -296,5 +326,22 @@ public class EventService(
         {
             eventEntity.EndDate = DateTime.SpecifyKind(request.EndDate.Value, DateTimeKind.Utc);
         }
+    }
+
+    private async Task<(bool IsSuccess, string Message, int MaxEvents, int MaxAttendeesPerEvent)> GetActiveEntitlementAsync(
+        Guid organizerId)
+    {
+        var activePlans = await userPlanServiceClient.GetByUserIdAsync(organizerId, true);
+        var activePlan = activePlans
+            .Where(x => x.SubscriptionPlan is not null)
+            .OrderByDescending(x => x.StartDate)
+            .FirstOrDefault();
+
+        if (activePlan?.SubscriptionPlan is null)
+        {
+            return (false, "No active subscription plan found for this organizer.", 0, 0);
+        }
+
+        return (true, "OK", activePlan.SubscriptionPlan.MaxEvents, activePlan.SubscriptionPlan.MaxAttendeesPerEvent);
     }
 }
