@@ -10,81 +10,155 @@ namespace EventService_Application.Services;
 public class TrackService : ITrackService
 {
     private readonly ITrackRepository _trackRepository;
+    private readonly IEventRepository _eventRepository;
 
-    public TrackService(ITrackRepository trackRepository)
+    public TrackService(ITrackRepository trackRepository, IEventRepository eventRepository)
     {
         _trackRepository = trackRepository;
+        _eventRepository = eventRepository;
     }
 
-    public async Task<ApiResponse<TrackDto>> GetTrackByIdAsync(Guid trackId)
+    public async Task<ApiResponse<TrackDto>> GetTrackByIdAsync(Guid eventId, Guid trackId)
     {
-        var track = await _trackRepository.GetTrackByIdAsync(trackId);
+        var track = await _trackRepository.GetByIdWithinEventAsync(eventId, trackId);
         if (track == null)
             return ApiResponse<TrackDto>.Fail(404, "Track not found");
 
-        var trackDto = track.Adapt<TrackDto>();
-        return ApiResponse<TrackDto>.Success(200, "Track retrieved successfully", trackDto);
+        return ApiResponse<TrackDto>.Success(200, "Track retrieved successfully", MapToDto(track));
     }
 
     public async Task<ApiResponse<IEnumerable<TrackDto>>> GetTracksByEventIdAsync(Guid eventId)
     {
+        var eventExists = await _eventRepository.EventExistsAsync(eventId);
+        if (!eventExists)
+            return ApiResponse<IEnumerable<TrackDto>>.Fail(404, "Event not found");
+
         var tracks = await _trackRepository.GetTracksByEventIdAsync(eventId);
-        var trackDtos = tracks.Adapt<IEnumerable<TrackDto>>();
+        var trackDtos = tracks.Select(MapToDto);
         return ApiResponse<IEnumerable<TrackDto>>.Success(200, "Tracks retrieved successfully", trackDtos);
     }
 
-    public async Task<ApiResponse<TrackDto>> CreateTrackAsync(CreateTrackRequest request)
+    public async Task<ApiResponse<TrackDto>> CreateTrackAsync(Guid eventId, CreateTrackRequest request)
     {
+        var eventEntity = await _eventRepository.GetEventByIdAsync(eventId);
+        if (eventEntity is null)
+            return ApiResponse<TrackDto>.Fail(404, "Event not found");
+        
         if (string.IsNullOrWhiteSpace(request.Name))
             return ApiResponse<TrackDto>.Fail(400, "Track name is required");
 
-        if (string.IsNullOrWhiteSpace(request.ColorHex))
-            return ApiResponse<TrackDto>.Fail(400, "Track color is required");
+        if (request.StartTime.HasValue && request.EndTime.HasValue)
+        {
+            if (request.StartTime.Value >= request.EndTime.Value)
+                return ApiResponse<TrackDto>.Fail(400, "Track start time must be before end time");
+ 
+            if (eventEntity.StartDate.HasValue && request.StartTime.Value < eventEntity.StartDate.Value)
+                return ApiResponse<TrackDto>.Fail(400,
+                    "Track start time cannot be before event start date");
+ 
+            if (eventEntity.EndDate.HasValue && request.EndTime.Value > eventEntity.EndDate.Value)
+                return ApiResponse<TrackDto>.Fail(400,
+                    "Track end time cannot be after event end date");
+        }
 
-        var track = request.Adapt<Track>();
+        if (!IsValidHexColor(request.ColorHex))
+            return ApiResponse<TrackDto>.Fail(400, "Invalid color format. Use hex like #6366F1");
+        
+        var maxSort = await _trackRepository.GetMaxSortOrderAsync(eventId);
+        var track = new Track()
+        {
+            Id = Guid.CreateVersion7(),
+            EventId = eventId,
+            Name = request.Name.Trim(),
+            Description = request.Description?.Trim(),
+            StartTime = NormalizeToUtc(request.StartTime),
+            EndTime = NormalizeToUtc(request.EndTime),
+            ColorHex = request.ColorHex,
+            SortOrder = maxSort + 1
+        };
 
         await _trackRepository.AddTrackAsync(track);
         await _trackRepository.SaveChangesAsync();
 
-        var trackDto = track.Adapt<TrackDto>();
-        return ApiResponse<TrackDto>.Success(201, "Track created successfully", trackDto);
+        return ApiResponse<TrackDto>.Success(201, "Track created successfully", MapToDto(track));
     }
 
-    public async Task<ApiResponse<TrackDto>> UpdateTrackAsync(Guid trackId, UpdateTrackRequest request)
+    public async Task<ApiResponse<TrackDto>> UpdateTrackAsync(Guid eventId, Guid trackId, UpdateTrackRequest request)
     {
-        var existingTrack = await _trackRepository.GetTrackByIdAsync(trackId);
-        if (existingTrack == null)
-            return ApiResponse<TrackDto>.Fail(404, "Track not found");
-
+        var track = await _trackRepository.GetByIdWithinEventAsync(eventId, trackId);
+        if (track is null)
+            return ApiResponse<TrackDto>.Fail(404, "Track not found in this event");
+ 
+        // ── Validate name ──
         if (string.IsNullOrWhiteSpace(request.Name))
             return ApiResponse<TrackDto>.Fail(400, "Track name is required");
-
-        if (string.IsNullOrWhiteSpace(request.ColorHex))
-            return ApiResponse<TrackDto>.Fail(400, "Track color is required");
-
-        // Update properties
-        existingTrack.Name = request.Name;
-        existingTrack.Description = request.Description;
-        existingTrack.ColorHex = request.ColorHex;
-
-        await _trackRepository.UpdateTrackAsync(existingTrack);
+ 
+        // ── Validate time range ──
+        if (request.StartTime.HasValue && request.EndTime.HasValue)
+        {
+            if (request.StartTime.Value >= request.EndTime.Value)
+                return ApiResponse<TrackDto>.Fail(400, "Start time must be before end time");
+ 
+            var eventEntity = track.Event;
+            if (eventEntity.StartDate.HasValue && request.StartTime.Value < eventEntity.StartDate.Value)
+                return ApiResponse<TrackDto>.Fail(400,
+                    "Track start time cannot be before event start date");
+ 
+            if (eventEntity.EndDate.HasValue && request.EndTime.Value > eventEntity.EndDate.Value)
+                return ApiResponse<TrackDto>.Fail(400,
+                    "Track end time cannot be after event end date");
+        }
+ 
+        if (!IsValidHexColor(request.ColorHex))
+            return ApiResponse<TrackDto>.Fail(400, "Invalid color format");
+ 
+        // ── Apply changes ──
+        track.Name = request.Name.Trim();
+        track.Description = request.Description?.Trim();
+        track.StartTime = NormalizeToUtc(request.StartTime);
+        track.EndTime = NormalizeToUtc(request.EndTime);
+        track.ColorHex = request.ColorHex;
+ 
+        if (request.SortOrder.HasValue)
+            track.SortOrder = request.SortOrder.Value;
+ 
+        await _trackRepository.UpdateTrackAsync(track);
         await _trackRepository.SaveChangesAsync();
-
-        var trackDto = existingTrack.Adapt<TrackDto>();
-        return ApiResponse<TrackDto>.Success(200, "Track updated successfully", trackDto);
+ 
+        return ApiResponse<TrackDto>.Success(200, "Track updated", MapToDto(track));
     }
 
-    public async Task<ApiResponse<bool>> DeleteTrackAsync(Guid trackId)
+    public async Task<ApiResponse<bool>> DeleteTrackAsync(Guid eventId, Guid trackId)
     {
-        var exists = await _trackRepository.TrackExistsAsync(trackId);
-        if (!exists)
-            return ApiResponse<bool>.Fail(404, "Track not found");
-
-        var deleted = await _trackRepository.DeleteTrackAsync(trackId);
-        if (!deleted)
-            return ApiResponse<bool>.Fail(500, "Failed to delete track");
-
+        var track = await _trackRepository.GetByIdWithinEventAsync(eventId, trackId);
+        if (track is null)
+            return ApiResponse<bool>.Fail(404, "Track not found in this event");
+ 
+        // ── Guard: cannot delete track with sessions ──
+        // DeleteBehavior.Restrict on FK would throw DB exception.
+        // We catch it here with a clear business error instead.
+        if (await _trackRepository.HasSessionsAsync(trackId))
+            return ApiResponse<bool>.Fail(409,
+                "Cannot delete track with existing sessions. Remove all sessions first.");
+ 
+        await _trackRepository.DeleteTrackAsync(trackId);
         await _trackRepository.SaveChangesAsync();
-        return ApiResponse<bool>.Success(200, "Track deleted successfully", true);
+ 
+        return ApiResponse<bool>.Success(200, "Track deleted", true);
     }
+    
+    private static TrackDto MapToDto(Track track)
+    {
+        var dto = track.Adapt<TrackDto>();
+        dto.SessionCount = track.Sessions?.Count ?? 0;
+        return dto;
+    }
+ 
+    private static DateTime? NormalizeToUtc(DateTime? value)
+        => value.HasValue ? DateTime.SpecifyKind(value.Value, DateTimeKind.Utc) : null;
+ 
+    private static bool IsValidHexColor(string hex)
+        => !string.IsNullOrWhiteSpace(hex)
+           && hex.StartsWith('#')
+           && (hex.Length == 4 || hex.Length == 7 || hex.Length == 9); // #RGB, #RRGGBB, #RRGGBBAA
 }

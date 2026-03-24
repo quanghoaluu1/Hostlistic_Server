@@ -39,6 +39,8 @@ public class EventRepository(EventServiceDbContext dbContext) : IEventRepository
         return dbContext.Events.Update(@event).Entity;
     }
 
+    
+
     public IQueryable<Event> GetQueryable()
     {
         return dbContext.Events.AsQueryable().AsNoTracking();
@@ -57,4 +59,5 @@ public class EventRepository(EventServiceDbContext dbContext) : IEventRepository
     {
         await dbContext.SaveChangesAsync();
     }
+    
 }
