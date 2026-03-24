@@ -13,6 +13,7 @@ public class NotificationServiceDbContext : DbContext
     public DbSet<UserNotification> UserNotifications => Set<UserNotification>();
     public DbSet<EmailCampaign> EmailCampaigns => Set<EmailCampaign>();
     public DbSet<EmailLog> EmailLogs => Set<EmailLog>();
+    public DbSet<EventRecipient> EventRecipients => Set<EventRecipient>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -60,6 +61,23 @@ public class NotificationServiceDbContext : DbContext
         modelBuilder.Entity<EmailLog>(entity =>
         {
             entity.HasKey(e => e.Id);
+        });
+        
+        modelBuilder.Entity<EventRecipient>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+ 
+            // Unique index for idempotent upserts
+            entity.HasIndex(e => new { e.EventId, e.UserId, e.TicketTypeId })
+                .IsUnique()
+                .HasFilter("\"TicketTypeId\" IS NOT NULL");
+ 
+            // Covering index for recipient resolution queries
+            entity.HasIndex(e => new { e.EventId, e.IsCheckedIn });
+ 
+            entity.Property(e => e.Email).HasMaxLength(256);
+            entity.Property(e => e.FullName).HasMaxLength(256);
+            entity.Property(e => e.TicketTypeName).HasMaxLength(128);
         });
     }
 }

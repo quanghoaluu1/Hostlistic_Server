@@ -12,6 +12,8 @@
 
     <ItemGroup>
       <PackageReference Include="Mapster" Version="7.4.0" />
+      <PackageReference Include="MassTransit" Version="8.5.8" />
+      <PackageReference Include="MassTransit.RabbitMQ" Version="8.5.8" />
       <PackageReference Include="Resend" Version="0.2.1" />
       <PackageReference Include="StackExchange.Redis" Version="2.10.14" />
     </ItemGroup>

@@ -26,6 +26,28 @@ services:
         limits:
           memory: 256M
 
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"    # AMQP protocol
+      - "15672:15672"  # Management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    networks:
+      - hostlistic_net
+    restart: unless-stopped
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
   identityservice:
     image: hostlistic/identityservice
     build:
@@ -80,6 +102,9 @@ services:
 
   bookingservice:
     image: hostlistic/bookingservice
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
     build:
       context: .
       dockerfile: Services/BookingService/Dockerfile
@@ -100,6 +125,9 @@ services:
       - ServiceUrls__NotificationService=http://notificationservice:8080
       - ServiceUrls__IdentityService=http://identityservice:8080
       - FrontendUrl=${FRONTEND_URL}
+      - RabbitMq__Host=rabbitmq
+      - RabbitMq__Username=guest
+      - RabbitMq__Password=guest
     networks:
       - hostlistic_net
     restart: unless-stopped
@@ -109,6 +137,9 @@ services:
           memory: 512M
 
   notificationservice:
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
     image: hostlistic/notificationservice
     build:
       context: .
@@ -118,6 +149,10 @@ services:
       - ASPNETCORE_HTTP_PORTS=8080
       - ConnectionStrings__DefaultConnection=${NOTIFICATION_DB_CONNECTION}
       - Resend__ApiToken=${RESEND_API_KEY}
+      - RabbitMq__Host=rabbitmq
+      - RabbitMq__Username=guest
+      - RabbitMq__Password=guest
+      - Email__DailyLimit=100
     networks:
       - hostlistic_net
     restart: unless-stopped

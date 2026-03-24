@@ -1,12 +1,13 @@
 using Common;
 using Mapster;
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
+using NotificationService_Api.Extensions;
+using NotificationService_Application.Consumers;
 using NotificationService_Application.Interfaces;
 using NotificationService_Application.Mappings;
 using NotificationService_Application.Services;
-using NotificationService_Domain.Interfaces;
 using NotificationService_Infrastructure.Data;
-using NotificationService_Infrastructure.Repositories;
 using Resend;
 using Scalar.AspNetCore;
 using StackExchange.Redis;
@@ -34,12 +35,40 @@ builder.Services.AddDbContext<NotificationServiceDbContext>(optionsAction =>
 {
     optionsAction.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
 });
+var redisConnectionString = builder.Configuration["Redis:ConnectionString"] 
+                            ?? "localhost:6379";
+builder.Services.AddSingleton<IConnectionMultiplexer>(
+    ConnectionMultiplexer.Connect(redisConnectionString));
+builder.Services.AddScoped<IEmailRateLimiter, EmailRateLimiter>();
 
 // Mapster configuration
 var config = TypeAdapterConfig.GlobalSettings;
 config.Scan(typeof(MappingConfig).Assembly);
 builder.Services.AddSingleton(config);
-
+builder.Services.AddMassTransit(x =>
+{
+    // Register all consumers in this assembly
+    x.AddConsumer<BookingConfirmedConsumer>();
+    x.AddConsumer<BulkEmailConsumer>();  // Part 5 — will be created later
+ 
+    x.UsingRabbitMq((context, cfg) =>
+    {
+        cfg.Host(builder.Configuration["RabbitMq:Host"] ?? "rabbitmq", "/", h =>
+        {
+            h.Username(builder.Configuration["RabbitMq:Username"] ?? "guest");
+            h.Password(builder.Configuration["RabbitMq:Password"] ?? "guest");
+        });
+ 
+        cfg.UseMessageRetry(r => r.Intervals(
+            TimeSpan.FromSeconds(1),
+            TimeSpan.FromSeconds(5),
+            TimeSpan.FromSeconds(15),
+            TimeSpan.FromSeconds(30)
+        ));
+ 
+        cfg.ConfigureEndpoints(context);
+    });
+});
 builder.Services.AddOptions();
 builder.Services.AddHttpClient<IResend, ResendClient>();
 builder.Services.Configure<ResendClientOptions>(o =>
@@ -48,18 +77,7 @@ builder.Services.Configure<ResendClientOptions>(o =>
 });
 builder.Services.AddTransient<IResend, ResendClient>();
 
-// Register repositories
-builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
-builder.Services.AddScoped<IUserNotificationRepository, UserNotificationRepository>();
-builder.Services.AddScoped<IEmailCampaignRepository, EmailCampaignRepository>();
-builder.Services.AddScoped<IEmailLogRepository, EmailLogRepository>();
-
-// Register services
-builder.Services.AddScoped<IEmailService, EmailService>();
-builder.Services.AddScoped<INotificationCrudService, NotificationCrudService>();
-builder.Services.AddScoped<IUserNotificationService, UserNotificationService>();
-builder.Services.AddScoped<IEmailCampaignService, EmailCampaignService>();
-builder.Services.AddScoped<IEmailLogService, EmailLogService>();
+builder.Services.AddApplicationServices();
 builder.Services.AddHealthChecks();
 
 var app = builder.Build();

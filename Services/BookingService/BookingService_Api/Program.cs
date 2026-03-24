@@ -1,21 +1,19 @@
-using BookingService_Application.Interfaces;
-using BookingService_Application.Services;
-using BookingService_Domain.Interfaces;
+using BookingService_Api.Extensions;
+using BookingService_Api.Hubs;
 using BookingService_Infrastructure.Data;
-using BookingService_Infrastructure.Repositories;
-using BookingService_Infrastructure.ServiceClients;
 using Common;
 using Mapster;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+using PayOS;
 using Scalar.AspNetCore;
 using System.Reflection;
 using System.Text;
-using BookingService_Api.Hubs;
-using BookingService_Api.Services;
-using PayOS;
+using BookingService_Application.Consumers;
+using BookingService_Application.Services;
+using MassTransit;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -66,48 +64,31 @@ builder.Services.AddDbContext<BookingServiceDbContext>(optionsAction =>
 {
     optionsAction.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
 });
+builder.Services.AddMassTransit(config =>
+{
+    config.AddConsumer<EventCompletedConsumer>();
+    config.UsingRabbitMq((context, cfg) =>
+    {
+        cfg.Host(builder.Configuration["RabbitMq:Host"] ?? "rabbitmq", "/", h =>
+        {
+            h.Username(builder.Configuration["RabbitMq:Username"] ?? "guest");
+            h.Password(builder.Configuration["RabbitMq:Password"] ?? "guest");
+        });
+        cfg.UseMessageRetry(r => r.Intervals(
+            TimeSpan.FromSeconds(1),
+            TimeSpan.FromSeconds(5),
+            TimeSpan.FromSeconds(15)
+        ));
+        cfg.ConfigureEndpoints(context);
+    });
+});
 var config = TypeAdapterConfig.GlobalSettings;
 config.Scan(Assembly.GetExecutingAssembly());
 builder.Services.AddSingleton(config);
 builder.Services.AddSignalR();
 
-// Register repositories
-builder.Services.AddScoped<IOrderRepository, OrderRepository>();
-builder.Services.AddScoped<IOrderDetailRepository, OrderDetailRepository>();
-builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
-builder.Services.AddScoped<IPaymentMethodRepository, PaymentMethodRepository>();
-builder.Services.AddScoped<ITicketRepository, TicketRepository>();
-builder.Services.AddScoped<IPayoutRequestRepository, PayoutRequestRepository>();
-builder.Services.AddScoped<ITicketPurchaseService, TicketPurchaseService>();
-builder.Services.AddScoped<IInventoryService, InventoryService>();
-builder.Services.AddScoped<IQrCodeService, QrCodeService>();
-builder.Services.AddScoped<IInventoryReservationRepository, InventoryReservationRepository>();
-builder.Services.AddScoped<IWalletRepository, WalletRepository>();
-builder.Services.AddScoped<IEventSettlementRepository, EventSettlementRepository>();
-builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
-builder.Services.AddScoped<IEventSettlementRepository, EventSettlementRepository>();
-builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
-
-// Register services
-builder.Services.AddScoped<IOrderService, OrderService>();
-builder.Services.AddScoped<IOrderDetailService, OrderDetailService>();
-builder.Services.AddScoped<IPaymentService, PaymentService>();
-builder.Services.AddScoped<IPaymentMethodService, PaymentMethodService>();
-builder.Services.AddScoped<ITicketService, TicketService>();
-builder.Services.AddScoped<IPayoutRequestService, PayoutRequestService>();
-builder.Services.AddScoped<IPhotoService, PhotoService>();
-builder.Services.AddScoped<IWalletService, WalletService>();
-builder.Services.AddScoped<IEventServiceClient, EventServiceClient>();
-builder.Services.AddScoped<IUserServiceClient, UserServiceClient>();
-builder.Services.AddScoped<INotificationServiceClient, NotificationServiceClient>();
-builder.Services.AddScoped<IUserPlanServiceClient, UserPlanServiceClient>();
-builder.Services.AddScoped<IPayOsService, PayOsService>();
-builder.Services.AddScoped<IPayOsWebhookHandler, PayOsWebhookHandler>();
-builder.Services.AddScoped<IPaymentNotifier, SignalRPaymentNotifier>();
-builder.Services.AddScoped<ISettlementService, SettlementService>();
-builder.Services.AddScoped<ISubscriptionPurchaseService, SubscriptionPurchaseService>();
-
 builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
+builder.Services.AddApplicationServices();
 
 // IsNullOrWhiteSpace: empty appsettings values are not null, so ?? alone is not enough.
 var eventServiceUrl = builder.Configuration["ServiceUrls:EventService"];

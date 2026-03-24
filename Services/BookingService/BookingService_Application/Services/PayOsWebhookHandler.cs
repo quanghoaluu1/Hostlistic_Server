@@ -2,6 +2,8 @@
 using BookingService_Application.Interfaces;
 using BookingService_Domain.Enum;
 using Common;
+using Common.Messages;
+using MassTransit;
 using Microsoft.Extensions.Logging;
 
 namespace BookingService_Application.Services;
@@ -16,6 +18,7 @@ public class PayOsWebhookHandler(
     IUserServiceClient userServiceClient,
     INotificationServiceClient notificationServiceClient,
     IPaymentNotifier paymentNotifier,
+    IPublishEndpoint publishEndpoint,
     ILogger<PayOsWebhookHandler> logger
     ) : IPayOsWebhookHandler
 {
@@ -117,7 +120,36 @@ public class PayOsWebhookHandler(
                 "Failed to push SignalR notification for order {OrderId}. " +
                 "Client can use polling fallback.", order.Id);
         }
-        
+
+        try
+        {
+            var eventInfo = await eventServiceClient.GetEventInfoAsync(order.EventId);
+            var userInfo = await userServiceClient.GetUserInfoAsync(order.UserId);
+
+            await publishEndpoint.Publish(new BookingConfirmedEvent(
+                EventId: order.EventId,
+                UserId: order.UserId,
+                Email: userInfo?.Email ?? string.Empty,
+                FullName: userInfo?.FullName ?? "Valued Customer",
+                OrderId: order.Id,
+                Tickets: orderDetails.Select(od => new BookingTicketInfo(
+                    TicketTypeId: od.TicketTypeId,
+                    TicketTypeName: tickets
+                        .FirstOrDefault(t => t.TicketTypeId == od.TicketTypeId)?.TicketTypeName ?? "Unknown",
+                    Quantity: od.Quantity)).ToList(),
+                ConfirmedAt: DateTime.UtcNow
+            ));
+            logger.LogInformation(
+                "Published BookingConfirmedEvent for Order {OrderId}, Event {EventId}, User {UserId}",
+                order.Id, order.EventId, order.UserId);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex,
+                "Failed to publish BookingConfirmedEvent for order {OrderId}. " +
+                "Recipient will be missing from NotificationService until manual sync.",
+                order.Id);
+        }
         _ = Task.Run(async () =>
         {
             try
