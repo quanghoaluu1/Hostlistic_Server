@@ -27,7 +27,7 @@ public class UserPlansController(IUserPlanService service) : ControllerBase
     }
 
     [HttpGet("by-user/{userId:guid}")]
-    public async Task<IActionResult> GetByUser(Guid userId, [FromQuery] bool onlyActive = false)
+    public async Task<IActionResult> GetByUser(Guid userId, [FromQuery] bool onlyActive = true)
     {
         var result = await service.GetByUserIdAsync(userId, onlyActive);
         return Ok(result);

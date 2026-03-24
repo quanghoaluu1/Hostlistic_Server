@@ -21,8 +21,10 @@ public class UserPlanService(IUserPlanRepository userPlanRepository, ISubscripti
         var existingActives = await userPlanRepository.GetByUserIdAsync(dto.UserId, true);
         if (existingActives.Any(x => x.SubscriptionPlanId == dto.SubscriptionPlanId))
             return ApiResponse<UserPlanDto>.Fail(400, "User đã có gói này đang hoạt động");
+
         var startDate = DateTime.UtcNow;
         var endDate = startDate.AddDays(plan.DurationInDays);
+
         var entity = new UserPlan
         {
             Id = Guid.NewGuid(),
