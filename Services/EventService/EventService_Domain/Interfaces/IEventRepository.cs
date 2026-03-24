@@ -1,3 +1,4 @@
+using Common;
 using EventService_Domain.Entities;
 
 namespace EventService_Domain.Interfaces;
@@ -11,5 +12,6 @@ public interface IEventRepository
     Task<bool> DeleteEventAsync(Guid eventId);
     Task<bool> EventExistsAsync(Guid eventId);
     IQueryable<Event> GetQueryable();
+    Task<PagedResult<Event>> GetAllEventsAsync(string? name, int pageNumber, int pageSize, string? sortBy = null);
     Task SaveChangesAsync();
 }

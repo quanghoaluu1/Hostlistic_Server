@@ -60,30 +60,46 @@ namespace EventService_Application.Services
             return ApiResponse<FeedbackDto>.Success(200, "Retrieved feedback successfully.", feedbackDto);
         }
 
-        public Task<ApiResponse<List<FeedbackDto>>> GetAllFeedbacksAsync()
+        public async Task<ApiResponse<PagedResult<FeedbackDto>>> GetFeedbacksByEventIdAsync(Guid eventId, BaseQueryParams request)
         {
-            throw new NotImplementedException();
+            var feedbacks = await _feedbackRepository.GetFeedbacksByEventIdAsync(eventId, request.Page, request.PageSize, request.SortBy);
+            var feedbackDtos = feedbacks.Adapt<List<FeedbackDto>>();
+            var result = new PagedResult<FeedbackDto>
+                (
+                    feedbackDtos,
+                    feedbacks.TotalItems,
+                    feedbacks.TotalPages,
+                    feedbacks.PageSize
+                );
+            return ApiResponse<PagedResult<FeedbackDto>>.Success(200, "Retrieved feedbacks successfully.", result);
         }
 
-        public async Task<ApiResponse<List<FeedbackDto>>> GetFeedbacksByEventIdAsync(Guid eventId)
+        public async Task<ApiResponse<PagedResult<FeedbackDto>>> GetFeedbacksBySessionIdAsync(Guid sessionId, BaseQueryParams request)
         {
-            var feedbacks = await _feedbackRepository.GetFeedbacksByEventIdAsync(eventId);
+            var feedbacks = await _feedbackRepository.GetFeedbacksBySessionAsync(sessionId, request.Page, request.PageSize, request.SortBy);
             var feedbackDtos = feedbacks.Adapt<List<FeedbackDto>>();
-            return ApiResponse<List<FeedbackDto>>.Success(200, "Retrieved feedbacks successfully.", feedbackDtos);
+            var result = new PagedResult<FeedbackDto>
+                (
+                    feedbackDtos,
+                    feedbacks.TotalItems,
+                    feedbacks.TotalPages,
+                    feedbacks.PageSize
+                );
+            return ApiResponse<PagedResult<FeedbackDto>>.Success(200, "Retrieved feedbacks successfully.", result);
         }
 
-        public async Task<ApiResponse<List<FeedbackDto>>> GetFeedbacksBySessionIdAsync(Guid sessionId)
+        public async Task<ApiResponse<PagedResult<FeedbackDto>>> GetAllFeedback(BaseQueryParams request)
         {
-            var feedbacks = await _feedbackRepository.GetFeedbacksBySessionAsync(sessionId);
+            var feedbacks = await _feedbackRepository.GetAllFeedbacksAsync(request.Page, request.PageSize, request.SortBy);
             var feedbackDtos = feedbacks.Adapt<List<FeedbackDto>>();
-            return ApiResponse<List<FeedbackDto>>.Success(200, "Retrieved feedbacks successfully.", feedbackDtos);
-        }
-
-        public async Task<ApiResponse<List<FeedbackDto>>> GetAllFeedback()
-        {
-            var feedbacks = await _feedbackRepository.GetAllFeedbacksAsync();
-            var feedbackDtos = feedbacks.Adapt<List<FeedbackDto>>();
-            return ApiResponse<List<FeedbackDto>>.Success(200, "Retrieved all feedbacks successfully.", feedbackDtos);
+            var result = new PagedResult<FeedbackDto>
+                (
+                    feedbackDtos,
+                    feedbacks.TotalItems,
+                    feedbacks.TotalPages,
+                    feedbacks.PageSize
+                );
+            return ApiResponse<PagedResult<FeedbackDto>>.Success(200, "Retrieved all feedbacks successfully.", result);
         }
 
         public async Task<ApiResponse<FeedbackDto>> UpdateFeedbackAsync(Guid id, UpdateFeedbackDto request)

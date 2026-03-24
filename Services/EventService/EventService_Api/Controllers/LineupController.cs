@@ -1,4 +1,5 @@
-﻿using EventService_Application.DTOs;
+﻿using Common;
+using EventService_Application.DTOs;
 using EventService_Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
@@ -22,9 +23,9 @@ namespace EventService_Api.Controllers
         }
 
         [HttpGet("lineup/{eventId:guid}")]
-        public async Task<IActionResult> GetLineupsByEventId(Guid eventId)
+        public async Task<IActionResult> GetLineupsByEventId(Guid eventId, [FromQuery] BaseQueryParams request)
         {
-            var result = await _lineupService.GetLineupsByEventIdAsync(eventId);
+            var result = await _lineupService.GetLineupsByEventIdAsync(eventId, request);
             if (!result.IsSuccess) return BadRequest(result);
             return Ok(result);
         }
@@ -38,9 +39,9 @@ namespace EventService_Api.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAllLineups()
+        public async Task<IActionResult> GetAllLineups([FromQuery] BaseQueryParams request)
         {
-            var result = await _lineupService.GetAllLineups();
+            var result = await _lineupService.GetAllLineups(request);
             if (!result.IsSuccess) return BadRequest(result);
             return Ok(result);
         }

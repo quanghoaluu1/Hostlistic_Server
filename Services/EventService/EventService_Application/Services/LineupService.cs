@@ -39,7 +39,7 @@ namespace EventService_Application.Services
             }
 
             var uniqueTalentIds = request.TalentIds.Distinct().ToList();
-            
+
 
             if (!uniqueTalentIds.Any())
             {
@@ -104,20 +104,27 @@ namespace EventService_Application.Services
             );
         }
 
-        public async Task<ApiResponse<List<LineupDto>>> GetLineupsByEventIdAsync(Guid eventId)
+        public async Task<ApiResponse<PagedResult<LineupDto>>> GetLineupsByEventIdAsync(Guid eventId, BaseQueryParams request)
         {
-            var lineups = await _lineupRepository.GetLineupsByEventIdAsync(eventId);
-            var lineupDtos = lineups.Select(l => new LineupDto
+            var lineups = await _lineupRepository.GetLineupsByEventIdAsync(eventId, request.Page, request.PageSize, request.SortBy);
+            var lineupDtos = lineups.Items.Select(l => new LineupDto
             {
                 Id = l.Id,
                 EventId = l.EventId,
                 SessionId = l.SessionId,
                 Talent = l.Talent.Adapt<TalentDto>()
             }).ToList();
-            return ApiResponse<List<LineupDto>>.Success(
+            var result = new PagedResult<LineupDto>
+            (
+                lineupDtos,
+                lineups.TotalItems,
+                lineups.TotalPages,
+                lineups.TotalPages
+            );
+            return ApiResponse<PagedResult<LineupDto>>.Success(
                 200,
                 "Lineups retrieved successfully",
-                lineupDtos
+                result
             );
         }
 
@@ -138,24 +145,32 @@ namespace EventService_Application.Services
             return ApiResponse<LineupDto>.Success(200, "Lineup retrieved successfully", lineupDto);
         }
 
-        public async Task<ApiResponse<List<LineupDto>>> GetAllLineups()
+        public async Task<ApiResponse<PagedResult<LineupDto>>> GetAllLineups(BaseQueryParams request)
         {
-            var lineups = await _lineupRepository.GetAllLineupsAsync();
-            if (lineups == null || lineups.Count == 0)
+            var lineups = await _lineupRepository.GetAllLineupsAsync(request.Page, request.PageSize, request.SortBy);
+            if (lineups == null)
             {
-                return ApiResponse<List<LineupDto>>.Fail(404, "No lineups found");
+                return ApiResponse<PagedResult<LineupDto>>.Fail(404, "No lineups found");
             }
-            var lineupDtos = lineups.Select(l => new LineupDto
+            var lineupDtos = lineups.Items.Select(l => new LineupDto
             {
                 Id = l.Id,
                 EventId = l.EventId,
                 SessionId = l.SessionId,
                 Talent = l.Talent.Adapt<TalentDto>()
             }).ToList();
-            return ApiResponse<List<LineupDto>>.Success(
+            var result = new PagedResult<LineupDto>
+            (
+                lineupDtos,
+                lineups.TotalItems,
+                lineups.TotalPages,
+                lineups.TotalPages
+            );
+
+            return ApiResponse<PagedResult<LineupDto>>.Success(
                 200,
                 "Lineups retrieved successfully",
-                lineupDtos
+                result
             );
         }
 

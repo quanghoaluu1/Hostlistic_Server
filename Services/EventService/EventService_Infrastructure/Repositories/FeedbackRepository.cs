@@ -1,7 +1,7 @@
-﻿using EventService_Domain.Entities;
+﻿using Common;
+using EventService_Domain.Entities;
 using EventService_Domain.Interfaces;
 using EventService_Infrastructure.Data;
-using Microsoft.EntityFrameworkCore;
 
 namespace EventService_Infrastructure.Repositories
 {
@@ -25,18 +25,31 @@ namespace EventService_Infrastructure.Repositories
             return await _context.Feedbacks.FindAsync(id);
         }
 
-        public async Task<IEnumerable<Feedback>> GetAllFeedbacksAsync()
+        public async Task<PagedResult<Feedback>> GetAllFeedbacksAsync(int pageNumber, int pageSize, string? sortBy = null)
         {
-            return await _context.Feedbacks.ToListAsync();
+            var query = _context.Feedbacks.AsQueryable();
+            query = query.ApplySorting(sortBy);
+            return await query.ToPagedResultAsync(pageNumber, pageSize);
         }
 
-        public async Task<IEnumerable<Feedback>> GetFeedbacksByEventIdAsync(Guid eventId)
+        //public async Task<IEnumerable<Feedback>> GetFeedbacksByEventIdAsync(Guid eventId)
+        //{
+        //    return await _context.Feedbacks.Where(f => f.EventId == eventId).ToListAsync();
+        //}
+
+        public async Task<PagedResult<Feedback>> GetFeedbacksByEventIdAsync(Guid eventId, int pageNumber, int pageSize, string? sortBy = null)
         {
-            return await _context.Feedbacks.Where(f => f.EventId == eventId).ToListAsync();
+            var query = _context.Feedbacks
+                .Where(f => f.EventId == eventId)
+                .AsQueryable();
+            query = query.ApplySorting(sortBy);
+            return await query.ToPagedResultAsync(pageNumber, pageSize);
         }
-        public async Task<IEnumerable<Feedback>> GetFeedbacksBySessionAsync(Guid sessionId)
+        public async Task<PagedResult<Feedback>> GetFeedbacksBySessionAsync(Guid sessionId, int pageNumber, int pageSize, string? sortBy = null)
         {
-            return await _context.Feedbacks.Where(f => f.SessionId == sessionId).ToListAsync();
+            var query = _context.Feedbacks.Where(f => f.SessionId == sessionId).AsQueryable();
+            query = query.ApplySorting(sortBy);
+            return await query.ToPagedResultAsync(pageNumber, pageSize);
         }
 
         public async Task<Feedback> UpdateFeedbackAsync(Feedback feedback)

@@ -1,6 +1,5 @@
 using Common;
 using EventService_Application.DTOs;
-using EventService_Domain;
 
 namespace EventService_Application.Interfaces;
 
@@ -10,4 +9,5 @@ public interface IEventTypeService
     Task<ApiResponse<IReadOnlyList<EventTypeResponse>>> GetAllEventTypesAsync();
     Task<ApiResponse<EventTypeResponse>> GetEventTypeByIdAsync(Guid eventTypeId);
     Task<ApiResponse<EventTypeResponse>> UpdateEventTypeAsync(Guid eventTypeId, UpdateEventTypeDto eventType);
+    Task<ApiResponse<PagedResult<EventTypeResponse>>> GetAllEventTypesAsync(EventTypeRequest? request);
 }

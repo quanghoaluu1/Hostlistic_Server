@@ -1,3 +1,4 @@
+using Common;
 using EventService_Application.DTOs;
 using EventService_Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -27,9 +28,9 @@ public class EventTemplateController(IEventTemplateService service) : Controller
     }
 
     [HttpGet("by-creator/{createdBy:guid}")]
-    public async Task<IActionResult> GetByCreator(Guid createdBy)
+    public async Task<IActionResult> GetByCreator(Guid createdBy, [FromQuery] BaseQueryParams request)
     {
-        var result = await service.GetByCreatorAsync(createdBy);
+        var result = await service.GetEventTemplateByCreatorAsync(createdBy, request);
         return Ok(result);
     }
 

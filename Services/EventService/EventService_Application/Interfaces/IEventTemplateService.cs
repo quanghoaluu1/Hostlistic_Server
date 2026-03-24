@@ -10,4 +10,5 @@ public interface IEventTemplateService
     Task<ApiResponse<IEnumerable<EventTemplateDto>>> GetByCreatorAsync(Guid createdBy);
     Task<ApiResponse<EventTemplateDto>> UpdateAsync(Guid id, UpdateEventTemplateDto dto);
     Task<ApiResponse<bool>> DeleteAsync(Guid id);
+    Task<ApiResponse<PagedResult<EventTemplateDto>>> GetEventTemplateByCreatorAsync(Guid createdBy, BaseQueryParams? request);
 }

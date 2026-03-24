@@ -1,3 +1,5 @@
+using Common;
+
 namespace EventService_Domain.Interfaces;
 
 public interface IEventTypeRepository
@@ -8,5 +10,7 @@ public interface IEventTypeRepository
     Task<bool> EventTypeExistsAsync(Guid eventTypeId);
     EventType UpdateEventTypeAsync(EventType eventType);
     Task SaveChangesAsync();
-    
+    Task<PagedResult<EventType>> GetAllEventTypesAsync(string? name, int pageNumber, int pageSize, string? sortBy = null);
+
+
 }

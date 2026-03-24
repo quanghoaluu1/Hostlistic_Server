@@ -28,9 +28,24 @@ public class EventTypeService(IEventTypeRepository eventTypeRepository) : IEvent
 
     public async Task<ApiResponse<IReadOnlyList<EventTypeResponse>>> GetAllEventTypesAsync()
     {
-        var eventTypes =  await eventTypeRepository.GetAllEventTypesAsync();
+        var eventTypes = await eventTypeRepository.GetAllEventTypesAsync();
         var result = eventTypes.Adapt<IReadOnlyList<EventTypeResponse>>();
         return ApiResponse<IReadOnlyList<EventTypeResponse>>.Success(200, "Event types retrieved successfully", result);
+    }
+
+    public async Task<ApiResponse<PagedResult<EventTypeResponse>>> GetAllEventTypesAsync(EventTypeRequest? request)
+    {
+        var pagedEventTypes = await eventTypeRepository.GetAllEventTypesAsync(request.Name, request.Page, request.PageSize, request.SortBy);
+        var eventTypeDtos = pagedEventTypes.Items.Adapt<List<EventTypeResponse>>();
+        var result = new PagedResult<EventTypeResponse>
+        (
+             eventTypeDtos,
+             pagedEventTypes.TotalItems,
+             pagedEventTypes.TotalPages,
+             pagedEventTypes.PageSize
+        );
+
+        return ApiResponse<PagedResult<EventTypeResponse>>.Success(200, "Event types retrieved successfully", result);
     }
 
     public async Task<ApiResponse<EventTypeResponse>> GetEventTypeByIdAsync(Guid eventTypeId)
@@ -39,14 +54,14 @@ public class EventTypeService(IEventTypeRepository eventTypeRepository) : IEvent
         var result = eventType.Adapt<EventTypeResponse>();
         return result == null ? ApiResponse<EventTypeResponse>.Fail(404, "Event type not found") : ApiResponse<EventTypeResponse>.Success(200, "Event type retrieved successfully", result);
     }
-    
+
     public async Task<ApiResponse<EventTypeResponse>> UpdateEventTypeAsync(Guid eventTypeId,
         UpdateEventTypeDto eventTypeToUpdate)
     {
         var existedEventType = await eventTypeRepository.GetEventTypeByIdAsync(eventTypeId);
         if (existedEventType == null)
             return ApiResponse<EventTypeResponse>.Fail(404, "Event type not found");
-        existedEventType.Name = eventTypeToUpdate.Name ?? existedEventType.Name;       
+        existedEventType.Name = eventTypeToUpdate.Name ?? existedEventType.Name;
         existedEventType.IsActive = eventTypeToUpdate.IsActive ?? existedEventType.IsActive;
         eventTypeRepository.UpdateEventTypeAsync(existedEventType);
         await eventTypeRepository.SaveChangesAsync();

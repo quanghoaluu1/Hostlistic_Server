@@ -45,6 +45,22 @@ public class EventTemplateService(IEventTemplateRepository repository) : IEventT
         var dtos = list.Adapt<IEnumerable<EventTemplateDto>>();
         return ApiResponse<IEnumerable<EventTemplateDto>>.Success(200, "OK", dtos);
     }
+    public async Task<ApiResponse<PagedResult<EventTemplateDto>>> GetEventTemplateByCreatorAsync(Guid createdBy, BaseQueryParams? request)
+    {
+        var pagedResult = await repository.GetEventTemplateByCreatorAsync(createdBy, request?.Page ?? 1, request?.PageSize ?? 10, request?.SortBy);
+        var dtos = pagedResult.Items.Adapt<List<EventTemplateDto>>();
+        var result = new PagedResult<EventTemplateDto>
+        (
+            dtos,
+            pagedResult.TotalItems,
+            pagedResult.CurrentPage,
+            pagedResult.PageSize
+        );
+        return ApiResponse<PagedResult<EventTemplateDto>>.Success(200, "OK", result);
+        //var list = await repository.GetByCreatorAsync(createdBy);
+        //var dtos = list.Adapt<IEnumerable<EventTemplateDto>>();
+        //return ApiResponse<IEnumerable<EventTemplateDto>>.Success(200, "OK", dtos);
+    }
 
     public async Task<ApiResponse<EventTemplateDto>> UpdateAsync(Guid id, UpdateEventTemplateDto dto)
     {

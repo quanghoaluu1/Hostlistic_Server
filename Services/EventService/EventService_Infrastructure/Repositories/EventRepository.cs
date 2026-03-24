@@ -1,3 +1,4 @@
+using Common;
 using EventService_Domain.Entities;
 using EventService_Domain.Interfaces;
 using EventService_Infrastructure.Data;
@@ -15,6 +16,24 @@ public class EventRepository(EventServiceDbContext dbContext) : IEventRepository
             .ThenInclude(l => l.Talent)
             .Include(e => e.EventType)
             .Include(e => e.Venue).ToListAsync();
+    }
+
+    public async Task<PagedResult<Event>> GetAllEventsAsync(string? name, int pageNumber, int pageSize, string? sortBy = null)
+    {
+        var query = dbContext.Events
+            .Include(e => e.Tracks)
+                .ThenInclude(t => t.Sessions)
+            .ThenInclude(s => s.Lineups)
+            .ThenInclude(l => l.Talent)
+            .Include(e => e.Venue)
+            .Include(e => e.EventType)
+            .AsQueryable();
+        if (!string.IsNullOrWhiteSpace(name))
+        {
+            query = query.Where(e => e.Title.Contains(name));
+        }
+        query = query.ApplySorting(sortBy);
+        return await query.ToPagedResultAsync(pageNumber, pageSize);
     }
 
     public async Task<Event?> GetEventByIdAsync(Guid eventId)

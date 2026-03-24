@@ -1,4 +1,5 @@
-﻿using EventService_Domain.Entities;
+﻿using Common;
+using EventService_Domain.Entities;
 
 namespace EventService_Domain.Interfaces
 {
@@ -6,8 +7,8 @@ namespace EventService_Domain.Interfaces
     {
         Task<Lineup> AddLineupAsync(Lineup lineup);
         Task<Lineup?> GetLineupByIdAsync(Guid lineupId);
-        Task<List<Lineup>> GetAllLineupsAsync();
-        Task<List<Lineup>> GetLineupsByEventIdAsync(Guid eventId);
+        Task<PagedResult<Lineup>> GetLineupsByEventIdAsync(Guid eventId, int pageNumber, int pageSize, string? sortBy = null);
+        Task<PagedResult<Lineup>> GetAllLineupsAsync(int pageNumber, int pageSize, string? sortBy = null);
         Task<Lineup> UpdateLineupAsync(Lineup lineup);
         Task<bool> DeleteLineupAsync(Guid lineupId);
         Task<List<Lineup>> GetLineupsByEventAndTalentsAsync(Guid eventId, Guid? sessionId, List<Guid> talentIds);

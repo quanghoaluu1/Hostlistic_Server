@@ -1,4 +1,5 @@
-﻿using EventService_Application.DTOs;
+﻿using Common;
+using EventService_Application.DTOs;
 using EventService_Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
@@ -33,27 +34,27 @@ namespace EventService_Api.Controllers
         }
 
         [HttpGet("event/{eventId:guid}")]
-        public async Task<IActionResult> GetFeedbacksByEventIdAsync(Guid eventId)
+        public async Task<IActionResult> GetFeedbacksByEventIdAsync(Guid eventId, [FromQuery] BaseQueryParams request)
         {
-            var result = await _feedbackService.GetFeedbacksByEventIdAsync(eventId);
+            var result = await _feedbackService.GetFeedbacksByEventIdAsync(eventId, request);
             if (!result.IsSuccess)
                 return StatusCode(result.StatusCode, result);
             return Ok(result);
         }
 
         [HttpGet("session/{sessionId:guid}")]
-        public async Task<IActionResult> GetFeedbacksBySessionIdAsync(Guid sessionId)
+        public async Task<IActionResult> GetFeedbacksBySessionIdAsync(Guid sessionId, [FromQuery] BaseQueryParams request)
         {
-            var result = await _feedbackService.GetFeedbacksBySessionIdAsync(sessionId);
+            var result = await _feedbackService.GetFeedbacksBySessionIdAsync(sessionId, request);
             if (!result.IsSuccess)
                 return StatusCode(result.StatusCode, result);
             return Ok(result);
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAllFeedbacksAsync()
+        public async Task<IActionResult> GetAllFeedbacksAsync([FromQuery] BaseQueryParams request)
         {
-            var result = await _feedbackService.GetAllFeedbacksAsync();
+            var result = await _feedbackService.GetAllFeedback(request);
             if (!result.IsSuccess)
                 return StatusCode(result.StatusCode, result);
             return Ok(result);

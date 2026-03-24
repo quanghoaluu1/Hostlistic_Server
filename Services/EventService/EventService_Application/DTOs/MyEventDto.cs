@@ -22,3 +22,8 @@ public record MyEventQueryParams : BaseQueryParams
     public int? Status { get; init; }
     public string? Search { get; init; }
 }
+
+public record EventRequest : BaseQueryParams
+{
+    public string? Name { get; init; }
+}

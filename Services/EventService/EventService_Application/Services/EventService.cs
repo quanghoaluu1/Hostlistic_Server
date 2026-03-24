@@ -84,6 +84,20 @@ public class EventService(
         var responseDtos = events.Adapt<IReadOnlyCollection<EventResponseDto>>();
         return ApiResponse<IReadOnlyCollection<EventResponseDto>>.Success(200, "Events retrieved successfully", responseDtos);
     }
+
+    public async Task<ApiResponse<PagedResult<EventResponseDto>>> GetPublicEventsAsync(EventRequest request)
+    {
+        var events = await eventRepository.GetAllEventsAsync(request.Name, request.Page, request.PageSize);
+        var dtos = events.Adapt<List<EventResponseDto>>();
+        var pagedResult = new PagedResult<EventResponseDto>
+        (
+            dtos,
+            events.TotalItems,
+            events.TotalPages,
+            events.PageSize
+        );
+        return ApiResponse<PagedResult<EventResponseDto>>.Success(200, "Events retrieved successfully", pagedResult);
+    }
     public async Task<ApiResponse<EventResponseDto>> GetEventByIdAsync(Guid eventId)
     {
         var eventEntity = await eventRepository.GetEventByIdAsync(eventId);

@@ -1,8 +1,8 @@
-using System.Security.Claims;
 using EventService_Application.DTOs;
 using EventService_Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace EventService_Api.Controllers;
 
@@ -20,9 +20,9 @@ public class EventController(IEventService eventService, IPhotoService photoServ
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAllEventsAsync()
+    public async Task<IActionResult> GetAllEventsAsync([FromQuery] EventRequest request)
     {
-        var result = await eventService.GetAllEventsAsync();
+        var result = await eventService.GetPublicEventsAsync(request);
         return Ok(result);
     }
 
@@ -74,5 +74,5 @@ public class EventController(IEventService eventService, IPhotoService photoServ
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
         return Guid.Parse(userIdClaim ?? throw new UnauthorizedAccessException("User ID not found in token"));
     }
-    
+
 }

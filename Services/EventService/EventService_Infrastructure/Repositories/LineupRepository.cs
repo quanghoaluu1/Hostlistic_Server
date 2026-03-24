@@ -1,4 +1,5 @@
-﻿using EventService_Domain.Entities;
+﻿using Common;
+using EventService_Domain.Entities;
 using EventService_Domain.Interfaces;
 using EventService_Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -25,16 +26,20 @@ namespace EventService_Infrastructure.Repositories
             return await _context.Lineups.Include(l => l.Talent).FirstOrDefaultAsync(t => t.Id == lineupId);
         }
 
-        public async Task<List<Lineup>> GetAllLineupsAsync()
+        public async Task<PagedResult<Lineup>> GetAllLineupsAsync(int pageNumber, int pageSize, string? sortBy = null)
         {
-            return await _context.Lineups.Include(l => l.Talent).ToListAsync();
+            var query = _context.Lineups.Include(l => l.Talent).AsQueryable();
+            query = query.ApplySorting(sortBy);
+            return await query.ToPagedResultAsync(pageNumber, pageSize);
         }
 
-        public async Task<List<Lineup>> GetLineupsByEventIdAsync(Guid eventId)
+        public async Task<PagedResult<Lineup>> GetLineupsByEventIdAsync(Guid eventId, int pageNumber, int pageSize, string? sortBy = null)
         {
-            return await _context.Lineups.Include(l => l.Talent)
+            var query = _context.Lineups.Include(l => l.Talent)
                 .Where(l => l.EventId == eventId)
-                .ToListAsync();
+                .AsQueryable();
+            query = query.ApplySorting(sortBy);
+            return await query.ToPagedResultAsync(pageNumber, pageSize);
         }
 
         public async Task<Lineup> UpdateLineupAsync(Lineup lineup)
