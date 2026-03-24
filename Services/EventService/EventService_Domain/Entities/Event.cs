@@ -20,14 +20,11 @@ public class Event : BaseClass
     public int? TotalCapacity { get; set; }
     public bool? IsPublic { get; set; } = false;
     public EventStatus EventStatus { get; set; } = EventStatus.Draft;
-    public Guid? VenueId { get; set; }
     
     // Navigation properties to parent
     [ForeignKey("EventTypeId")]
     public virtual EventType? EventType { get; set; }
     
-    [ForeignKey("VenueId")]
-    public virtual Venue Venue { get; set; } = null!;
     
     // Navigation properties to children
     public ICollection<EventTeamMember> EventTeamMembers { get; set; } = new List<EventTeamMember>();
@@ -39,6 +36,7 @@ public class Event : BaseClass
     public ICollection<CheckIn> CheckIns { get; set; } = new List<CheckIn>();
     public ICollection<Feedback> Feedbacks { get; set; } = new List<Feedback>();
     public ICollection<SponsorTier> SponsorTiers { get; set; } = new List<SponsorTier>();
+    public ICollection<Venue> Venues { get; set; } = [];
 }
 
 public class RichTextContent

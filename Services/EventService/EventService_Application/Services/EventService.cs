@@ -67,7 +67,6 @@ public class EventService(
             StartTime = eventEntity.StartDate,
             EndTime = eventEntity.EndDate,
             TotalCapacity = request.TotalCapacity,
-            VenueId = eventEntity.VenueId,
             EventId = eventEntity.Id
         };
         defaultTrack.Sessions.Add(defaultSession);
@@ -315,7 +314,6 @@ public class EventService(
         eventEntity.EventMode = request.EventMode ?? eventEntity.EventMode;
         eventEntity.TotalCapacity = request.TotalCapacity ?? eventEntity.TotalCapacity;
         eventEntity.EventTypeId = request.EventTypeId ?? eventEntity.EventTypeId;
-        eventEntity.VenueId = request.VenueId ?? eventEntity.VenueId;
         eventEntity.IsPublic = request.IsPublic ?? eventEntity.IsPublic;
         if (request.StartDate.HasValue)
         {

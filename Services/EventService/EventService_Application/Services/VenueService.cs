@@ -7,83 +7,133 @@ using Mapster;
 
 namespace EventService_Application.Services
 {
-    public class VenueService : IVenueService
+    public class VenueService(IVenueRepository venueRepository,IEventRepository eventRepository, IPhotoService photoService)
+        : IVenueService
     {
-        private readonly IVenueRepository _venueRepository;
-        private readonly IPhotoService _photoService;
-        public VenueService(IVenueRepository venueRepository, IPhotoService photoService)
+        public async Task<ApiResponse<VenueResponse>> CreateAsync(
+        Guid eventId, CreateVenueRequest request)
+    {
+        // 1. Verify event exists
+        var eventExists = await eventRepository.EventExistsAsync(eventId);
+        if (!eventExists)
+            return ApiResponse<VenueResponse>.Fail(404, "Event not found.");
+
+        // 2. Check duplicate name within event
+        var nameExists = await venueRepository.ExistsByNameAsync(eventId, request.Name);
+        if (nameExists)
+            return ApiResponse<VenueResponse>.Fail(409,
+                $"A venue named '{request.Name}' already exists in this event.");
+
+        // 3. Create via domain factory
+        var venue = Venue.Create(eventId, request.Name, request.Description, request.Capacity);
+
+        // 4. Upload layout image if provided
+        if (request.LayoutImage is not null)
         {
-            _venueRepository = venueRepository;
-            _photoService = photoService;
+            var uploadResult = await photoService.UploadPhotoAsync(
+                request.LayoutImage, $"events/{eventId}/venues/");
+
+            if (uploadResult.Error is not null)
+                return ApiResponse<VenueResponse>.Fail(500, "Failed to upload layout image.");
+
+            venue.LayoutUrl = uploadResult.Url.AbsoluteUri;
+            venue.LayoutPublicId = uploadResult.PublicId;
         }
 
-        public async Task<ApiResponse<VenueDto>> CreateVenueAsync(CreateVenueDto createVenueDto)
-        {
-            if (string.IsNullOrEmpty(createVenueDto.Name) || string.IsNullOrEmpty(createVenueDto.Location) || createVenueDto.Capacity < 0 || createVenueDto.LayoutUrl == null)
-                return ApiResponse<VenueDto>.Fail(400, "Invalid venue data.");
+        // 5. Persist
+        await venueRepository.AddVenueAsync(venue);
 
-            var imageUploadResult = await _photoService.UploadPhotoAsync(createVenueDto.LayoutUrl, "venue-images/");
-            if (imageUploadResult.Error != null)
-                return ApiResponse<VenueDto>.Fail(500, "Failed to upload venue layout image.");
-            var newVenue = new Venue
-            {
-                Id = Guid.NewGuid(),
-                Name = createVenueDto.Name,
-                Location = createVenueDto.Location,
-                Capacity = createVenueDto.Capacity,
-                LayoutUrl = imageUploadResult.Url.AbsoluteUri
-            };
-            await _venueRepository.AddVenueAsync(newVenue);
-            var venueDto = newVenue.Adapt<VenueDto>();
-            return ApiResponse<VenueDto>.Success(200, "Created venue successfully", venueDto);
+        var response = venue.Adapt<VenueResponse>();
+        return ApiResponse<VenueResponse>.Success(201, "Venue created successfully.", response);
+    }
+
+    public async Task<ApiResponse<VenueResponse>> GetByIdAsync(Guid eventId, Guid venueId)
+    {
+        var venue = await venueRepository.GetByIdWithinEventAsync(eventId, venueId);
+        if (venue is null)
+            return ApiResponse<VenueResponse>.Fail(404, "Venue not found.");
+
+        return ApiResponse<VenueResponse>.Success(200, "Retrieved venue.", venue.Adapt<VenueResponse>());
+    }
+
+    public async Task<ApiResponse<IReadOnlyList<VenueResponse>>> GetByEventIdAsync(Guid eventId)
+    {
+        // No pagination — room count per event is inherently low (2–20).
+        // Thesis rationale: "Pagination adds query overhead without meaningful benefit
+        // when cardinality is bounded by physical/virtual room constraints."
+        var venues = await venueRepository.GetByEventIdAsync(eventId);
+        var response = venues.Adapt<IReadOnlyList<VenueResponse>>();
+        return ApiResponse<IReadOnlyList<VenueResponse>>.Success(200, "Retrieved venues.", response);
+    }
+
+    public async Task<ApiResponse<VenueResponse>> UpdateAsync(
+        Guid eventId, Guid venueId, UpdateVenueRequest request)
+    {
+        // 1. Fetch with tracking (need to persist changes)
+        var venue = await venueRepository.GetByIdWithinEventForUpdateAsync(eventId, venueId);
+        if (venue is null)
+            return ApiResponse<VenueResponse>.Fail(404, "Venue not found.");
+
+        // 2. Duplicate name check (exclude self)
+        if (request.Name is not null)
+        {
+            var nameExists = await venueRepository.ExistsByNameAsync(
+                eventId, request.Name, excludeVenueId: venueId);
+            if (nameExists)
+                return ApiResponse<VenueResponse>.Fail(409,
+                    $"A venue named '{request.Name}' already exists in this event.");
+
+            venue.Name = request.Name;
         }
 
-        public async Task<ApiResponse<VenueDto>> GetVenueByIdAsync(Guid id)
+        // 3. Apply partial updates
+        if (request.Description is not null)
+            venue.Description = request.Description;
+        if (request.Capacity.HasValue)
+            venue.Capacity = request.Capacity.Value;
+
+        // 4. Handle layout image
+        if (request.RemoveLayout && venue.LayoutPublicId is not null)
         {
-            var venue = await _venueRepository.GetVenueByIdAsync(id);
-            if (venue == null)
-                return ApiResponse<VenueDto>.Fail(404, "Venue not found.");
-            var venueDto = venue.Adapt<VenueDto>();
-            return ApiResponse<VenueDto>.Success(200, "Retrieved venue successfully", venueDto);
+            await photoService.DeletePhotoAsync(venue.LayoutPublicId);
+            venue.LayoutUrl = null;
+            venue.LayoutPublicId = null;
+        }
+        else if (request.LayoutImage is not null)
+        {
+            // Delete old image first
+            if (venue.LayoutPublicId is not null)
+                await photoService.DeletePhotoAsync(venue.LayoutPublicId);
+
+            var uploadResult = await photoService.UploadPhotoAsync(
+                request.LayoutImage, $"events/{eventId}/venues/");
+
+            if (uploadResult.Error is not null)
+                return ApiResponse<VenueResponse>.Fail(500, "Failed to upload layout image.");
+
+            venue.LayoutUrl = uploadResult.Url.AbsoluteUri;
+            venue.LayoutPublicId = uploadResult.PublicId;
         }
 
-        public async Task<ApiResponse<IEnumerable<VenueDto>>> GetAllVenuesAsync()
-        {
-            var venues = await _venueRepository.GetAllVenuesAsync();
-            var venueDtos = venues.Adapt<IEnumerable<VenueDto>>();
-            return ApiResponse<IEnumerable<VenueDto>>.Success(200, "Retrieved venues successfully", venueDtos);
-        }
+        // 5. Persist
+        await venueRepository.UpdateVenueAsync(venue);
 
-        public async Task<ApiResponse<VenueDto>> UpdateVenueAsync(Guid id, CreateVenueDto updateVenueDto)
-        {
-            var existingVenue = await _venueRepository.GetVenueByIdAsync(id);
-            if (existingVenue == null)
-                return ApiResponse<VenueDto>.Fail(404, "Venue not found.");
+        return ApiResponse<VenueResponse>.Success(200, "Venue updated.", venue.Adapt<VenueResponse>());
+    }
 
-            if (!string.IsNullOrEmpty(updateVenueDto.Name))
-                existingVenue.Name = updateVenueDto.Name;
-            if (!string.IsNullOrEmpty(updateVenueDto.Location))
-                existingVenue.Location = updateVenueDto.Location;
-            if (updateVenueDto.Capacity >= 0 && updateVenueDto.Capacity != existingVenue.Capacity)
-                existingVenue.Capacity = updateVenueDto.Capacity;
-            if (updateVenueDto.LayoutUrl != null)
-            {
-                var imageUploadResult = await _photoService.UploadPhotoAsync(updateVenueDto.LayoutUrl, "venue-images/");
-                if (imageUploadResult.Error != null)
-                    return ApiResponse<VenueDto>.Fail(500, "Failed to upload venue layout image.");
-                existingVenue.LayoutUrl = imageUploadResult.Url.AbsoluteUri;
-            }
-            await _venueRepository.UpdateVenueAsync(existingVenue);
-            var venueDto = existingVenue.Adapt<VenueDto>();
-            return ApiResponse<VenueDto>.Success(200, "Updated venue successfully", venueDto);
-        }
+    public async Task<ApiResponse<bool>> DeleteAsync(Guid eventId, Guid venueId)
+    {
+        var venue = await venueRepository.GetByIdWithinEventForUpdateAsync(eventId, venueId);
+        if (venue is null)
+            return ApiResponse<bool>.Fail(404, "Venue not found.");
 
-        public async Task<ApiResponse<bool>> DeleteVenueAsync(Guid id)
-        {
-            var success = await _venueRepository.DeleteVenueAsync(id);
-            if (!success)
-                return ApiResponse<bool>.Fail(404, "Venue not found.");
-            return ApiResponse<bool>.Success(200, "Deleted venue successfully", true);
-        }
+        // Clean up Cloudinary
+        if (venue.LayoutPublicId is not null)
+            await photoService.DeletePhotoAsync(venue.LayoutPublicId);
+
+        await venueRepository.DeleteVenueAsync(venueId);
+
+        return ApiResponse<bool>.Success(200, "Venue deleted.", true);
+    }
     }
 }

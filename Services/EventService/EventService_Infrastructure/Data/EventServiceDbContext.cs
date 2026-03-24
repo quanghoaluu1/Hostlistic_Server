@@ -54,13 +54,11 @@ public class EventServiceDbContext : DbContext
             entity.Property(e => e.EventMode)
                 .HasConversion<string>()
                     .HasMaxLength(50);
+            entity.HasMany(e => e.Venues)
+                .WithOne(v => v.Event)
+                .HasForeignKey(v => v.EventId)
+                .OnDelete(DeleteBehavior.Cascade);
             
-            
-            entity.HasOne(e => e.Venue)
-                .WithMany(v => v.Events)
-                .HasForeignKey(e => e.VenueId)
-                .OnDelete(DeleteBehavior.Restrict);
-
             entity.HasMany(e => e.EventTeamMembers)
                 .WithOne(etm => etm.Event)
                 .HasForeignKey(etm => etm.EventId)
@@ -149,6 +147,9 @@ public class EventServiceDbContext : DbContext
                 .WithOne(s => s.Venue)
                 .HasForeignKey(s => s.VenueId)
                 .OnDelete(DeleteBehavior.Restrict);
+            entity.Property(v => v.Name).IsRequired().HasMaxLength(200);
+            entity.Property(v => v.Description).HasMaxLength(1000);
+            entity.HasIndex(v => new { v.EventId, v.Name }).IsUnique();
         });
 
         // Track configuration

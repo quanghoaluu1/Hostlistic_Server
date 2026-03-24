@@ -152,6 +152,7 @@ builder.Services.AddScoped<ISponsorInteractionRepository, SponsorInteractionRepo
 builder.Services.AddScoped<IEventTeamMemberRepository, EventTeamMemberRepository>();
 builder.Services.AddScoped<IFeedbackRepository, FeedbackRepository>();
 builder.Services.AddScoped<IAgendaService, AgendaService>();
+builder.Services.AddScoped<IVenueRepository, VenueRepository>();
 
 // Register services
 builder.Services.AddScoped<ISessionService, SessionService>();
@@ -171,6 +172,7 @@ builder.Services.AddScoped<ISponsorInteractionService, SponsorInteractionService
 builder.Services.AddScoped<IFeedbackService, FeedbackService>();
 builder.Services.AddScoped<IUserPlanServiceClient, UserPlanServiceClient>();
 builder.Services.AddScoped<IAgendaRepository, AgendaRepository>();
+builder.Services.AddScoped<IVenueService, VenueService>();
 
 var identityServiceUrl = builder.Configuration["ServiceUrls:IdentityService"] ?? "http://localhost:5049";
 builder.Services.AddHttpClient("IdentityService", client =>
