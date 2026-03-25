@@ -4,6 +4,8 @@ public enum EmailCampaignStatus
 {
     Draft,
     Sending,
+    Paused,       
     Completed,
+    Failed,
     Cancelled
 }

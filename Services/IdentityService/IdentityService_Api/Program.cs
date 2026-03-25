@@ -1,17 +1,14 @@
 using System.Reflection;
 using System.Text;
 using Common;
-using IdentityService_Application.Interfaces;
+using IdentityService_Api.Extensions;
 using IdentityService_Application.Services;
-using IdentityService_Domain.Interfaces;
-using IdentityService_Domain.Repositories;
 using IdentityService_Infrastructure.Data;
 using Mapster;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
-using NotificationService_Application.Interfaces;
 using Scalar.AspNetCore;
 using StackExchange.Redis;
 
@@ -93,21 +90,7 @@ builder.Services.AddHttpClient("BookingService", client =>
     client.BaseAddress = new Uri(builder.Configuration["Services:BookingService"] ?? "http://bookingservice:8080");
 });
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddScoped<INotificationServiceClient, NotificationServiceClient>();
-builder.Services.AddScoped<IBookingServiceClient, BookingServiceClient>();
-builder.Services.AddScoped<IUserRepository, UserRepository>();
-builder.Services.AddScoped<IOtpService, OtpService>();
-builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
-builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<IPhotoService, PhotoService>();
-builder.Services.AddScoped<IUserTicketService, UserTicketService>();
-builder.Services.AddScoped<IOrganizerBankInfoRepository, OrganizerBankInfoRepository>();
-builder.Services.AddScoped<ISubscriptionPlanRepository, SubscriptionPlanRepository>();
-builder.Services.AddScoped<IUserPlanRepository, UserPlanRepository>();
-builder.Services.AddScoped<IOrganizerBankInfoService, OrganizerBankInfoService>();
-builder.Services.AddScoped<ISubscriptionPlanService, SubscriptionPlanService>();
-builder.Services.AddScoped<IUserPlanService, UserPlanService>();
+builder.Services.AddApplicationServices();
 builder.Services.AddHealthChecks();
 
 var app = builder.Build();

@@ -1,5 +1,6 @@
 ﻿using BookingService_Application.Interfaces;
 using Common;
+using Common.Messages;
 using MassTransit;
 using Microsoft.Extensions.Logging;
 

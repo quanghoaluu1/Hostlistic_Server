@@ -1,11 +1,8 @@
 using System.Text;
+using AIService_Api.Extensions;
 using AIService_Application.Interface;
 using AIService_Application.Services;
-using AIService_Api.Filters;
-using AIService_Domain.Interfaces;
 using AIService_Infrastructure.Data;
-using AIService_Infrastructure.Repositories;
-using AIService_Infrastructure.ServiceClients;
 using Common;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -27,13 +24,7 @@ builder.Services.AddOpenApi(options =>
     optionsAction.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
 });
 builder.Services.AddSingleton<IAiProvider, GeminiProvider>();
-builder.Services.AddScoped<IAiContentService, AiContentService>();
-builder.Services.AddScoped<IAiRequestRepository, AiRequestRepository>();
-builder.Services.AddScoped<IAiGeneratedContentRepository, AiGeneratedContentRepository>();
-builder.Services.AddScoped<IPromptTemplateRepository, PromptTemplateRepository>();
-builder.Services.AddScoped<IPromptTemplateService, PromptTemplateService>();
-builder.Services.AddScoped<IPromptTemplateEngine, PromptTemplateEngine>();
-builder.Services.AddScoped<IEventServiceClient, EventServiceClient>();
+builder.Services.AddApplicationServices();
 // Same config keys as BookingService (ServiceUrls:*). Use IsNullOrWhiteSpace — empty string is not null.
 var eventServiceUrl = builder.Configuration["ServiceUrls:EventService"];
 if (string.IsNullOrWhiteSpace(eventServiceUrl))
@@ -55,9 +46,6 @@ builder.Services.AddHttpClient("IdentityService", client =>
     client.Timeout = TimeSpan.FromSeconds(15);
 });
 
-builder.Services.AddScoped<IUserPlanServiceClient, UserPlanServiceClient>();
-builder.Services.AddScoped<IAiPlanEntitlementService, AiPlanEntitlementService>();
-builder.Services.AddScoped<RequireAiSubscriptionFilter>();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Production", policy =>

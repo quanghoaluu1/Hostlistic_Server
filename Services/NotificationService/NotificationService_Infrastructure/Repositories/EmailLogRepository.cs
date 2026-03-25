@@ -32,6 +32,10 @@ public class EmailLogRepository(NotificationServiceDbContext dbContext) : IEmail
         await dbContext.EmailLogs.AddAsync(emailLog);
     }
 
+    public async Task AddRangeAsync(IEnumerable<EmailLog> emailLogs)
+    {
+        await dbContext.EmailLogs.AddRangeAsync(emailLogs);
+    }
     public Task UpdateAsync(EmailLog emailLog)
     {
         dbContext.EmailLogs.Update(emailLog);
