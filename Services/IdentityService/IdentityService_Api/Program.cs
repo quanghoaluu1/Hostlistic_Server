@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Security.Authentication;
 using System.Text;
 using Common;
 using IdentityService_Api.Extensions;
@@ -72,8 +73,18 @@ builder.Services.AddDbContext<IdentityServiceDbContext>(optionsAction =>
 {
     optionsAction.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
 });
-builder.Services.AddSingleton<IConnectionMultiplexer>(sp => 
-    ConnectionMultiplexer.Connect(builder.Configuration.GetConnectionString("RedisConnection")!));
+builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+{
+    var connectionString = builder.Configuration.GetConnectionString("RedisConnection")!;
+    var config = ConfigurationOptions.Parse(connectionString);
+    
+    config.SslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13;
+    config.AbortOnConnectFail = false;
+    config.ConnectTimeout = 10000;
+    config.CertificateValidation += (_, _, _, _) => true;
+    
+    return ConnectionMultiplexer.Connect(config);
+});
 
 // Configure Cloudinary
 builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
