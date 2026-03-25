@@ -35,7 +35,7 @@ builder.Services.AddDbContext<NotificationServiceDbContext>(optionsAction =>
 {
     optionsAction.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
 });
-var redisConnectionString = builder.Configuration["Redis:ConnectionString"] 
+var redisConnectionString = builder.Configuration.GetConnectionString("RedisConnection")
                             ?? "localhost:6379";
 builder.Services.AddSingleton<IConnectionMultiplexer>(
     ConnectionMultiplexer.Connect(redisConnectionString));

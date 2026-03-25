@@ -148,6 +148,7 @@ services:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_HTTP_PORTS=8080
       - ConnectionStrings__DefaultConnection=${NOTIFICATION_DB_CONNECTION}
+      - ConnectionStrings__RedisConnection=${REDIS_CONNECTION}
       - Resend__ApiToken=${RESEND_API_KEY}
       - RabbitMq__Host=rabbitmq
       - RabbitMq__Username=guest
