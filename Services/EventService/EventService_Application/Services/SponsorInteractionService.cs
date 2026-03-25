@@ -44,17 +44,31 @@ public class SponsorInteractionService(ISponsorInteractionRepository repository,
         return ApiResponse<SponsorInteractionDto>.Success(200, "OK", dto);
     }
 
-    public async Task<ApiResponse<IEnumerable<SponsorInteractionDto>>> GetBySponsorIdAsync(Guid sponsorId)
+    public async Task<ApiResponse<PagedResult<SponsorInteractionDto>>> GetBySponsorIdAsync(Guid sponsorId, BaseQueryParams request)
     {
-        var list = await repository.GetBySponsorIdAsync(sponsorId);
-        var dtos = list.Adapt<IEnumerable<SponsorInteractionDto>>();
-        return ApiResponse<IEnumerable<SponsorInteractionDto>>.Success(200, "OK", dtos);
+        var list = await repository.GetBySponsorIdAsync(sponsorId, request);
+        var dtos = list.Adapt<List<SponsorInteractionDto>>();
+        var result = new PagedResult<SponsorInteractionDto>
+            (
+                dtos,
+                list.TotalItems,
+                list.CurrentPage,
+                list.PageSize
+            );
+        return ApiResponse<PagedResult<SponsorInteractionDto>>.Success(200, "OK", result);
     }
 
-    public async Task<ApiResponse<IEnumerable<SponsorInteractionDto>>> GetByUserIdAsync(Guid userId)
+    public async Task<ApiResponse<PagedResult<SponsorInteractionDto>>> GetByUserIdAsync(Guid userId, BaseQueryParams request)
     {
-        var list = await repository.GetByUserIdAsync(userId);
-        var dtos = list.Adapt<IEnumerable<SponsorInteractionDto>>();
-        return ApiResponse<IEnumerable<SponsorInteractionDto>>.Success(200, "OK", dtos);
+        var list = await repository.GetByUserIdAsync(userId, request);
+        var dtos = list.Adapt<List<SponsorInteractionDto>>();
+        var result = new PagedResult<SponsorInteractionDto>
+            (
+                dtos,
+                list.TotalItems,
+                list.CurrentPage,
+                list.PageSize
+            );
+        return ApiResponse<IEnumerable<SponsorInteractionDto>>.Success(200, "OK", request);
     }
 }

@@ -1,3 +1,4 @@
+using Common;
 using EventService_Application.DTOs;
 using EventService_Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -27,16 +28,16 @@ public class SponsorInteractionsController(ISponsorInteractionService service) :
     }
 
     [HttpGet("by-sponsor/{sponsorId:guid}")]
-    public async Task<IActionResult> GetBySponsor(Guid sponsorId)
+    public async Task<IActionResult> GetBySponsor(Guid sponsorId, [FromQuery] BaseQueryParams request)
     {
-        var result = await service.GetBySponsorIdAsync(sponsorId);
+        var result = await service.GetBySponsorIdAsync(sponsorId, request);
         return Ok(result);
     }
 
     [HttpGet("by-user/{userId:guid}")]
-    public async Task<IActionResult> GetByUser(Guid userId)
+    public async Task<IActionResult> GetByUser(Guid userId, [FromQuery] BaseQueryParams request)
     {
-        var result = await service.GetByUserIdAsync(userId);
+        var result = await service.GetByUserIdAsync(userId, request);
         return Ok(result);
     }
 }

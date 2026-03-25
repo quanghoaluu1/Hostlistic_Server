@@ -36,7 +36,7 @@ public class SessionBookingService : ISessionBookingService
             (
                 sessionBookingDtos,
                 sessionBookings.TotalItems,
-                sessionBookings.TotalPages,
+                sessionBookings.CurrentPage,
                 sessionBookings.PageSize
             );
         return ApiResponse<PagedResult<SessionBookingDto>>.Success(200, "Session bookings retrieved successfully", result);
@@ -50,7 +50,7 @@ public class SessionBookingService : ISessionBookingService
             (
                 sessionBookingDtos,
                 sessionBookings.TotalItems,
-                sessionBookings.TotalPages,
+                sessionBookings.CurrentPage,
                 sessionBookings.PageSize
             );
         return ApiResponse<PagedResult<SessionBookingDto>>.Success(200, "Session bookings retrieved successfully", result);

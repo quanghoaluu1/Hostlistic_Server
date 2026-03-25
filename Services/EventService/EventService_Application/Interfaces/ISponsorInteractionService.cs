@@ -7,6 +7,6 @@ public interface ISponsorInteractionService
 {
     Task<ApiResponse<SponsorInteractionDto>> CreateAsync(CreateSponsorInteractionDto dto);
     Task<ApiResponse<SponsorInteractionDto>> GetByIdAsync(Guid id);
-    Task<ApiResponse<IEnumerable<SponsorInteractionDto>>> GetBySponsorIdAsync(Guid sponsorId);
-    Task<ApiResponse<IEnumerable<SponsorInteractionDto>>> GetByUserIdAsync(Guid userId);
+    Task<ApiResponse<PagedResult<SponsorInteractionDto>>> GetBySponsorIdAsync(Guid sponsorId, BaseQueryParams request);
+    Task<ApiResponse<PagedResult<SponsorInteractionDto>>> GetByUserIdAsync(Guid userId, BaseQueryParams request);
 }

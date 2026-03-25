@@ -118,8 +118,8 @@ namespace EventService_Application.Services
             (
                 lineupDtos,
                 lineups.TotalItems,
-                lineups.TotalPages,
-                lineups.TotalPages
+                lineups.CurrentPage,
+                lineups.PageSize
             );
             return ApiResponse<PagedResult<LineupDto>>.Success(
                 200,
@@ -163,7 +163,7 @@ namespace EventService_Application.Services
             (
                 lineupDtos,
                 lineups.TotalItems,
-                lineups.TotalPages,
+                lineups.CurrentPage,
                 lineups.PageSize
             );
 

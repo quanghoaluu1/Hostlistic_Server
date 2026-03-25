@@ -1,3 +1,4 @@
+using Common;
 using EventService_Domain.Entities;
 using EventService_Domain.Interfaces;
 using EventService_Infrastructure.Data;
@@ -13,18 +14,22 @@ public class SponsorInteractionRepository(EventServiceDbContext dbContext) : ISp
             .FirstOrDefaultAsync(x => x.Id == id);
     }
 
-    public async Task<IReadOnlyList<SponsorInteraction>> GetBySponsorIdAsync(Guid sponsorId)
+    public async Task<PagedResult<SponsorInteraction>> GetBySponsorIdAsync(Guid sponsorId, BaseQueryParams request)
     {
-        return await dbContext.SponsorInteractions
+        var query = dbContext.SponsorInteractions
             .Where(x => x.SponsorId == sponsorId)
-            .ToListAsync();
+            .AsQueryable();
+        query = query.ApplySorting(request.SortBy);
+        return await query.ToPagedResultAsync(request.Page, request.PageSize);
     }
 
-    public async Task<IReadOnlyList<SponsorInteraction>> GetByUserIdAsync(Guid userId)
+    public async Task<PagedResult<SponsorInteraction>> GetByUserIdAsync(Guid userId, BaseQueryParams request)
     {
-        return await dbContext.SponsorInteractions
+        var query = dbContext.SponsorInteractions
             .Where(x => x.UserId == userId)
-            .ToListAsync();
+            .AsQueryable();
+        query = query.ApplySorting(request.SortBy);
+        return await query.ToPagedResultAsync(request.Page, request.PageSize);
     }
 
     public async Task AddAsync(SponsorInteraction entity)

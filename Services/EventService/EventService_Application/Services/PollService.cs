@@ -127,7 +127,7 @@ namespace EventService_Application.Services
             (
                 pollDtos,
                 polls.TotalItems,
-                polls.TotalPages,
+                polls.CurrentPage,
                 polls.PageSize
             );
             return ApiResponse<PagedResult<PollDto>>.Success(200, "Polls retrieved successfully.", pagedResult);
