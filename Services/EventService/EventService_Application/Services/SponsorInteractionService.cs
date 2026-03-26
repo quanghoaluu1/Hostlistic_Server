@@ -69,6 +69,6 @@ public class SponsorInteractionService(ISponsorInteractionRepository repository,
                 list.CurrentPage,
                 list.PageSize
             );
-        return ApiResponse<IEnumerable<SponsorInteractionDto>>.Success(200, "OK", request);
+        return ApiResponse<PagedResult<SponsorInteractionDto>>.Success(200, "OK", result);
     }
 }

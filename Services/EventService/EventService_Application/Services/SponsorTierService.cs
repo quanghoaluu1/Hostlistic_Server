@@ -43,11 +43,18 @@ public class SponsorTierService(ISponsorTierRepository repository, IEventReposit
         return ApiResponse<SponsorTierDto>.Success(200, "OK", dto);
     }
 
-    public async Task<ApiResponse<IEnumerable<SponsorTierDto>>> GetByEventIdAsync(Guid eventId)
+    public async Task<ApiResponse<PagedResult<SponsorTierDto>>> GetByEventIdAsync(Guid eventId, BaseQueryParams request)
     {
-        var list = await repository.GetByEventIdAsync(eventId);
-        var dtos = list.Adapt<IEnumerable<SponsorTierDto>>();
-        return ApiResponse<IEnumerable<SponsorTierDto>>.Success(200, "OK", dtos);
+        var list = await repository.GetByEventIdAsync(eventId, request);
+        var dtos = list.Adapt<List<SponsorTierDto>>();
+        var result = new PagedResult<SponsorTierDto>
+        (
+            dtos,
+            list.TotalItems,
+            list.PageSize,
+            list.CurrentPage
+        );
+        return ApiResponse<PagedResult<SponsorTierDto>>.Success(200, "OK", result);
     }
 
     public async Task<ApiResponse<SponsorTierDto>> UpdateAsync(Guid id, UpdateSponsorTierDto dto)

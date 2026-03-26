@@ -26,11 +26,18 @@ public class TrackService : ITrackService
         return ApiResponse<TrackDto>.Success(200, "Track retrieved successfully", trackDto);
     }
 
-    public async Task<ApiResponse<IEnumerable<TrackDto>>> GetTracksByEventIdAsync(Guid eventId)
+    public async Task<ApiResponse<PagedResult<TrackDto>>> GetTracksByEventIdAsync(Guid eventId, BaseQueryParams request)
     {
-        var tracks = await _trackRepository.GetTracksByEventIdAsync(eventId);
-        var trackDtos = tracks.Adapt<IEnumerable<TrackDto>>();
-        return ApiResponse<IEnumerable<TrackDto>>.Success(200, "Tracks retrieved successfully", trackDtos);
+        var tracks = await _trackRepository.GetTracksByEventIdAsync(eventId, request);
+        var trackDtos = tracks.Adapt<List<TrackDto>>();
+        var result = new PagedResult<TrackDto>
+        (
+            trackDtos,
+            tracks.TotalItems,
+            tracks.CurrentPage,
+            tracks.PageSize
+        );
+        return ApiResponse<PagedResult<TrackDto>>.Success(200, "Tracks retrieved successfully", result);
     }
 
     public async Task<ApiResponse<TrackDto>> CreateTrackAsync(CreateTrackRequest request)

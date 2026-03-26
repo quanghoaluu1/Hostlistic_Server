@@ -47,11 +47,18 @@ namespace EventService_Application.Services
             return ApiResponse<VenueDto>.Success(200, "Retrieved venue successfully", venueDto);
         }
 
-        public async Task<ApiResponse<IEnumerable<VenueDto>>> GetAllVenuesAsync()
+        public async Task<ApiResponse<PagedResult<VenueDto>>> GetAllVenuesAsync(BaseQueryParams request)
         {
-            var venues = await _venueRepository.GetAllVenuesAsync();
-            var venueDtos = venues.Adapt<IEnumerable<VenueDto>>();
-            return ApiResponse<IEnumerable<VenueDto>>.Success(200, "Retrieved venues successfully", venueDtos);
+            var venues = await _venueRepository.GetAllVenuesAsync(request);
+            var venueDtos = venues.Adapt<List<VenueDto>>();
+            var result = new PagedResult<VenueDto>
+            (
+                venueDtos,
+                venues.TotalItems,
+                venues.CurrentPage,
+                venues.PageSize
+            );
+            return ApiResponse<PagedResult<VenueDto>>.Success(200, "Retrieved venues successfully", result);
         }
 
         public async Task<ApiResponse<VenueDto>> UpdateVenueAsync(Guid id, CreateVenueDto updateVenueDto)

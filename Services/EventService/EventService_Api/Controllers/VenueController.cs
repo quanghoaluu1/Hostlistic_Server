@@ -1,4 +1,5 @@
-﻿using EventService_Application.DTOs;
+﻿using Common;
+using EventService_Application.DTOs;
 using EventService_Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
@@ -29,9 +30,9 @@ namespace EventService_Api.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAllVenuesAsync()
+        public async Task<IActionResult> GetAllVenuesAsync([FromQuery] BaseQueryParams request)
         {
-            var result = await _venueService.GetAllVenuesAsync();
+            var result = await _venueService.GetAllVenuesAsync(request);
             return Ok(result);
         }
 

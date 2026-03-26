@@ -1,7 +1,7 @@
-﻿using EventService_Domain.Entities;
+﻿using Common;
+using EventService_Domain.Entities;
 using EventService_Domain.Interfaces;
 using EventService_Infrastructure.Data;
-using Microsoft.EntityFrameworkCore;
 
 namespace EventService_Infrastructure.Repositories
 {
@@ -25,9 +25,11 @@ namespace EventService_Infrastructure.Repositories
             return await _context.Venues.FindAsync(id);
         }
 
-        public async Task<IEnumerable<Venue>> GetAllVenuesAsync()
+        public async Task<PagedResult<Venue>> GetAllVenuesAsync(BaseQueryParams request)
         {
-            return await _context.Venues.ToListAsync();
+            var query = _context.Venues.AsQueryable();
+            query = query.ApplySorting(request.SortBy);
+            return await query.ToPagedResultAsync(request.Page, request.PageSize);
         }
 
         public async Task<Venue> UpdateVenueAsync(Venue venue)

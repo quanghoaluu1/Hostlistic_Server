@@ -1,6 +1,6 @@
+using Common;
 using EventService_Application.DTOs;
 using EventService_Application.Interfaces;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EventService_Api.Controllers;
@@ -26,9 +26,9 @@ public class TracksController : ControllerBase
     }
 
     [HttpGet("event/{eventId:guid}")]
-    public async Task<IActionResult> GetTracksByEventId(Guid eventId)
+    public async Task<IActionResult> GetTracksByEventId(Guid eventId, [FromQuery] BaseQueryParams request)
     {
-        var result = await _trackService.GetTracksByEventIdAsync(eventId);
+        var result = await _trackService.GetTracksByEventIdAsync(eventId, request);
         if (!result.IsSuccess) return BadRequest(result);
         return Ok(result);
     }

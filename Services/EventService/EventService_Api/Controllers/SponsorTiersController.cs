@@ -1,3 +1,4 @@
+using Common;
 using EventService_Application.DTOs;
 using EventService_Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -27,9 +28,9 @@ public class SponsorTiersController(ISponsorTierService service) : ControllerBas
     }
 
     [HttpGet("by-event/{eventId:guid}")]
-    public async Task<IActionResult> GetByEvent(Guid eventId)
+    public async Task<IActionResult> GetByEvent(Guid eventId, [FromQuery] BaseQueryParams request)
     {
-        var result = await service.GetByEventIdAsync(eventId);
+        var result = await service.GetByEventIdAsync(eventId, request);
         return Ok(result);
     }
 

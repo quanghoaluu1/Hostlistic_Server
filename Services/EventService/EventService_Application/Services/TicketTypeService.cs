@@ -27,18 +27,32 @@ public class TicketTypeService : ITicketTypeService
         return ApiResponse<TicketTypeDto>.Success(200, "Ticket type retrieved successfully", dto);
     }
 
-    public async Task<ApiResponse<IEnumerable<TicketTypeDto>>> GetTicketTypesByEventIdAsync(Guid eventId)
+    public async Task<ApiResponse<PagedResult<TicketTypeDto>>> GetTicketTypesByEventIdAsync(Guid eventId, BaseQueryParams request)
     {
-        var ticketTypes = await _ticketTypeRepository.GetTicketTypesByEventIdAsync(eventId);
-        var dtos = ticketTypes.Adapt<IEnumerable<TicketTypeDto>>();
-        return ApiResponse<IEnumerable<TicketTypeDto>>.Success(200, "Ticket types retrieved successfully", dtos);
+        var ticketTypes = await _ticketTypeRepository.GetTicketTypesByEventIdAsync(eventId, request);
+        var dtos = ticketTypes.Adapt<List<TicketTypeDto>>();
+        var result = new PagedResult<TicketTypeDto>
+        (
+            dtos,
+            ticketTypes.TotalItems,
+            ticketTypes.CurrentPage,
+            ticketTypes.PageSize
+        );
+        return ApiResponse<PagedResult<TicketTypeDto>>.Success(200, "Ticket types retrieved successfully", result);
     }
 
-    public async Task<ApiResponse<IEnumerable<TicketTypeDto>>> GetTicketTypesBySessionIdAsync(Guid sessionId)
+    public async Task<ApiResponse<PagedResult<TicketTypeDto>>> GetTicketTypesBySessionIdAsync(Guid sessionId, BaseQueryParams request)
     {
-        var ticketTypes = await _ticketTypeRepository.GetTicketTypesBySessionIdAsync(sessionId);
-        var dtos = ticketTypes.Adapt<IEnumerable<TicketTypeDto>>();
-        return ApiResponse<IEnumerable<TicketTypeDto>>.Success(200, "Ticket types retrieved successfully", dtos);
+        var ticketTypes = await _ticketTypeRepository.GetTicketTypesBySessionIdAsync(sessionId, request);
+        var dtos = ticketTypes.Adapt<List<TicketTypeDto>>();
+        var result = new PagedResult<TicketTypeDto>
+        (
+            dtos,
+            ticketTypes.TotalItems,
+            ticketTypes.CurrentPage,
+            ticketTypes.PageSize
+        );
+        return ApiResponse<PagedResult<TicketTypeDto>>.Success(200, "Ticket types retrieved successfully", result);
     }
 
     public async Task<ApiResponse<TicketTypeDto>> CreateTicketTypeAsync(CreateTicketTypeRequest request)

@@ -1,3 +1,4 @@
+using Common;
 using EventService_Domain.Entities;
 using EventService_Domain.Interfaces;
 using EventService_Infrastructure.Data;
@@ -22,20 +23,24 @@ public class TicketTypeRepository : ITicketTypeRepository
             .FirstOrDefaultAsync(t => t.Id == ticketTypeId);
     }
 
-    public async Task<IEnumerable<TicketType>> GetTicketTypesByEventIdAsync(Guid eventId)
+    public async Task<PagedResult<TicketType>> GetTicketTypesByEventIdAsync(Guid eventId, BaseQueryParams request)
     {
-        return await _context.TicketTypes
+        var query = _context.TicketTypes
             .Include(t => t.Session)
             .Where(t => t.EventId == eventId)
-            .ToListAsync();
+            .AsQueryable();
+        query = query.ApplySorting(request.SortBy);
+        return await query.ToPagedResultAsync(request.Page, request.PageSize);
     }
 
-    public async Task<IEnumerable<TicketType>> GetTicketTypesBySessionIdAsync(Guid sessionId)
+    public async Task<PagedResult<TicketType>> GetTicketTypesBySessionIdAsync(Guid sessionId, BaseQueryParams request)
     {
-        return await _context.TicketTypes
+        var query = _context.TicketTypes
             .Include(t => t.Event)
             .Where(t => t.SessionId == sessionId)
-            .ToListAsync();
+            .AsQueryable();
+        query = query.ApplySorting(request.SortBy);
+        return await query.ToPagedResultAsync(request.Page, request.PageSize);
     }
 
     public async Task<TicketType> AddTicketTypeAsync(TicketType ticketType)

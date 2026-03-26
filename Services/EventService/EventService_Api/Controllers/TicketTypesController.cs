@@ -1,3 +1,4 @@
+using Common;
 using EventService_Application.DTOs;
 using EventService_Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
@@ -25,16 +26,16 @@ public class TicketTypesController : ControllerBase
     }
 
     [HttpGet("event/{eventId:guid}")]
-    public async Task<IActionResult> GetTicketTypesByEventId(Guid eventId)
+    public async Task<IActionResult> GetTicketTypesByEventId(Guid eventId, [FromQuery] BaseQueryParams request)
     {
-        var result = await _ticketTypeService.GetTicketTypesByEventIdAsync(eventId);
+        var result = await _ticketTypeService.GetTicketTypesByEventIdAsync(eventId, request);
         return Ok(result);
     }
 
     [HttpGet("session/{sessionId:guid}")]
-    public async Task<IActionResult> GetTicketTypesBySessionId(Guid sessionId)
+    public async Task<IActionResult> GetTicketTypesBySessionId(Guid sessionId, [FromQuery] BaseQueryParams request)
     {
-        var result = await _ticketTypeService.GetTicketTypesBySessionIdAsync(sessionId);
+        var result = await _ticketTypeService.GetTicketTypesBySessionIdAsync(sessionId, request);
         return Ok(result);
     }
 

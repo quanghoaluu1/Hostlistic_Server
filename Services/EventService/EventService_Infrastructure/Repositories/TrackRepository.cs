@@ -1,3 +1,4 @@
+using Common;
 using EventService_Domain.Entities;
 using EventService_Domain.Interfaces;
 using EventService_Infrastructure.Data;
@@ -23,12 +24,14 @@ public class TrackRepository : ITrackRepository
             .FirstOrDefaultAsync(t => t.Id == trackId);
     }
 
-    public async Task<IEnumerable<Track>> GetTracksByEventIdAsync(Guid eventId)
+    public async Task<PagedResult<Track>> GetTracksByEventIdAsync(Guid eventId, BaseQueryParams request)
     {
-        return await _context.Tracks
+        var query = _context.Tracks
             .Include(t => t.Sessions)
             .Where(t => t.EventId == eventId)
-            .ToListAsync();
+            .AsQueryable();
+        query = query.ApplySorting(request.SortBy);
+        return await query.ToPagedResultAsync(request.Page, request.PageSize);
     }
 
     public async Task<Track> AddTrackAsync(Track track)
