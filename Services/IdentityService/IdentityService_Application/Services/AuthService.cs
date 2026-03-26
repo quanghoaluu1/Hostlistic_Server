@@ -16,7 +16,7 @@ using NotificationService_Application.Interfaces;
 
 namespace IdentityService_Application.Services;
 
-public class AuthService(IUserRepository userRepository, IRefreshTokenRepository refreshTokenRepository, IConfiguration configuration, IOtpService otpService, INotificationServiceClient notificationServiceClient)
+public class AuthService(IUserRepository userRepository, IRefreshTokenRepository refreshTokenRepository, IConfiguration configuration, IOtpService otpService, INotificationServiceClient notificationServiceClient, IBookingServiceClient bookingServiceClient)
     : IAuthService
 {
     public async Task<ApiResponse<bool>> RegisterAsync(RegisterRequest request)
@@ -27,6 +27,7 @@ public class AuthService(IUserRepository userRepository, IRefreshTokenRepository
         newUser.Role = Role.Member;
         await userRepository.AddUserAsync(newUser);
         await userRepository.SaveChangesAsync();
+        await bookingServiceClient.CreateWalletAsync(newUser.Id);
         return ApiResponse<bool>.Success(201,"User created successfully", true);
     }
     
