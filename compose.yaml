@@ -92,6 +92,7 @@ services:
       - CloudinarySettings__CloudName=${CLOUDINARY_CLOUD_NAME}
       - CloudinarySettings__ApiKey=${CLOUDINARY_API_KEY}
       - CloudinarySettings__ApiSecret=${CLOUDINARY_API_SECRET}
+      - ServiceUrls__IdentityService=http://identityservice:8080
     networks:
       - hostlistic_net
     restart: unless-stopped
