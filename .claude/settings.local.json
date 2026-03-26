@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /d/hostlistic/Hostlistic_Server/Services/ApiGateway -type f -name *.json -o -name *.cs -o -name *.yml)"
+    ]
+  }
+}
