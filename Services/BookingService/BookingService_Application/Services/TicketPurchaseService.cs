@@ -63,10 +63,17 @@ public class TicketPurchaseService : ITicketPurchaseService
             var availabilityCheck = await _inventoryService.CheckAvailabilityAsync(request.TicketItems);
             if (!availabilityCheck.IsSuccess || !availabilityCheck.Data!.IsAvailable)
             {
-                _logger.LogWarning("Ticket availability check failed for event {EventId}: {Message}", request.EventId,
-                    availabilityCheck.Data?.Message ?? "Tickets not available");
-                return ApiResponse<PurchaseTicketResponse>.Fail(400,
-                    availabilityCheck.Data?.Message ?? "Tickets not available");
+                var message = availabilityCheck.Data?.Message ?? "Tickets not available";
+                _logger.LogWarning("Ticket availability check failed for event {EventId}: {Message}", request.EventId, message);
+
+                var perTicketErrors = availabilityCheck.Data?.TicketAvailability
+                    .Where(t => !t.IsValid && !string.IsNullOrEmpty(t.ErrorMessage))
+                    .Select(t => $"{t.TicketTypeName}: {t.ErrorMessage}")
+                    .ToList();
+
+                return perTicketErrors is { Count: > 0 }
+                    ? ApiResponse<PurchaseTicketResponse>.FailWithErrors(400, message, perTicketErrors)
+                    : ApiResponse<PurchaseTicketResponse>.Fail(400, message);
             }
 
             // 2. Reserve inventory temporarily
@@ -282,10 +289,17 @@ public class TicketPurchaseService : ITicketPurchaseService
             var availabilityCheck = await _inventoryService.CheckAvailabilityAsync(request.TicketItems);
             if (!availabilityCheck.IsSuccess || !availabilityCheck.Data!.IsAvailable)
             {
-                _logger.LogWarning("Ticket availability check failed for event {EventId}: {Message}", request.EventId,
-                    availabilityCheck.Data?.Message ?? "Tickets not available");
-                return ApiResponse<PayOsCheckoutResponse>.Fail(400,
-                    availabilityCheck.Data?.Message ?? "Tickets not available");
+                var message = availabilityCheck.Data?.Message ?? "Tickets not available";
+                _logger.LogWarning("Ticket availability check failed for event {EventId}: {Message}", request.EventId, message);
+
+                var perTicketErrors = availabilityCheck.Data?.TicketAvailability
+                    .Where(t => !t.IsValid && !string.IsNullOrEmpty(t.ErrorMessage))
+                    .Select(t => $"{t.TicketTypeName}: {t.ErrorMessage}")
+                    .ToList();
+
+                return perTicketErrors is { Count: > 0 }
+                    ? ApiResponse<PayOsCheckoutResponse>.FailWithErrors(400, message, perTicketErrors)
+                    : ApiResponse<PayOsCheckoutResponse>.Fail(400, message);
             }
 
             // 2. Reserve inventory temporarily
