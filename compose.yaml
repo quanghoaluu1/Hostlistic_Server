@@ -150,6 +150,9 @@ services:
       - ConnectionStrings__DefaultConnection=${NOTIFICATION_DB_CONNECTION}
       - ConnectionStrings__RedisConnection=${REDIS_CONNECTION}
       - Resend__ApiToken=${RESEND_API_KEY}
+      - Jwt__Key=${JWT_SECRET_KEY}
+      - Jwt__Issuer=hostlistic
+      - Jwt__Audience=hostlistic
       - RabbitMq__Host=rabbitmq
       - RabbitMq__Username=guest
       - RabbitMq__Password=guest
