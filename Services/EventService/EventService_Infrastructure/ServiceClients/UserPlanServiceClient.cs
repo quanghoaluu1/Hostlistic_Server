@@ -12,7 +12,7 @@ public class UserPlanServiceClient(
     IHttpContextAccessor httpContextAccessor,
     ILogger<UserPlanServiceClient> logger) : IUserPlanServiceClient
 {
-    public async Task<IEnumerable<UserPlanDto>> GetByUserIdAsync(Guid userId, bool onlyActive = false)
+    public async Task<UserPlanLookupResult> GetByUserIdAsync(Guid userId, bool onlyActive = false)
     {
         try
         {
@@ -23,16 +23,32 @@ public class UserPlanServiceClient(
             if (!response.IsSuccessStatusCode)
             {
                 logger.LogWarning("GetByUserIdAsync(UserPlans) failed: {Status}", response.StatusCode);
-                return [];
+                return new UserPlanLookupResult
+                {
+                    IsSuccess = false,
+                    StatusCode = (int)response.StatusCode,
+                    Message = $"IdentityService returned {(int)response.StatusCode}"
+                };
             }
 
             var apiResponse = await response.Content.ReadFromJsonAsync<ApiResponse<IEnumerable<UserPlanDto>>>();
-            return apiResponse?.Data ?? [];
+            return new UserPlanLookupResult
+            {
+                IsSuccess = true,
+                StatusCode = 200,
+                Message = apiResponse?.Message ?? "OK",
+                Plans = apiResponse?.Data ?? []
+            };
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error fetching user plans for user {UserId}", userId);
-            return [];
+            return new UserPlanLookupResult
+            {
+                IsSuccess = false,
+                StatusCode = 500,
+                Message = ex.Message
+            };
         }
     }
 

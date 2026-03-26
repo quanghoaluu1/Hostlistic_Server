@@ -4,5 +4,5 @@ namespace EventService_Application.Interfaces;
 
 public interface IUserPlanServiceClient
 {
-    Task<IEnumerable<UserPlanDto>> GetByUserIdAsync(Guid userId, bool onlyActive = false);
+    Task<UserPlanLookupResult> GetByUserIdAsync(Guid userId, bool onlyActive = false);
 }

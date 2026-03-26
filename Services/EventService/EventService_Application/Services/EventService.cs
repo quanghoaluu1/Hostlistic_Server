@@ -329,7 +329,13 @@ public class EventService(
     private async Task<(bool IsSuccess, string Message, int MaxEvents, int MaxAttendeesPerEvent)> GetActiveEntitlementAsync(
         Guid organizerId)
     {
-        var activePlans = await userPlanServiceClient.GetByUserIdAsync(organizerId, true);
+        var lookup = await userPlanServiceClient.GetByUserIdAsync(organizerId, true);
+        if (!lookup.IsSuccess)
+        {
+            return (false, $"Failed to fetch active subscription plan: {lookup.Message}", 0, 0);
+        }
+
+        var activePlans = lookup.Plans;
         var activePlan = activePlans
             .Where(x => x.SubscriptionPlan is not null)
             .OrderByDescending(x => x.StartDate)
