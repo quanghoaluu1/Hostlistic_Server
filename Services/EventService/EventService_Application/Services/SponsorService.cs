@@ -2,12 +2,17 @@ using Common;
 using EventService_Application.DTOs;
 using EventService_Application.Interfaces;
 using EventService_Domain.Entities;
+using EventService_Domain.Enums;
 using EventService_Domain.Interfaces;
 using Mapster;
 
 namespace EventService_Application.Services;
 
-public class SponsorService(ISponsorRepository repository, ISponsorTierRepository sponsorTierRepository, IEventRepository eventRepository) : ISponsorService
+public class SponsorService(
+    ISponsorRepository repository,
+    ISponsorTierRepository sponsorTierRepository,
+    IEventRepository eventRepository
+) : ISponsorService
 {
     public async Task<ApiResponse<SponsorDto>> CreateAsync(CreateSponsorDto dto)
     {
@@ -102,4 +107,21 @@ public class SponsorService(ISponsorRepository repository, ISponsorTierRepositor
         await repository.SaveChangesAsync();
         return ApiResponse<bool>.Success(200, "Xoá thành công", true);
     }
+
+    public async Task<IEnumerable<SponsorPublicDto>> GetSponsorsByEventAsync(Guid eventId)
+    {
+        var sponsors = await repository.GetByEventIdAsync(eventId);
+
+        return sponsors.Select(s => new SponsorPublicDto
+        {
+            Id = s.Id,
+            Name = s.Name,
+            LogoUrl = s.LogoUrl,
+            Description = s.Description,
+            WebsiteUrl = s.WebsiteUrl,
+            TierName = s.Tier.Name
+        });
+    }
+
+    
 }
