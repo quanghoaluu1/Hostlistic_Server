@@ -2,10 +2,11 @@ using NotificationService_Application.Dtos;
 using NotificationService_Application.Interfaces;
 using Resend;
 using System.Text;
+using Microsoft.Extensions.Configuration;
 
 namespace NotificationService_Application.Services;
 
-public class EmailService(IResend resend) : IEmailService
+public class EmailService(IResend resend, IConfiguration configuration) : IEmailService
 {
     public async Task SendOtpEmailAsync(EmailOtpRequest request)
     {
@@ -108,6 +109,89 @@ public class EmailService(IResend resend) : IEmailService
                 </html>"
         };
 
+        await resend.EmailSendAsync(message);
+    }
+    
+
+    public async Task SendTeamMemberInviteEmailAsync(InviteMemberEmailRequest request)
+    {
+        var baseUrl = "https://hostlistic.tech";
+        var acceptUrl = $"{baseUrl}/invitations/{request.InviteToken}/accept?eventId={request.EventId}";
+        var declineUrl = $"{baseUrl}/invitations/{request.InviteToken}/decline?eventId={request.EventId}";
+
+        var roleDisplay = request.CustomTitle ?? request.Role;
+        var expiryFormatted = request.InviteTokenExpiry.ToString("MMMM dd, yyyy 'at' HH:mm 'UTC'");
+
+        var htmlBody = $$"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8"/>
+            <style>
+                body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; background-color: #f8f9fa; }
+                .container { max-width: 600px; margin: 0 auto; padding: 40px 20px; }
+                .card { background: #ffffff; border-radius: 12px; padding: 32px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+                .header { text-align: center; margin-bottom: 24px; }
+                .header h1 { color: #6D28D9; font-size: 24px; margin: 0; }
+                .content { color: #374151; line-height: 1.6; font-size: 16px; }
+                .role-badge { display: inline-block; background: #EDE9FE; color: #6D28D9; padding: 4px 12px; border-radius: 6px; font-weight: 600; font-size: 14px; }
+                .event-title { font-weight: 700; color: #1F2937; }
+                .buttons { text-align: center; margin: 32px 0 16px; }
+                .btn { display: inline-block; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px; margin: 0 8px; }
+                .btn-accept { background: #6D28D9; color: #ffffff; }
+                .btn-decline { background: #F3F4F6; color: #6B7280; border: 1px solid #D1D5DB; }
+                .footer { text-align: center; color: #9CA3AF; font-size: 13px; margin-top: 24px; }
+                .expiry { background: #FEF3C7; color: #92400E; padding: 8px 16px; border-radius: 6px; font-size: 14px; text-align: center; margin-top: 16px; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="card">
+                    <div class="header">
+                        <h1>Hostlistic</h1>
+                    </div>
+                    <div class="content">
+                        <p>Hi <strong>{{request.InvitedUserName}}</strong>,</p>
+                        <p><strong>{{request.InvitedByUserName}}</strong> has invited you to join the event
+                           <span class="event-title">"{{request.EventTitle}}"</span> as
+                           <span class="role-badge">{{roleDisplay}}</span>.</p>
+                        <p>You can accept or decline this invitation using the buttons below:</p>
+                    </div>
+                    <div class="buttons">
+                        <a href="{{acceptUrl}}" class="btn btn-accept">Accept Invitation</a>
+                        <a href="{{declineUrl}}" class="btn btn-decline">Decline</a>
+                    </div>
+                    <div class="expiry">
+                        This invitation expires on {{expiryFormatted}}
+                    </div>
+                </div>
+                <div class="footer">
+                    <p>Hostlistic — Event Management Platform</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """;
+
+        var message = new EmailMessage
+        {
+            From = "Hostlistic <noreply@hostlistic.tech>",
+            To = request.InvitedUserEmail,
+            Subject = $"You're invited to join \"{request.EventTitle}\" as {roleDisplay}",
+            HtmlBody = htmlBody
+        };
+        await resend.EmailSendAsync(message);
+    }
+
+    public async Task SendEmailAsync(string toEmail, string subject, string htmlBody)
+    {
+        var message = new EmailMessage
+        {
+            From = "Hostlistic <noreply@hostlistic.tech>",
+            To = toEmail,
+            Subject = subject,
+            HtmlBody = htmlBody
+        };
         await resend.EmailSendAsync(message);
     }
 

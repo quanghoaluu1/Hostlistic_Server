@@ -47,4 +47,14 @@ public class UserRepository : IUserRepository
             .AsNoTracking()
             .FirstOrDefaultAsync(u => u.GoogleId == googleId);
     }
+
+    public async Task<List<User>> SearchByEmailAsync(string email, int maxResults = 5)
+    {
+        return await _dbContext.Users
+            .AsNoTracking()
+            .Where(u => u.Email.StartsWith(email))
+            .OrderBy(u => u.Email)
+            .Take(maxResults)
+            .ToListAsync();
+    }
 }

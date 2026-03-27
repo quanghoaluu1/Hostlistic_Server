@@ -1,3 +1,4 @@
+using NotificationService_Api.Services;
 using NotificationService_Application.Interfaces;
 using NotificationService_Application.Services;
 using NotificationService_Domain.Interfaces;
@@ -9,6 +10,9 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
+        // SignalR push service
+        services.AddScoped<INotificationPushService, SignalRNotificationPushService>();
+
         // Repositories
         services.AddScoped<INotificationRepository, NotificationRepository>();
         services.AddScoped<IUserNotificationRepository, UserNotificationRepository>();

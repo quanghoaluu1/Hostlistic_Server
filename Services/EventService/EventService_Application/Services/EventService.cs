@@ -151,7 +151,7 @@ public class EventService(
                 EventModeValue = e.EventMode,
                 Status = e.EventStatus,
                 e.Location,
-                RoleValue = (int)EventRole.Organizer,
+                RoleValue = EventRole.Organizer,
                 JoinedAt = e.CreatedAt
             });
 
@@ -167,7 +167,7 @@ public class EventService(
                 EventModeValue = m.Event.EventMode,
                 Status = m.Event.EventStatus,
                 m.Event.Location,
-                RoleValue = (int)m.Role,
+                RoleValue = m.Role,
                 JoinedAt = m.JoinedAt ?? m.InvitedAt
             });
 
@@ -176,7 +176,7 @@ public class EventService(
         // FILTER
         if (queryParams.Role.HasValue)
         {
-            var roleValue = (int)queryParams.Role.Value;
+            var roleValue = queryParams.Role.Value;
             query = query.Where(e => e.RoleValue == roleValue);
         }
 

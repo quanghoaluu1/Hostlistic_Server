@@ -1,8 +1,9 @@
-﻿namespace EventService_Domain.Enums;
+namespace EventService_Domain.Enums;
 
 public enum EventMemberStatus
 {
-    Invited,
-    Active, 
-    Removed
+    Invited = 0,
+    Active = 1,
+    Declined = 2,
+    Removed = 3
 }

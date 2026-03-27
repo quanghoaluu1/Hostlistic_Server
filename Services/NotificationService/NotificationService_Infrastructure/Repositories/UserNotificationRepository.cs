@@ -25,6 +25,13 @@ public class UserNotificationRepository(NotificationServiceDbContext dbContext) 
             .ToListAsync();
     }
 
+    public async Task<List<UserNotification>> GetUnreadByUserIdAsync(Guid userId)
+    {
+        return await dbContext.UserNotifications
+            .Where(un => un.UserId == userId && !un.IsRead)
+            .ToListAsync();
+    }
+
     public async Task<List<UserNotification>> GetByNotificationIdAsync(Guid notificationId)
     {
         return await dbContext.UserNotifications
