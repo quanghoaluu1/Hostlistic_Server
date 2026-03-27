@@ -348,4 +348,59 @@ public class EventService(
 
         return (true, "OK", activePlan.SubscriptionPlan.MaxEvents, activePlan.SubscriptionPlan.MaxAttendeesPerEvent);
     }
+    public async Task<ApiResponse<StreamAuthResponseDto>> VerifyStreamAccessAsync(Guid eventId, Guid userId)
+    {
+        var eventEntity = await eventRepository.GetEventByIdAsync(eventId);
+        if (eventEntity == null)
+            return ApiResponse<StreamAuthResponseDto>.Fail(404, "Event not found");
+
+        if (eventEntity.EventMode == EventMode.Offline)
+            return ApiResponse<StreamAuthResponseDto>.Fail(400, "This is an offline event and does not support streaming.");
+
+        // Check constraints: Allow opening 30 mins before StartDate
+        if (eventEntity.StartDate.HasValue)
+        {
+            var earliestOpenTime = eventEntity.StartDate.Value.AddMinutes(-30);
+            if (DateTime.UtcNow < earliestOpenTime)
+            {
+                return ApiResponse<StreamAuthResponseDto>.Success(200, "Too early to join stream", new StreamAuthResponseDto
+                {
+                    IsAllowed = false,
+                    Role = "None",
+                    ErrorMessage = "Phòng Live chỉ được mở trước 30 phút so với thời gian bắt đầu sự kiện."
+                });
+            }
+        }
+
+        // Determine User Role
+        string role = "Attendee";
+        if (eventEntity.OrganizerId == userId)
+        {
+            role = "Organizer";
+        }
+        else
+        {
+            // Note: Since IQueryable might not support async without EF Core using, we evaluate synchronously or rely on existing repository methods if available.
+            // Using synchronous FirstOrDefault for safe IQueryable materialization if EF Core using is missing.
+            var teamMembers = eventTeamMemberRepository.GetQueryableByUserId(userId).Where(m => m.EventId == eventId).ToList();
+            var member = teamMembers.FirstOrDefault(m => m.Status == EventMemberStatus.Active);
+
+            if (member != null)
+            {
+                role = member.Role.ToString();
+            }
+            else
+            {
+                // In a complete implementation, check EventRegistration/Ticket module here
+                role = "Attendee";
+            }
+        }
+
+        return ApiResponse<StreamAuthResponseDto>.Success(200, "Success", new StreamAuthResponseDto
+        {
+            IsAllowed = true,
+            Role = role,
+            ErrorMessage = null
+        });
+    }
 }

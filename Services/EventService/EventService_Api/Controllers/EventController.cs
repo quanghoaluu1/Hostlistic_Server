@@ -81,5 +81,12 @@ public class EventController(IEventService eventService, IPhotoService photoServ
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
         return Guid.Parse(userIdClaim ?? throw new UnauthorizedAccessException("User ID not found in token"));
     }
-    
+    [HttpGet("{eventId:guid}/stream-auth")]
+    [AllowAnonymous]
+    public async Task<IActionResult> VerifyStreamAccess(Guid eventId, [FromQuery] Guid userId)
+    {
+        var result = await eventService.VerifyStreamAccessAsync(eventId, userId);
+        return Ok(result);
+    }
+
 }

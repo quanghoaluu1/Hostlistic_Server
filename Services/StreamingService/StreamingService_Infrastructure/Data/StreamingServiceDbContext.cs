@@ -1,9 +1,10 @@
 using Microsoft.EntityFrameworkCore;
+using StreamingService_Application.Interfaces;
 using StreamingService_Domain.Entities;
 
 namespace StreamingService_Infrastructure.Data;
 
-public class StreamingServiceDbContext : DbContext
+public class StreamingServiceDbContext : DbContext, IStreamingServiceDbContext
 {
     public StreamingServiceDbContext(DbContextOptions<StreamingServiceDbContext> options) : base(options)
     {
