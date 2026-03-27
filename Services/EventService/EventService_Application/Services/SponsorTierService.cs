@@ -77,4 +77,9 @@ public class SponsorTierService(ISponsorTierRepository repository, IEventReposit
         await repository.SaveChangesAsync();
         return ApiResponse<bool>.Success(200, "Xoá thành công", true);
     }
+
+    public async Task<IReadOnlyList<SponsorTier>> GetAllSponsorTiersAsync()
+    {
+        return await repository.GetAllSponsorTiersAsync();
+    }
 }
