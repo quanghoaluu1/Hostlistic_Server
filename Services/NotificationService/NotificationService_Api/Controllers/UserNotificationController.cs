@@ -34,6 +34,24 @@ public class UserNotificationController(IUserNotificationService userNotificatio
         return Ok(result);
     }
 
+    [Authorize]
+    [HttpGet("unread")]
+    public async Task<IActionResult> GetUnread()
+    {
+        var userId = GetCurrentUserId();
+        var result = await userNotificationService.GetUnreadByUserIdAsync(userId);
+        return StatusCode(result.StatusCode, result);
+    }
+
+    [Authorize]
+    [HttpPatch("{id:guid}/read")]
+    public async Task<IActionResult> MarkAsRead(Guid id)
+    {
+        var userId = GetCurrentUserId();
+        var result = await userNotificationService.MarkAsReadAsync(id, userId);
+        return StatusCode(result.StatusCode, result);
+    }
+
     [HttpGet("notification/{notificationId:guid}")]
     public async Task<IActionResult> GetByNotificationId(Guid notificationId)
     {
@@ -67,7 +85,8 @@ public class UserNotificationController(IUserNotificationService userNotificatio
 
     private Guid GetCurrentUserId()
     {
-        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userIdClaim = User.FindFirstValue("sub")
+            ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
         return Guid.Parse(userIdClaim ?? throw new UnauthorizedAccessException("User ID not found in token"));
     }
 }

@@ -33,6 +33,31 @@ public class UserNotificationService(IUserNotificationRepository userNotificatio
         return ApiResponse<List<UserNotificationDto>>.Success(200, "User notifications retrieved successfully", dtos);
     }
 
+    public async Task<ApiResponse<List<UserNotificationDto>>> GetUnreadByUserIdAsync(Guid userId)
+    {
+        var userNotifications = await userNotificationRepository.GetUnreadByUserIdAsync(userId);
+        var dtos = userNotifications.Adapt<List<UserNotificationDto>>();
+        return ApiResponse<List<UserNotificationDto>>.Success(200, "Unread notifications retrieved successfully", dtos);
+    }
+
+    public async Task<ApiResponse<UserNotificationDto>> MarkAsReadAsync(Guid id, Guid userId)
+    {
+        var userNotification = await userNotificationRepository.GetByIdAsync(id);
+        if (userNotification is null || userNotification.UserId != userId)
+            return ApiResponse<UserNotificationDto>.Fail(404, "Notification not found");
+
+        if (!userNotification.IsRead)
+        {
+            userNotification.IsRead = true;
+            userNotification.ReadAt = DateTime.UtcNow;
+            await userNotificationRepository.UpdateAsync(userNotification);
+            await userNotificationRepository.SaveChangesAsync();
+        }
+
+        var dto = userNotification.Adapt<UserNotificationDto>();
+        return ApiResponse<UserNotificationDto>.Success(200, "Notification marked as read", dto);
+    }
+
     public async Task<ApiResponse<List<UserNotificationDto>>> GetByNotificationIdAsync(Guid notificationId)
     {
         var userNotifications = await userNotificationRepository.GetByNotificationIdAsync(notificationId);

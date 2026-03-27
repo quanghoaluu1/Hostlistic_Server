@@ -96,6 +96,20 @@ public class UserService : IUserService
         return ApiResponse<UserProfileDto>.Success(200, "User profile updated successfully", userProfile);
     }
 
+    public async Task<ApiResponse<List<UserSearchResultDto>>> SearchByEmailAsync(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email) || email.Length < 3)
+            return ApiResponse<List<UserSearchResultDto>>.Fail(400, "Email query must be at least 3 characters.");
+
+        var users = await _userRepository.SearchByEmailAsync(email.Trim().ToLower());
+
+        var results = users.Select(u => new UserSearchResultDto(
+            u.Id, u.FullName, u.Email, u.AvatarUrl
+        )).ToList();
+
+        return ApiResponse<List<UserSearchResultDto>>.Success(200, "Success", results);
+    }
+
     private static string ExtractPublicIdFromUrl(string url)
     {
         try

@@ -11,4 +11,5 @@ public interface IUserRepository
     Task UpdateUserAsync(User user);
     Task SaveChangesAsync();
     Task<User?> GetUserByGoogleIdAsync(string googleId);
+    Task<List<User>> SearchByEmailAsync(string email, int maxResults = 5);
 }

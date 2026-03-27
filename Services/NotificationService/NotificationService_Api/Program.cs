@@ -5,7 +5,9 @@ using MassTransit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.SignalR;
 using NotificationService_Api.Extensions;
+using NotificationService_Api.Hubs;
 using NotificationService_Application.Consumers;
 using NotificationService_Application.Interfaces;
 using NotificationService_Application.Mappings;
@@ -53,6 +55,17 @@ builder.Services.AddAuthentication(options =>
         {
             Console.WriteLine("Token valid failed: " + context.Exception.Message);
             return Task.CompletedTask;
+        },
+        OnMessageReceived = context =>
+        {
+            // SignalR passes the token as a query parameter
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+            {
+                context.Token = accessToken;
+            }
+            return Task.CompletedTask;
         }
     };
 });
@@ -87,7 +100,8 @@ builder.Services.AddMassTransit(x =>
 {
     // Register all consumers in this assembly
     x.AddConsumer<BookingConfirmedConsumer>();
-    x.AddConsumer<BulkEmailConsumer>();  // Part 5 — will be created later
+    x.AddConsumer<BulkEmailConsumer>();
+    x.AddConsumer<TeamMemberInvitedConsumer>();
  
     x.UsingRabbitMq((context, cfg) =>
     {
@@ -115,6 +129,9 @@ builder.Services.Configure<ResendClientOptions>(o =>
 });
 builder.Services.AddTransient<IResend, ResendClient>();
 
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<IUserIdProvider, SubClaimUserIdProvider>();
+
 builder.Services.AddApplicationServices();
 builder.Services.AddHealthChecks();
 
@@ -134,5 +151,6 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapHealthChecks("/health");
+app.MapHub<NotificationHub>("/hubs/notifications");
 
 app.Run();
