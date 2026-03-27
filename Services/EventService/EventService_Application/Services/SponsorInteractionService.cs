@@ -2,6 +2,7 @@ using Common;
 using EventService_Application.DTOs;
 using EventService_Application.Interfaces;
 using EventService_Domain.Entities;
+using EventService_Domain.Enums;
 using EventService_Domain.Interfaces;
 using Mapster;
 
@@ -56,5 +57,48 @@ public class SponsorInteractionService(ISponsorInteractionRepository repository,
         var list = await repository.GetByUserIdAsync(userId);
         var dtos = list.Adapt<IEnumerable<SponsorInteractionDto>>();
         return ApiResponse<IEnumerable<SponsorInteractionDto>>.Success(200, "OK", dtos);
+    }
+
+    public async Task TrackInteractionAsync(Guid sponsorId, Guid userId, InteractionType type)
+    {
+        var exists = await sponsorRepository.ExistsAsync(sponsorId);
+        if (!exists)
+            throw new KeyNotFoundException($"Sponsor {sponsorId} not found.");
+
+        var interaction = new SponsorInteraction
+        {
+            SponsorId = sponsorId,
+            UserId = userId,
+            InteractionType = type,
+            InteractionDate = DateTime.UtcNow
+        };
+
+        await repository.AddAsync(interaction);
+        await repository.SaveChangesAsync();
+    }
+
+    public async Task<SponsorInteractionStatsDto> GetInteractionStatsAsync(Guid sponsorId)
+    {
+        var sponsor = await sponsorRepository.GetByIdWithInteractionsAsync(sponsorId)
+            ?? throw new KeyNotFoundException($"Sponsor {sponsorId} not found.");
+
+        var counts = sponsor.SponsorInteractions
+            .GroupBy(i => i.InteractionType)
+            .ToDictionary(
+                g => g.Key.ToString(),
+                g => g.Count()
+            );
+
+        return new SponsorInteractionStatsDto
+        {
+            SponsorId = sponsor.Id,
+            SponsorName = sponsor.Name,
+            InteractionCounts = counts,
+            TotalInteractions = sponsor.SponsorInteractions.Count,
+            TotalClickInteractions = sponsor.SponsorInteractions.Count(i =>
+                i.InteractionType == InteractionType.Click ||
+                i.InteractionType == InteractionType.LogoClick ||
+                i.InteractionType == InteractionType.LinkClick)
+        };
     }
 }
