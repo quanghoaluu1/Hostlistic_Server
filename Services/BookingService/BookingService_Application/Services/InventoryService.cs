@@ -120,7 +120,14 @@ namespace BookingService_Application.Services
 
                 if (!response.IsAvailable && string.IsNullOrEmpty(response.Message))
                 {
-                    response.Message = "Some tickets are not available for purchase";
+                    var ticketErrors = response.TicketAvailability
+                        .Where(t => !t.IsValid && !string.IsNullOrEmpty(t.ErrorMessage))
+                        .Select(t => $"{t.TicketTypeName}: {t.ErrorMessage}")
+                        .ToList();
+
+                    response.Message = ticketErrors.Count > 0
+                        ? string.Join("; ", ticketErrors)
+                        : "Some tickets are not available for purchase";
                 }
 
                 return ApiResponse<InventoryCheckResponse>.Success(200, response.IsAvailable ? "All tickets available" : response.Message, response);

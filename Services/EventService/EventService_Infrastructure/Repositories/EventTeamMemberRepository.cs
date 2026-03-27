@@ -1,4 +1,5 @@
 using EventService_Domain.Entities;
+using EventService_Domain.Enums;
 using EventService_Domain.Interfaces;
 using EventService_Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -10,6 +11,7 @@ public class EventTeamMemberRepository(EventServiceDbContext dbContext) : IEvent
     public async Task<IReadOnlyList<EventTeamMember>> GetMembersByEventIdAsync(Guid eventId)
     {
         return await dbContext.EventTeamMembers
+            .AsNoTracking()
             .Where(m => m.EventId == eventId)
             .ToListAsync();
     }
@@ -53,6 +55,25 @@ public class EventTeamMemberRepository(EventServiceDbContext dbContext) : IEvent
     public IQueryable<EventTeamMember> GetQueryableByUserId(Guid userId)
     {
         return dbContext.EventTeamMembers.Where(m => m.UserId == userId).AsNoTracking();
+    }
+
+    public async Task<EventTeamMember?> GetByInviteTokenAsync(string token)
+    {
+        return await dbContext.EventTeamMembers
+            .FirstOrDefaultAsync(m => m.InviteToken == token);
+    }
+
+    public async Task<int> CountActiveAndInvitedByEventAsync(Guid eventId)
+    {
+        return await dbContext.EventTeamMembers
+            .AsNoTracking()
+            .CountAsync(m => m.EventId == eventId &&
+                             (m.Status == EventMemberStatus.Active || m.Status == EventMemberStatus.Invited));
+    }
+
+    public void Remove(EventTeamMember member)
+    {
+        dbContext.EventTeamMembers.Remove(member);
     }
 
     public async Task SaveChangesAsync()

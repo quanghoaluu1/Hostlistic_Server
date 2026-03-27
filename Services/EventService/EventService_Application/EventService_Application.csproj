@@ -9,6 +9,8 @@
     <ItemGroup>
       <PackageReference Include="CloudinaryDotNet" Version="1.28.0" />
       <PackageReference Include="Mapster" Version="10.0.0-pre01" />
+      <PackageReference Include="MassTransit" Version="8.5.8" />
+      <PackageReference Include="MassTransit.RabbitMQ" Version="8.5.8" />
       <ProjectReference Include="..\EventService_Domain\EventService_Domain.csproj" />
       <ProjectReference Include="..\..\..\Common\Common.csproj" />
     </ItemGroup>

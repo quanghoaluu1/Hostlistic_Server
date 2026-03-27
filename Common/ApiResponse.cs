@@ -10,4 +10,5 @@ public class ApiResponse<T>
     
     public static ApiResponse<T> Success(int statusCode, string message, T? data) => new ApiResponse<T> {IsSuccess = true, StatusCode = statusCode, Message = message, Data = data};
     public static ApiResponse<T> Fail(int statusCode, string message) => new ApiResponse<T> {IsSuccess = false, StatusCode = statusCode, Message = message};
+    public static ApiResponse<T> FailWithErrors(int statusCode, string message, List<string> errors) => new ApiResponse<T> {IsSuccess = false, StatusCode = statusCode, Message = message, Errors = errors};
 }

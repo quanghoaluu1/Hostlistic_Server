@@ -5,6 +5,7 @@ using EventService_Domain.Entities;
 using EventService_Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -13,9 +14,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace EventService_Infrastructure.Migrations
 {
     [DbContext(typeof(EventServiceDbContext))]
-    partial class EventServiceDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260326094018_update")]
+    partial class update
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -129,24 +132,11 @@ namespace EventService_Infrastructure.Migrations
                     b.Property<string>("CustomTitle")
                         .HasColumnType("text");
 
-                    b.Property<DateTime?>("DeclinedAt")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<Guid>("EventId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("InviteToken")
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
-                    b.Property<DateTime?>("InviteTokenExpiry")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<DateTime>("InvitedAt")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("InvitedByUserId")
-                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("JoinedAt")
                         .HasColumnType("timestamp with time zone");
@@ -155,19 +145,13 @@ namespace EventService_Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("jsonb");
 
-                    b.Property<int>("Role")
-                        .HasColumnType("integer");
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");
-
-                    b.Property<string>("UserEmail")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<string>("UserFullName")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
@@ -175,11 +159,6 @@ namespace EventService_Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("EventId");
-
-                    b.HasIndex("InviteToken")
-                        .IsUnique()
-                        .HasDatabaseName("IX_EventTeamMembers_InviteToken")
-                        .HasFilter("\"InviteToken\" IS NOT NULL");
 
                     b.ToTable("EventTeamMembers");
                 });

@@ -49,6 +49,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAgendaService, AgendaService>();
         services.AddScoped<IVenueService, VenueService>();
         services.AddScoped<IUserPlanServiceClient, UserPlanServiceClient>();
+        services.AddScoped<ITeamMemberService, TeamMemberService>();
 
         return services;
     }

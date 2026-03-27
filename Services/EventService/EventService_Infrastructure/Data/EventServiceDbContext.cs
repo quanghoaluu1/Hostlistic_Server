@@ -116,14 +116,24 @@ public class EventServiceDbContext : DbContext
         modelBuilder.Entity<EventTeamMember>(entity =>
         {
             entity.HasKey(e => e.Id);
-            
-            entity.Property(e => e.Role).HasConversion<string>().HasMaxLength(50);
-            
+
+            entity.Property(e => e.Role).HasConversion<int>().HasColumnType("integer").IsRequired();
+
             entity.Property(e => e.Permissions)
                 .HasColumnType("jsonb")
                 .HasConversion(
                     v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
                     v => JsonSerializer.Deserialize<Dictionary<string, bool>>(v, (JsonSerializerOptions?)null) ?? new Dictionary<string, bool>());
+
+            entity.Property(e => e.InviteToken).HasMaxLength(64);
+            entity.Property(e => e.UserFullName).HasMaxLength(200);
+            entity.Property(e => e.UserEmail).HasMaxLength(200);
+
+            // Partial unique index for fast token lookup (NULL values are excluded)
+            entity.HasIndex(e => e.InviteToken)
+                .IsUnique()
+                .HasFilter("\"InviteToken\" IS NOT NULL")
+                .HasDatabaseName("IX_EventTeamMembers_InviteToken");
         });
 
         // EventTemplate configuration
