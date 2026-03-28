@@ -190,6 +190,28 @@ services:
         limits:
           memory: 384M
 
+  streamingservice:
+    image: hostlistic/streamingservice
+    build:
+      context: .
+      dockerfile: Services/StreamingService/StreamingService_Api/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_HTTP_PORTS=8080
+      - ConnectionStrings__DefaultConnection=${STREAM_DB_CONNECTION}
+      - Jwt__Key=${JWT_SECRET_KEY}
+      - Jwt__Issuer=hostlistic
+      - Jwt__Audience=hostlistic
+      - ServiceUrls__EventService=http://eventservice:8080
+      - ServiceUrls__IdentityService=http://identityservice:8080
+    networks:
+      - hostlistic_net
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+
 networks:
   hostlistic_net:
     driver: bridge

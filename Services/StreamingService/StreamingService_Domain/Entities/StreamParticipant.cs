@@ -15,6 +15,7 @@ public class StreamParticipant : BaseClass
     public DateTime? JoinedAt { get; set; }
     public DateTime? LeftAt { get; set; }
     public bool IsCurrentlyConnected { get; set; }
+    public bool IsBanned { get; set; }
 
     [ForeignKey(nameof(StreamRoomId))]
     public virtual StreamRoom StreamRoom { get; set; } = null!;
