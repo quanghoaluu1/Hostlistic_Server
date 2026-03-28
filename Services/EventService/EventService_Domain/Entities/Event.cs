@@ -35,7 +35,6 @@ public class Event : BaseClass
     public ICollection<Sponsor> Sponsors { get; set; } = new List<Sponsor>();
     public ICollection<CheckIn> CheckIns { get; set; } = new List<CheckIn>();
     public ICollection<Feedback> Feedbacks { get; set; } = new List<Feedback>();
-    public ICollection<SponsorTier> SponsorTiers { get; set; } = new List<SponsorTier>();
     public ICollection<Venue> Venues { get; set; } = [];
 }
 

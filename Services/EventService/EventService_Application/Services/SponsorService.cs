@@ -24,8 +24,8 @@ public class SponsorService(
             return ApiResponse<SponsorDto>.Fail(400, "Sự kiện không tồn tại");
 
         var tier = await sponsorTierRepository.GetByIdAsync(dto.TierId);
-        if (tier == null || tier.EventId != dto.EventId)
-            return ApiResponse<SponsorDto>.Fail(400, "Tier không hợp lệ cho sự kiện này");
+        if (tier == null)
+            return ApiResponse<SponsorDto>.Fail(400, "Tier không tồn tại");
 
         var entity = new Sponsor
         {
@@ -86,8 +86,8 @@ public class SponsorService(
         if (dto.TierId.HasValue)
         {
             var tier = await sponsorTierRepository.GetByIdAsync(dto.TierId.Value);
-            if (tier == null || tier.EventId != entity.EventId)
-                return ApiResponse<SponsorDto>.Fail(400, "Tier không hợp lệ cho sự kiện này");
+            if (tier == null)
+                return ApiResponse<SponsorDto>.Fail(400, "Tier không tồn tại");
             entity.TierId = dto.TierId.Value;
         }
 
