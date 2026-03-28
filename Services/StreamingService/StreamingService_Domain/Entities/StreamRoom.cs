@@ -17,7 +17,12 @@ public class StreamRoom : BaseClass
     public DateTime? EndedAt { get; set; }
     
     public int MaxParticipants { get; set; }
-    public int IsRecordEnabled { get; set; }
+    public bool IsRecordEnabled { get; set; }
+    
+    // Room Settings
+    public bool IsChatEnabled { get; set; } = true;
+    public bool IsQnAEnabled { get; set; } = true;
+    public bool RequireHostToStart { get; set; } = false;
     
     public Guid CreatedBy { get; set; }
     
