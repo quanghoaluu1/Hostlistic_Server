@@ -39,14 +39,12 @@ public class UpdateEventTemplateDto
 public class SponsorTierDto
 {
     public Guid Id { get; set; }
-    public Guid EventId { get; set; }
     public string Name { get; set; } = string.Empty;
     public int Priority { get; set; }
 }
 
 public class CreateSponsorTierDto
 {
-    public Guid EventId { get; set; }
     public string Name { get; set; } = string.Empty;
     public int Priority { get; set; }
 }

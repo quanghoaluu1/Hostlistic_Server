@@ -23,7 +23,7 @@ public class UserPlanRepository(IdentityServiceDbContext dbContext) : IUserPlanR
 
         if (onlyActive)
         {
-            query = query.Where(x => x.IsActive);
+            query = query.Where(x => x.IsActive == true);
         }
 
         return await query.ToListAsync();

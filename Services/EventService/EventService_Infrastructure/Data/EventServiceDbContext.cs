@@ -99,11 +99,6 @@ public class EventServiceDbContext : DbContext
                 .HasForeignKey(f => f.EventId)
                 .OnDelete(DeleteBehavior.Cascade);
             
-            entity.HasMany(e => e.SponsorTiers)
-                .WithOne(st => st.Event)
-                .HasForeignKey(st => st.EventId)
-                .OnDelete(DeleteBehavior.Cascade);
-            
         });
 
         // EventType configuration

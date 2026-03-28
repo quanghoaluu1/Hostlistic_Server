@@ -1,8 +1,10 @@
-﻿namespace EventService_Domain.Enums;
+namespace EventService_Domain.Enums;
 
 public enum InteractionType
 {
     View,
     Click,
-    Lead
+    Lead,
+    LogoClick,
+    LinkClick
 }

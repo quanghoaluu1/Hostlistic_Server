@@ -7,16 +7,14 @@ namespace EventService_Infrastructure.Repositories;
 
 public class SponsorTierRepository(EventServiceDbContext dbContext) : ISponsorTierRepository
 {
-    public async Task<IReadOnlyList<SponsorTier>> GetByEventIdAsync(Guid eventId)
-    {
-        return await dbContext.SponsorTiers
-            .Where(x => x.EventId == eventId)
-            .ToListAsync();
-    }
-
     public async Task<SponsorTier?> GetByIdAsync(Guid id)
     {
         return await dbContext.SponsorTiers.FindAsync(id);
+    }
+
+    public async Task<IReadOnlyList<SponsorTier>> GetAllSponsorTiersAsync()
+    {
+        return await dbContext.SponsorTiers.ToListAsync();
     }
 
     public async Task AddAsync(SponsorTier entity)

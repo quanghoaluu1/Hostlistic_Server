@@ -26,11 +26,11 @@ public class SponsorTiersController(ISponsorTierService service) : ControllerBas
         return Ok(result);
     }
 
-    [HttpGet("by-event/{eventId:guid}")]
-    public async Task<IActionResult> GetByEvent(Guid eventId)
+    [HttpGet]
+    public async Task<IActionResult> GetAll()
     {
-        var result = await service.GetByEventIdAsync(eventId);
-        return Ok(result);
+        var tiers = await service.GetAllSponsorTiersAsync();
+        return Ok(tiers);
     }
 
     [HttpPatch("{id:guid}")]
