@@ -5,16 +5,18 @@ using EventService_Domain.Entities;
 using EventService_Domain.Enums;
 using EventService_Domain.Interfaces;
 using Mapster;
+using Microsoft.AspNetCore.Http;
 
 namespace EventService_Application.Services;
 
 public class SponsorService(
     ISponsorRepository repository,
     ISponsorTierRepository sponsorTierRepository,
-    IEventRepository eventRepository
+    IEventRepository eventRepository,
+    IPhotoService photoService
 ) : ISponsorService
 {
-    public async Task<ApiResponse<SponsorDto>> CreateAsync(CreateSponsorDto dto)
+    public async Task<ApiResponse<SponsorDto>> CreateAsync(CreateSponsorDto dto, IFormFile? logoFile = null)
     {
         if (dto.EventId == Guid.Empty || dto.TierId == Guid.Empty || string.IsNullOrWhiteSpace(dto.Name))
             return ApiResponse<SponsorDto>.Fail(400, "Dữ liệu sponsor không hợp lệ");
@@ -27,12 +29,21 @@ public class SponsorService(
         if (tier == null)
             return ApiResponse<SponsorDto>.Fail(400, "Tier không tồn tại");
 
+        var logoUrl = dto.LogoUrl ?? string.Empty;
+        if (logoFile is { Length: > 0 })
+        {
+            var uploadResult = await photoService.UploadPhotoAsync(logoFile, $"events/{dto.EventId}/sponsors/");
+            if (uploadResult.Error != null)
+                return ApiResponse<SponsorDto>.Fail(400, uploadResult.Error.Message);
+            logoUrl = uploadResult.Url.AbsoluteUri;
+        }
+
         var entity = new Sponsor
         {
             Id = Guid.NewGuid(),
             EventId = dto.EventId,
             Name = dto.Name,
-            LogoUrl = dto.LogoUrl,
+            LogoUrl = logoUrl,
             Description = dto.Description,
             WebsiteUrl = dto.WebsiteUrl,
             TierId = dto.TierId

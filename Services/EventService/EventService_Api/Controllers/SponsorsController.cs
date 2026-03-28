@@ -11,9 +11,19 @@ namespace EventService_Api.Controllers;
 public class SponsorsController(ISponsorService service) : ControllerBase
 {
     [HttpPost]
+    [Consumes("application/json")]
     public async Task<IActionResult> Create([FromBody] CreateSponsorDto dto)
     {
-        var result = await service.CreateAsync(dto);
+        var result = await service.CreateAsync(dto, null);
+        if (!result.IsSuccess) return BadRequest(result);
+        return CreatedAtAction(nameof(GetById), new { id = result.Data?.Id }, result);
+    }
+
+    [HttpPost]
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> CreateWithLogo([FromForm] CreateSponsorDto dto, IFormFile? logo)
+    {
+        var result = await service.CreateAsync(dto, logo);
         if (!result.IsSuccess) return BadRequest(result);
         return CreatedAtAction(nameof(GetById), new { id = result.Data?.Id }, result);
     }
