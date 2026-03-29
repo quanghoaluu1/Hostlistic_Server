@@ -19,6 +19,7 @@ public class CreateTicketRequest
 {
     public Guid OrderId { get; set; }
     public Guid TicketTypeId { get; set; }
+    public Guid EventId { get; set; }  // required for HMAC QR payload generation
 }
 
 public class UpdateTicketRequest

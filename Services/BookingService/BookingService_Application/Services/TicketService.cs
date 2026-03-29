@@ -50,7 +50,7 @@ public class TicketService : ITicketService
         var ticket = request.Adapt<Ticket>();
 
         await _ticketRepository.AddTicketAsync(ticket); // sets ticket.Id and ticket.TicketCode
-        ticket.QrCodeUrl = await _qrCodeService.GenerateQrCodeAsync(ticket.TicketCode);
+        ticket.QrCodeUrl = await _qrCodeService.GenerateQrPayloadAsync(ticket.Id, request.EventId);
         await _ticketRepository.SaveChangesAsync();
 
         var ticketDto = ticket.Adapt<TicketDto>();

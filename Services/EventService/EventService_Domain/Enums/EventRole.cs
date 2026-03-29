@@ -5,5 +5,6 @@ public enum EventRole
     Organizer,
     Attendee,
     CoOrganizer,
-    Staff
+    Staff,
+    Volunteer
 }

@@ -1,11 +1,14 @@
 using Common;
 using EventService_Api;
+using EventService_Api.Consumers;
 using EventService_Api.Extensions;
+using EventService_Api.Hubs;
 using EventService_Infrastructure.Data;
 using Mapster;
 using MassTransit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
@@ -94,8 +97,12 @@ builder.Services.AddDbContext<EventServiceDbContext>(optionsAction =>
     optionsAction.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
 });
 
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<IUserIdProvider, SubClaimUserIdProvider>();
+
 builder.Services.AddMassTransit(config =>
 {
+    config.AddConsumer<CheckInCompletedEventConsumer>();
     config.UsingRabbitMq((context, cfg) =>
     {
         cfg.Host(builder.Configuration["RabbitMq:Host"] ?? "rabbitmq", "/", h =>
@@ -157,5 +164,6 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapHealthChecks("/health");
+app.MapHub<CheckInHub>("/hubs/checkin");
 
 app.Run();
