@@ -60,7 +60,7 @@ public class PayOsWebhookHandler(
             Quantity = od.Quantity,
             UnitPrice = od.UnitPrice
         }).ToList();
-        var tickets = await ticketPurchaseService.GenerateTicketsWithQrCodesAsync(order.Id, orderDetails);
+        var tickets = await ticketPurchaseService.GenerateTicketsWithQrCodesAsync(order.Id, orderDetails, order.EventId);
         if (tickets.Count > 0)
         {
             var unitPriceByType = orderDetails

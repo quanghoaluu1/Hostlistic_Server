@@ -15,6 +15,7 @@ namespace BookingService_Application.Interfaces
 
         Task<List<TicketDto>> GenerateTicketsWithQrCodesAsync(
             Guid orderId,
-            List<TicketItemRequest> ticketItems);
+            List<TicketItemRequest> ticketItems,
+            Guid eventId);
     }
 }

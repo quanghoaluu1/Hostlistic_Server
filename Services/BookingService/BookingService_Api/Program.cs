@@ -67,6 +67,8 @@ builder.Services.AddDbContext<BookingServiceDbContext>(optionsAction =>
 builder.Services.AddMassTransit(config =>
 {
     config.AddConsumer<EventCompletedConsumer>();
+    config.AddConsumer<SessionSyncedEventConsumer>();
+    config.AddConsumer<SessionDeletedEventConsumer>();
     config.UsingRabbitMq((context, cfg) =>
     {
         cfg.Host(builder.Configuration["RabbitMq:Host"] ?? "rabbitmq", "/", h =>

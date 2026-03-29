@@ -187,7 +187,7 @@ public class TicketPurchaseService : ITicketPurchaseService
                 await _inventoryService.ConfirmReservationAsync(reservationId);
 
                 // 10. Generate tickets with QR codes
-                var tickets = await GenerateTicketsWithQrCodesAsync(orderResult.Data.Id, request.TicketItems);
+                var tickets = await GenerateTicketsWithQrCodesAsync(orderResult.Data.Id, request.TicketItems, request.EventId);
 
                 // Enrich tickets with type name + price for email template
                 if (tickets.Count > 0)
@@ -415,7 +415,8 @@ public class TicketPurchaseService : ITicketPurchaseService
 
     public async Task<List<TicketDto>> GenerateTicketsWithQrCodesAsync(
         Guid orderId,
-        List<TicketItemRequest> ticketItems)
+        List<TicketItemRequest> ticketItems,
+        Guid eventId)
     {
         var tickets = new List<TicketDto>();
 
@@ -426,7 +427,8 @@ public class TicketPurchaseService : ITicketPurchaseService
                 var ticketResult = await _ticketService.CreateTicketAsync(new CreateTicketRequest
                 {
                     OrderId = orderId,
-                    TicketTypeId = item.TicketTypeId
+                    TicketTypeId = item.TicketTypeId,
+                    EventId = eventId
                 });
 
                 if (!ticketResult.IsSuccess)
