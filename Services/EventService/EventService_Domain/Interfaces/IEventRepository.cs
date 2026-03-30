@@ -10,7 +10,8 @@ public interface IEventRepository
     Event UpdateEventAsync(Event @event);
     Task<bool> DeleteEventAsync(Guid eventId);
     Task<bool> EventExistsAsync(Guid eventId);
-    
+
     IQueryable<Event> GetQueryable();
     Task SaveChangesAsync();
+    Task<object> GetDashboardAsync(int? year = null, int? month = null);
 }
