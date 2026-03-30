@@ -144,6 +144,7 @@ public class AuthService(IUserRepository userRepository, IRefreshTokenRepository
             };
             await userRepository.AddUserAsync(user);
             await userRepository.SaveChangesAsync();
+            await bookingServiceClient.CreateWalletAsync(user.Id);
             await userPlanRepository.AddAsync(new UserPlan
             {
                 Id = Guid.NewGuid(),

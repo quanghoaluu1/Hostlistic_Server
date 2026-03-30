@@ -65,7 +65,6 @@ public class TicketService : ITicketService
 
         // Update properties
         existingTicket.IsUsed = request.IsUsed;
-        existingTicket.QrCodeUrl = request.QrCodeUrl;
 
         await _ticketRepository.UpdateTicketAsync(existingTicket);
         await _ticketRepository.SaveChangesAsync();
