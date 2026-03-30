@@ -129,6 +129,7 @@ services:
       - RabbitMq__Host=rabbitmq
       - RabbitMq__Username=guest
       - RabbitMq__Password=guest
+      - QrSecret=${QR_SECRET}
     networks:
       - hostlistic_net
     restart: unless-stopped
@@ -194,7 +195,7 @@ services:
     image: hostlistic/streamingservice
     build:
       context: .
-      dockerfile: Services/StreamingService/StreamingService_Api/Dockerfile
+      dockerfile: Services/StreamingService/Dockerfile
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_HTTP_PORTS=8080
