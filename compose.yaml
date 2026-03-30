@@ -195,7 +195,7 @@ services:
     image: hostlistic/streamingservice
     build:
       context: .
-      dockerfile: Services/StreamingService/StreamingService_Api/Dockerfile
+      dockerfile: Services/StreamingService/Dockerfile
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_HTTP_PORTS=8080
