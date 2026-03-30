@@ -25,5 +25,4 @@ public class CreateTicketRequest
 public class UpdateTicketRequest
 {
     public bool IsUsed { get; set; }
-    public string QrCodeUrl { get; set; } = string.Empty;
 }
