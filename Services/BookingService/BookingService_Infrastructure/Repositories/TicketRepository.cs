@@ -71,6 +71,13 @@ public class TicketRepository : ITicketRepository
         return await _context.Tickets.AnyAsync(t => t.TicketCode == ticketCode);
     }
 
+    public async Task<IEnumerable<Ticket>> GetAllWithOrderAsync()
+    {
+        return await _context.Tickets
+            .Include(t => t.Order)
+            .ToListAsync();
+    }
+
     public async Task SaveChangesAsync()
     {
         await _context.SaveChangesAsync();

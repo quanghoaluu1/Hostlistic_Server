@@ -57,6 +57,13 @@ public class TicketsController : ControllerBase
         return Ok(result);
     }
 
+    [HttpPost("admin/regenerate-qr-codes")]
+    public async Task<IActionResult> RegenerateQrCodes()
+    {
+        var result = await _ticketService.RegenerateAllQrCodesAsync();
+        return Ok(result);
+    }
+
     [HttpDelete("{ticketId:guid}")]
     public async Task<IActionResult> DeleteTicket(Guid ticketId)
     {

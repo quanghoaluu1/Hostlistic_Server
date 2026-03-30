@@ -73,6 +73,16 @@ public class TicketService : ITicketService
         return ApiResponse<TicketDto>.Success(200, "Ticket updated successfully", ticketDto);
     }
 
+    public async Task<ApiResponse<int>> RegenerateAllQrCodesAsync()
+    {
+        var tickets = (await _ticketRepository.GetAllWithOrderAsync()).ToList();
+        foreach (var ticket in tickets)
+            ticket.QrCodeUrl = await _qrCodeService.GenerateQrPayloadAsync(ticket.Id, ticket.Order.EventId);
+
+        await _ticketRepository.SaveChangesAsync();
+        return ApiResponse<int>.Success(200, "QR codes regenerated", tickets.Count);
+    }
+
     public async Task<ApiResponse<bool>> DeleteTicketAsync(Guid ticketId)
     {
         var exists = await _ticketRepository.TicketExistsAsync(ticketId);
