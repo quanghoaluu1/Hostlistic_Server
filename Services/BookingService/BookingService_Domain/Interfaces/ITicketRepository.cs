@@ -12,5 +12,6 @@ public interface ITicketRepository
     Task<bool> DeleteTicketAsync(Guid ticketId);
     Task<bool> TicketExistsAsync(Guid ticketId);
     Task<bool> TicketCodeExistsAsync(string ticketCode);
+    Task<IEnumerable<Ticket>> GetAllWithOrderAsync();
     Task SaveChangesAsync();
 }
