@@ -24,18 +24,24 @@ public class CheckInCompletedEventConsumer(
                 .SendAsync("CheckInUpdate", new
                 {
                     msg.CheckInId,
+                    msg.TicketId,
                     msg.AttendeeName,
                     msg.TicketCode,
                     msg.TicketTypeName,
+                    msg.SessionId,
                     msg.SessionName,
                     msg.CheckInTime,
                     msg.CheckInType
                 }, context.CancellationToken);
+
+            logger.LogDebug(
+                "Pushed CheckInUpdate to SignalR group event-{EventId} for check-in {CheckInId}",
+                msg.EventId, msg.CheckInId);
         }
         catch (Exception ex)
         {
             // SignalR push is fire-and-forget — log but do not rethrow so MassTransit does not retry
-            logger.LogError(ex,
+            logger.LogWarning(ex,
                 "Failed to push CheckInUpdate to SignalR group event-{EventId} for check-in {CheckInId}",
                 msg.EventId, msg.CheckInId);
         }
