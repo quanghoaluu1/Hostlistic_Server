@@ -57,4 +57,19 @@ public class WalletsController : ControllerBase
         if (!result.IsSuccess) return BadRequest(result);
         return Ok(result);
     }
+    [HttpGet("dashboard/admin/cashflow")]
+    public async Task<IActionResult> GetAdminWeeklyCashflow()
+    {
+        var result = await _walletService.GetAdminWeeklyCashflowAsync();
+        if (result == null) return BadRequest("Unable to retrieve cashflow data.");
+        return Ok(result);
+    }
+
+    [HttpGet("dashboard/organizer/cashflow/{walletId:guid}")]
+    public async Task<IActionResult> GetOrganizerWeeklyCashflow(Guid walletId)
+    {
+        var result = await _walletService.GetOrganizerWeeklyCashflowAsync(walletId);
+        if (result == null) return BadRequest("Unable to retrieve cashflow data.");
+        return Ok(result);
+    }
 }
