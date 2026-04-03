@@ -38,3 +38,24 @@ public record WalletTicketSummary(
     string QrCodeUrl,
     decimal Price
 );
+
+public record FreePurchaseCompletedEvent(
+    Guid OrderId,
+    Guid EventId,
+    Guid UserId,
+    string EventName,
+    string EventLocation,
+    DateTime EventDate,
+    string CustomerName,
+    string CustomerEmail,
+    List<FreeTicketSummary> Tickets,
+    DateTime CompletedAt
+);
+
+public record FreeTicketSummary(
+    Guid Id,
+    Guid TicketTypeId,
+    string TicketCode,
+    string TicketTypeName,
+    string QrCodeUrl
+);

@@ -13,4 +13,5 @@ public interface IPaymentMethodService
     Task<ApiResponse<PaymentMethodDto>> CreatePaymentMethodWithIconAsync(CreatePaymentMethodRequest request, IFormFile? iconFile);
     Task<ApiResponse<PaymentMethodDto>> UpdatePaymentMethodWithIconAsync(Guid paymentMethodId, UpdatePaymentMethodRequest request, IFormFile? iconFile);
     Task<ApiResponse<bool>> DeletePaymentMethodAsync(Guid paymentMethodId);
+    Task<ApiResponse<PaymentOptionsResponse>> GetPaymentOptionsAsync(GetPaymentOptionsRequest request);
 }

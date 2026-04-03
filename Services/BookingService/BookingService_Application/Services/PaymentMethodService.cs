@@ -146,6 +146,40 @@ public class PaymentMethodService : IPaymentMethodService
         }
     }
 
+    public async Task<ApiResponse<PaymentOptionsResponse>> GetPaymentOptionsAsync(GetPaymentOptionsRequest request)
+    {
+        var totalAmount = request.TicketItems.Sum(x => x.UnitPrice * x.Quantity);
+
+        List<PaymentMethodDto> paymentMethods;
+
+        if (totalAmount == 0)
+        {
+            paymentMethods = new List<PaymentMethodDto>
+            {
+                new PaymentMethodDto
+                {
+                    Code = "FREE",
+                    Name = "Free Registration",
+                    IconUrl = null,
+                    FeePercentage = 0,
+                    FixedFee = 0,
+                    IsActive = true
+                }
+            };
+        }
+        else
+        {
+            var activeMethodsResult = await GetActivePaymentMethodsAsync();
+            paymentMethods = activeMethodsResult.Data?.ToList() ?? new List<PaymentMethodDto>();
+        }
+
+        return ApiResponse<PaymentOptionsResponse>.Success(200, "Payment options retrieved successfully", new PaymentOptionsResponse
+        {
+            TotalAmount = totalAmount,
+            PaymentMethods = paymentMethods
+        });
+    }
+
     public async Task<ApiResponse<bool>> DeletePaymentMethodAsync(Guid paymentMethodId)
     {
         var exists = await _paymentMethodRepository.PaymentMethodExistsAsync(paymentMethodId);

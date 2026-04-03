@@ -10,7 +10,8 @@
       "Bash(grep:*)",
       "Bash(xargs cat:*)",
       "Bash(find D:/hostlistic/Hostlistic_Server -name appsettings.json -path */Gateway* -o -name yarp.json)",
-      "Bash(ls /d/hostlistic/Hostlistic_Server/Services/BookingService/BookingService_Api/*.csproj)"
+      "Bash(ls /d/hostlistic/Hostlistic_Server/Services/BookingService/BookingService_Api/*.csproj)",
+      "Bash(find /d/hostlistic/Hostlistic_Server/Services/BookingService -type f -name \"*.cs\" ! -path \"*/obj/*\" ! -path \"*/bin/*\" -exec wc -l {} +)"
     ]
   }
 }

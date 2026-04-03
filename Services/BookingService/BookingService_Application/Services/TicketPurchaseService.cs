@@ -439,6 +439,152 @@ public class TicketPurchaseService : ITicketPurchaseService
         }
     }
 
+    public async Task<ApiResponse<FreeTicketPurchaseResponse>> PurchaseFreeTicketsAsync(FreeTicketPurchaseRequest request)
+    {
+        try
+        {
+            _logger.LogInformation("Starting free ticket registration for user {UserId} and event {EventId}", request.UserId, request.EventId);
+
+            // Step 1: Guard clause — ensure this is truly a free order
+            var totalAmount = request.TicketItems.Sum(x => x.UnitPrice * x.Quantity);
+            if (totalAmount != 0)
+            {
+                _logger.LogWarning("Free ticket endpoint called with non-zero total amount {TotalAmount} for user {UserId}", totalAmount, request.UserId);
+                return ApiResponse<FreeTicketPurchaseResponse>.Fail(400, "This endpoint only handles free tickets. Total amount must be zero.");
+            }
+
+            // Step 2: Validate ticket availability
+            var availabilityCheck = await _inventoryService.CheckAvailabilityAsync(request.TicketItems);
+            if (!availabilityCheck.IsSuccess || !availabilityCheck.Data!.IsAvailable)
+            {
+                var message = availabilityCheck.Data?.Message ?? "Tickets not available";
+                _logger.LogWarning("Ticket availability check failed for event {EventId}: {Message}", request.EventId, message);
+
+                var perTicketErrors = availabilityCheck.Data?.TicketAvailability
+                    .Where(t => !t.IsValid && !string.IsNullOrEmpty(t.ErrorMessage))
+                    .Select(t => $"{t.TicketTypeName}: {t.ErrorMessage}")
+                    .ToList();
+
+                return perTicketErrors is { Count: > 0 }
+                    ? ApiResponse<FreeTicketPurchaseResponse>.FailWithErrors(400, message, perTicketErrors)
+                    : ApiResponse<FreeTicketPurchaseResponse>.Fail(400, message);
+            }
+
+            // Step 3: Validate holder info if required
+            var holderValidationError = await ValidateHolderInfoAsync(request.TicketItems);
+            if (holderValidationError is not null)
+                return ApiResponse<FreeTicketPurchaseResponse>.Fail(400, holderValidationError);
+
+            // Step 4: Fetch event and user info
+            _logger.LogInformation("Fetching event info for EventId {EventId}", request.EventId);
+            var eventInfo = await _eventServiceClient.GetEventInfoAsync(request.EventId);
+
+            _logger.LogInformation("Fetching user info for UserId {UserId}", request.UserId);
+            var userInfo = await _userServiceClient.GetUserInfoAsync(request.UserId);
+
+            // Step 5: Reserve inventory temporarily
+            var reservationId = await _inventoryService.ReserveInventoryAsync(request.TicketItems);
+
+            try
+            {
+                // Step 6: Create order
+                var orderRequest = new CreateOrderRequest
+                {
+                    EventId = request.EventId,
+                    UserId = request.UserId,
+                    Notes = request.Notes,
+                    BuyerName = userInfo?.FullName,
+                    BuyerEmail = userInfo?.Email,
+                    BuyerAvatarUrl = userInfo?.AvatarUrl,
+                    OrderDetails = request.TicketItems.Select(item => new CreateOrderDetailRequest
+                    {
+                        TicketTypeId = item.TicketTypeId,
+                        TicketTypeName = item.TicketTypeName,
+                        Quantity = item.Quantity,
+                        UnitPrice = item.UnitPrice
+                    }).ToList()
+                };
+
+                var orderResult = await _orderService.CreateOrderAsync(orderRequest);
+                if (!orderResult.IsSuccess)
+                {
+                    _logger.LogWarning("Order creation failed for user {UserId}: {Message}", request.UserId, orderResult.Message);
+                    await _inventoryService.ReleaseReservationAsync(reservationId);
+                    return ApiResponse<FreeTicketPurchaseResponse>.Fail(400, orderResult.Message);
+                }
+
+                // Step 7: Skip payment creation — no Payment record for free tickets
+
+                // Step 8: Confirm inventory reduction
+                await _inventoryService.ConfirmReservationAsync(reservationId);
+
+                // Step 9: Generate tickets with QR codes
+                var tickets = await GenerateTicketsWithQrCodesAsync(
+                    orderResult.Data!.Id, request.TicketItems, request.EventId,
+                    eventName: eventInfo?.Title ?? string.Empty,
+                    buyerName: userInfo?.FullName,
+                    buyerEmail: userInfo?.Email);
+
+                // Step 10: Update order status to Confirmed
+                await _orderService.UpdateOrderAsync(orderResult.Data.Id, new UpdateOrderRequest
+                {
+                    Status = OrderStatus.Confirmed,
+                    Notes = "Free registration completed"
+                });
+
+                // Step 11: Publish FreePurchaseCompletedEvent — consumer handles SignalR notification and confirmation email
+                try
+                {
+                    await _publishEndpoint.Publish(new Common.Messages.FreePurchaseCompletedEvent(
+                        OrderId: orderResult.Data.Id,
+                        EventId: request.EventId,
+                        UserId: request.UserId,
+                        EventName: eventInfo?.Title ?? "Unknown Event",
+                        EventLocation: eventInfo?.Location ?? "TBD",
+                        EventDate: eventInfo?.StartDate ?? DateTime.UtcNow,
+                        CustomerName: userInfo?.FullName ?? "Valued Customer",
+                        CustomerEmail: userInfo?.Email ?? string.Empty,
+                        Tickets: tickets.Select(t => new Common.Messages.FreeTicketSummary(
+                            Id: t.Id,
+                            TicketTypeId: t.TicketTypeId,
+                            TicketCode: t.TicketCode,
+                            TicketTypeName: t.TicketTypeName,
+                            QrCodeUrl: t.QrCodeUrl
+                        )).ToList(),
+                        CompletedAt: DateTime.UtcNow
+                    ));
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex,
+                        "Failed to publish FreePurchaseCompletedEvent for order {OrderId}. " +
+                        "SignalR notification and confirmation email will not be sent.",
+                        orderResult.Data.Id);
+                }
+
+                // Step 12: Return success response
+                return ApiResponse<FreeTicketPurchaseResponse>.Success(200, "Free registration completed successfully", new FreeTicketPurchaseResponse
+                {
+                    OrderId = orderResult.Data.Id,
+                    Tickets = tickets,
+                    TotalAmount = 0,
+                    Message = "Free registration completed successfully."
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Free ticket registration failed for user {UserId} and event {EventId}", request.UserId, request.EventId);
+                await _inventoryService.ReleaseReservationAsync(reservationId);
+                return ApiResponse<FreeTicketPurchaseResponse>.Fail(500, $"Registration failed: {ex.Message}");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error in PurchaseFreeTicketsAsync");
+            return ApiResponse<FreeTicketPurchaseResponse>.Fail(500, $"Registration failed: {ex.Message}");
+        }
+    }
+
     public async Task<List<TicketDto>> GenerateTicketsWithQrCodesAsync(
         Guid orderId,
         List<TicketItemRequest> ticketItems,

@@ -20,5 +20,7 @@ namespace BookingService_Application.Interfaces
             string eventName = "",
             string? buyerName = null,
             string? buyerEmail = null);
+
+        Task<ApiResponse<FreeTicketPurchaseResponse>> PurchaseFreeTicketsAsync(FreeTicketPurchaseRequest request);
     }
 }

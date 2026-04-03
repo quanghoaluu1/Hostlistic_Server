@@ -70,6 +70,7 @@ builder.Services.AddMassTransit(config =>
     config.AddConsumer<SessionSyncedEventConsumer>();
     config.AddConsumer<SessionDeletedEventConsumer>();
     config.AddConsumer<WalletBookingConfirmConsumer>();
+    config.AddConsumer<FreePurchaseCompletedConsumer>();
     config.UsingRabbitMq((context, cfg) =>
     {
         cfg.Host(builder.Configuration["RabbitMq:Host"] ?? "rabbitmq", "/", h =>
