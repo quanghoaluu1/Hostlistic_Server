@@ -96,4 +96,11 @@ public class EventController(IEventService eventService, IPhotoService photoServ
         var result = await eventService.GetEventDashboardAsync(year, month);
         return Ok(result);
     }
+
+    [HttpPut("status/{eventId:guid}")]
+    public async Task<IActionResult> UpdateEventStatus(Guid eventId)
+    {
+        var result = await eventService.UpdateEventStatus(eventId);
+        return Ok(result);
+    }
 }

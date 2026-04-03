@@ -14,4 +14,5 @@ public interface IEventRepository
     IQueryable<Event> GetQueryable();
     Task SaveChangesAsync();
     Task<object> GetDashboardAsync(int? year = null, int? month = null);
+    Task<Event> UpdateEventStatus(Event @event);
 }

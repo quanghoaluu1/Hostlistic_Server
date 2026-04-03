@@ -414,4 +414,14 @@ public class EventService(
             dashboardData
         );
     }
+
+    public async Task<ApiResponse<EventResponseDto>> UpdateEventStatus(Guid eventId)
+    {
+        var eventEntity = await eventRepository.GetEventByIdAsync(eventId);
+        if (eventEntity == null)
+            return ApiResponse<EventResponseDto>.Fail(404, "Event not found");
+        await eventRepository.UpdateEventStatus(eventEntity);
+        var responseDto = eventEntity.Adapt<EventResponseDto>();
+        return ApiResponse<EventResponseDto>.Success(200, "Event status updated successfully", responseDto);
+    }
 }

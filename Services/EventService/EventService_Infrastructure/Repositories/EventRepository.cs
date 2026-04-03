@@ -1,4 +1,5 @@
 using EventService_Domain.Entities;
+using EventService_Domain.Enums;
 using EventService_Domain.Interfaces;
 using EventService_Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -107,6 +108,14 @@ public class EventRepository(EventServiceDbContext dbContext) : IEventRepository
             byStatus,
             byDate
         };
+    }
+
+    public async Task<Event> UpdateEventStatus(Event @event)
+    {
+        @event.EventStatus = EventStatus.Unpublished;
+        dbContext.Events.Update(@event);
+        await SaveChangesAsync();
+        return @event;
     }
 
 }
