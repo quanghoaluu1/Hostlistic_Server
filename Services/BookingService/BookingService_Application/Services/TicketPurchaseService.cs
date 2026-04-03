@@ -76,6 +76,18 @@ public class TicketPurchaseService : ITicketPurchaseService
                     : ApiResponse<PurchaseTicketResponse>.Fail(400, message);
             }
 
+            // 1b. Validate holder info if required
+            var holderValidationError = await ValidateHolderInfoAsync(request.TicketItems);
+            if (holderValidationError is not null)
+                return ApiResponse<PurchaseTicketResponse>.Fail(400, holderValidationError);
+
+            // Fetch event and buyer info early (needed for ticket denormalization and email)
+            _logger.LogInformation("Fetching event info for EventId {EventId}", request.EventId);
+            var eventInfo = await _eventServiceClient.GetEventInfoAsync(request.EventId);
+
+            _logger.LogInformation("Fetching user info for UserId {UserId}", request.UserId);
+            var userInfo = await _userServiceClient.GetUserInfoAsync(request.UserId);
+
             // 2. Reserve inventory temporarily
             var reservationId = await _inventoryService.ReserveInventoryAsync(request.TicketItems);
 
@@ -186,35 +198,20 @@ public class TicketPurchaseService : ITicketPurchaseService
                 // 9. Confirm inventory reduction
                 await _inventoryService.ConfirmReservationAsync(reservationId);
 
-                // 10. Generate tickets with QR codes
-                var tickets = await GenerateTicketsWithQrCodesAsync(orderResult.Data.Id, request.TicketItems, request.EventId);
+                // 10. Generate tickets with QR codes (TicketTypeName and EventName are persisted at creation)
+                var tickets = await GenerateTicketsWithQrCodesAsync(
+                    orderResult.Data.Id, request.TicketItems, request.EventId,
+                    eventName: eventInfo?.Title ?? string.Empty);
 
-                // Enrich tickets with type name + price for email template
+                // Enrich tickets with price for email template (Price is DTO-only, not persisted)
                 if (tickets.Count > 0)
                 {
                     var unitPriceByType = request.TicketItems
                         .GroupBy(x => x.TicketTypeId)
                         .ToDictionary(g => g.Key, g => g.First().UnitPrice);
 
-                    var ticketTypeIds = tickets.Select(t => t.TicketTypeId).Distinct().ToList();
-                    var ticketTypeInfoById = new Dictionary<Guid, TicketTypeInfoDto>();
-
-                    foreach (var ticketTypeId in ticketTypeIds)
-                    {
-                        var info = await _eventServiceClient.GetTicketTypeInfoAsync(ticketTypeId);
-                        if (info is not null)
-                        {
-                            ticketTypeInfoById[ticketTypeId] = info;
-                        }
-                    }
-
                     foreach (var t in tickets)
                     {
-                        if (ticketTypeInfoById.TryGetValue(t.TicketTypeId, out var info))
-                        {
-                            t.TicketTypeName = info.Name;
-                        }
-
                         if (unitPriceByType.TryGetValue(t.TicketTypeId, out var price))
                         {
                             t.Price = price;
@@ -229,14 +226,7 @@ public class TicketPurchaseService : ITicketPurchaseService
                     Notes = "Payment completed and tickets generated"
                 });
 
-                // 12. Get event and user information for email
-                _logger.LogInformation("Fetching event info for EventId {EventId}", request.EventId);
-                var eventInfo = await _eventServiceClient.GetEventInfoAsync(request.EventId);
-
-                _logger.LogInformation("Fetching user info for UserId {UserId}", request.UserId);
-                var userInfo = await _userServiceClient.GetUserInfoAsync(request.UserId);
-
-                // 13. Send confirmation email with tickets and QR codes
+                // 12. Send confirmation email with tickets and QR codes
                 var emailSent = await _notificationServiceClient.SendTicketPurchaseConfirmationAsync(new PurchaseConfirmationRequest
                 {
                     UserId = request.UserId,
@@ -301,6 +291,11 @@ public class TicketPurchaseService : ITicketPurchaseService
                     ? ApiResponse<PayOsCheckoutResponse>.FailWithErrors(400, message, perTicketErrors)
                     : ApiResponse<PayOsCheckoutResponse>.Fail(400, message);
             }
+
+            // 1b. Validate holder info if required
+            var holderValidationError = await ValidateHolderInfoAsync(request.TicketItems);
+            if (holderValidationError is not null)
+                return ApiResponse<PayOsCheckoutResponse>.Fail(400, holderValidationError);
 
             // 2. Reserve inventory temporarily
             var reservationId = await _inventoryService.ReserveInventoryAsync(request.TicketItems);
@@ -416,9 +411,25 @@ public class TicketPurchaseService : ITicketPurchaseService
     public async Task<List<TicketDto>> GenerateTicketsWithQrCodesAsync(
         Guid orderId,
         List<TicketItemRequest> ticketItems,
-        Guid eventId)
+        Guid eventId,
+        string eventName = "")
     {
         var tickets = new List<TicketDto>();
+
+        // Pre-fetch all ticket type names in one pass to avoid N+1 calls inside the loop
+        var ticketTypeNameMap = new Dictionary<Guid, string>();
+        foreach (var item in ticketItems)
+        {
+            if (!string.IsNullOrEmpty(item.TicketTypeName))
+            {
+                ticketTypeNameMap[item.TicketTypeId] = item.TicketTypeName;
+            }
+            else
+            {
+                var info = await _eventServiceClient.GetTicketTypeInfoAsync(item.TicketTypeId);
+                ticketTypeNameMap[item.TicketTypeId] = info?.Name ?? string.Empty;
+            }
+        }
 
         foreach (var item in ticketItems)
         {
@@ -428,7 +439,12 @@ public class TicketPurchaseService : ITicketPurchaseService
                 {
                     OrderId = orderId,
                     TicketTypeId = item.TicketTypeId,
-                    EventId = eventId
+                    EventId = eventId,
+                    TicketTypeName = ticketTypeNameMap.GetValueOrDefault(item.TicketTypeId, string.Empty),
+                    EventName = eventName,
+                    HolderName = item.Holders is not null && item.Holders.Count > i ? item.Holders[i].Name : null,
+                    HolderEmail = item.Holders is not null && item.Holders.Count > i ? item.Holders[i].Email : null,
+                    HolderPhone = item.Holders is not null && item.Holders.Count > i ? item.Holders[i].Phone : null,
                 });
 
                 if (!ticketResult.IsSuccess)
@@ -448,7 +464,34 @@ public class TicketPurchaseService : ITicketPurchaseService
         return tickets;
     }
 
-    
+    private async Task<string?> ValidateHolderInfoAsync(List<TicketItemRequest> ticketItems)
+    {
+        foreach (var item in ticketItems)
+        {
+            var ticketTypeInfo = await _eventServiceClient.GetTicketTypeInfoAsync(item.TicketTypeId);
+            if (ticketTypeInfo is null || !ticketTypeInfo.IsRequireHolderInfo)
+                continue;
+
+            if (item.Quantity >= 2)
+            {
+                if (item.Holders is null || item.Holders.Count == 0)
+                    return $"Holder information is required for ticket type '{item.TicketTypeName}' when purchasing multiple tickets.";
+
+                if (item.Holders.Count != item.Quantity)
+                    return $"Holder count ({item.Holders.Count}) must match quantity ({item.Quantity}) for ticket type '{item.TicketTypeName}'.";
+
+                for (int i = 0; i < item.Holders.Count; i++)
+                {
+                    if (string.IsNullOrWhiteSpace(item.Holders[i].Name))
+                        return $"Holder name is required for ticket {i + 1} of type '{item.TicketTypeName}'.";
+                }
+            }
+            // Quantity == 1: buyer is the holder — no holder data required
+        }
+
+        return null;
+    }
+
     private static long GenerateOrderCode()
     {
         // PayOS orderCode phải là số nguyên dương, max 9007199254740991 
@@ -478,6 +521,7 @@ public class TicketTypeInfoDto
 {
     public string Name { get; set; } = string.Empty;
     public decimal Price { get; set; }
+    public bool IsRequireHolderInfo { get; set; }
 }
 public class EventSettlementInfoDto
 {

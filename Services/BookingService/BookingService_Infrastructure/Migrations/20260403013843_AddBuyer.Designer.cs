@@ -3,6 +3,7 @@ using System;
 using BookingService_Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace BookingService_Infrastructure.Migrations
 {
     [DbContext(typeof(BookingServiceDbContext))]
-    partial class BookingServiceDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260403013843_AddBuyer")]
+    partial class AddBuyer
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -217,10 +220,6 @@ namespace BookingService_Infrastructure.Migrations
                     b.Property<Guid>("TicketTypeId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("TicketTypeName")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<decimal>("UnitPrice")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
@@ -380,23 +379,6 @@ namespace BookingService_Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("EventName")
-                        .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)");
-
-                    b.Property<string>("HolderEmail")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<string>("HolderName")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<string>("HolderPhone")
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
                     b.Property<bool>("IsUsed")
                         .HasColumnType("boolean");
 
@@ -416,11 +398,6 @@ namespace BookingService_Infrastructure.Migrations
 
                     b.Property<Guid>("TicketTypeId")
                         .HasColumnType("uuid");
-
-                    b.Property<string>("TicketTypeName")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
 
                     b.HasKey("Id");
 
