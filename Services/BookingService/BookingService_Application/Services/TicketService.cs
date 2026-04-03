@@ -48,6 +48,11 @@ public class TicketService : ITicketService
     public async Task<ApiResponse<TicketDto>> CreateTicketAsync(CreateTicketRequest request)
     {
         var ticket = request.Adapt<Ticket>();
+        ticket.TicketTypeName = request.TicketTypeName;
+        ticket.EventName = request.EventName;
+        ticket.HolderName = request.HolderName;
+        ticket.HolderEmail = request.HolderEmail;
+        ticket.HolderPhone = request.HolderPhone;
 
         await _ticketRepository.AddTicketAsync(ticket); // sets ticket.Id and ticket.TicketCode
         ticket.QrCodeUrl = await _qrCodeService.GenerateQrPayloadAsync(ticket.Id, request.EventId);

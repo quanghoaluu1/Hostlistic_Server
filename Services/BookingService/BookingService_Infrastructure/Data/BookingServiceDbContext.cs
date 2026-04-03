@@ -97,6 +97,12 @@ public class BookingServiceDbContext : DbContext
 
             entity.HasIndex(e => e.TicketCode)
                 .IsUnique();
+
+            entity.Property(e => e.TicketTypeName).HasMaxLength(200);
+            entity.Property(e => e.EventName).HasMaxLength(300);
+            entity.Property(e => e.HolderName).HasMaxLength(200);
+            entity.Property(e => e.HolderEmail).HasMaxLength(200);
+            entity.Property(e => e.HolderPhone).HasMaxLength(20);
         });
 
         // InventoryReservation configuration

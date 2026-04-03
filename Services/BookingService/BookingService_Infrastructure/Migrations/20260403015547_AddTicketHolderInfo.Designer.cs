@@ -3,6 +3,7 @@ using System;
 using BookingService_Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace BookingService_Infrastructure.Migrations
 {
     [DbContext(typeof(BookingServiceDbContext))]
-    partial class BookingServiceDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260403015547_AddTicketHolderInfo")]
+    partial class AddTicketHolderInfo
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -380,11 +383,6 @@ namespace BookingService_Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("EventName")
-                        .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)");
-
                     b.Property<string>("HolderEmail")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
@@ -419,8 +417,7 @@ namespace BookingService_Infrastructure.Migrations
 
                     b.Property<string>("TicketTypeName")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 
