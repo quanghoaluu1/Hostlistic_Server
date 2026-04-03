@@ -9,7 +9,8 @@
       "Bash(dotnet build:*)",
       "Bash(grep:*)",
       "Bash(xargs cat:*)",
-      "Bash(find D:/hostlistic/Hostlistic_Server -name appsettings.json -path */Gateway* -o -name yarp.json)"
+      "Bash(find D:/hostlistic/Hostlistic_Server -name appsettings.json -path */Gateway* -o -name yarp.json)",
+      "Bash(ls /d/hostlistic/Hostlistic_Server/Services/BookingService/BookingService_Api/*.csproj)"
     ]
   }
 }

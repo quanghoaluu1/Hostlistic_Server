@@ -17,6 +17,8 @@ namespace BookingService_Application.Interfaces
             Guid orderId,
             List<TicketItemRequest> ticketItems,
             Guid eventId,
-            string eventName = "");
+            string eventName = "",
+            string? buyerName = null,
+            string? buyerEmail = null);
     }
 }

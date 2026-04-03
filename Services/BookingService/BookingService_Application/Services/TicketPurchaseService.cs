@@ -3,7 +3,8 @@ using BookingService_Application.DTOs;
 using BookingService_Application.DTOs.PayOs;
 using BookingService_Application.Interfaces;
 using BookingService_Domain.Enum;
-using Microsoft.Extensions.Configuration;
+using Common.Messages;
+using MassTransit;
 using Microsoft.Extensions.Logging;
 using PayOS.Models.V2.PaymentRequests;
 
@@ -20,6 +21,7 @@ public class TicketPurchaseService : ITicketPurchaseService
     private readonly IUserServiceClient _userServiceClient;
     private readonly INotificationServiceClient _notificationServiceClient;
     private readonly IPayOsService _payOsService;
+    private readonly IPublishEndpoint _publishEndpoint;
     private readonly ILogger<TicketPurchaseService> _logger;
 
 
@@ -33,6 +35,7 @@ public class TicketPurchaseService : ITicketPurchaseService
         IUserServiceClient userServiceClient,
         INotificationServiceClient notificationServiceClient,
         IPayOsService payOsService,
+        IPublishEndpoint publishEndpoint,
         ILogger<TicketPurchaseService> logger)
     {
         _orderService = orderService;
@@ -44,6 +47,7 @@ public class TicketPurchaseService : ITicketPurchaseService
         _userServiceClient = userServiceClient;
         _notificationServiceClient = notificationServiceClient;
         _payOsService = payOsService;
+        _publishEndpoint = publishEndpoint;
         _logger = logger;
     }
 
@@ -120,9 +124,13 @@ public class TicketPurchaseService : ITicketPurchaseService
                     EventId = request.EventId,
                     UserId = request.UserId,
                     Notes = request.Notes,
+                    BuyerName = userInfo?.FullName,
+                    BuyerEmail = userInfo?.Email,
+                    BuyerAvatarUrl = userInfo?.AvatarUrl,
                     OrderDetails = request.TicketItems.Select(item => new CreateOrderDetailRequest
                     {
                         TicketTypeId = item.TicketTypeId,
+                        TicketTypeName = item.TicketTypeName,
                         Quantity = item.Quantity,
                         UnitPrice = item.UnitPrice
                     }).ToList()
@@ -201,7 +209,9 @@ public class TicketPurchaseService : ITicketPurchaseService
                 // 10. Generate tickets with QR codes (TicketTypeName and EventName are persisted at creation)
                 var tickets = await GenerateTicketsWithQrCodesAsync(
                     orderResult.Data.Id, request.TicketItems, request.EventId,
-                    eventName: eventInfo?.Title ?? string.Empty);
+                    eventName: eventInfo?.Title ?? string.Empty,
+                    buyerName: userInfo?.FullName,
+                    buyerEmail: userInfo?.Email);
 
                 // Enrich tickets with price for email template (Price is DTO-only, not persisted)
                 if (tickets.Count > 0)
@@ -226,23 +236,37 @@ public class TicketPurchaseService : ITicketPurchaseService
                     Notes = "Payment completed and tickets generated"
                 });
 
-                // 12. Send confirmation email with tickets and QR codes
-                var emailSent = await _notificationServiceClient.SendTicketPurchaseConfirmationAsync(new PurchaseConfirmationRequest
+                // 12. Publish wallet purchase event — consumer handles SignalR, BookingConfirmedEvent, and email
+                try
                 {
-                    UserId = request.UserId,
-                    OrderId = orderResult.Data.Id,
-                    Tickets = tickets,
-                    TotalAmount = totalAmount,
-                    EventName = eventInfo?.Title ?? "Unknown Event",
-                    EventDate = eventInfo?.StartDate ?? DateTime.Now,
-                    EventLocation = eventInfo?.Location ?? "TBD",
-                    CustomerName = userInfo?.FullName ?? "Valued Customer",
-                    CustomerEmail = userInfo?.Email ?? ""
-                });
-
-                var responseMessage = emailSent 
-                    ? "Purchase completed successfully. Confirmation email with tickets and QR codes sent."
-                    : "Purchase completed successfully. Email sending failed - please check your email settings.";
+                    await _publishEndpoint.Publish(new WalletPurchaseCompletedEvent(
+                        OrderId: orderResult.Data.Id,
+                        EventId: request.EventId,
+                        UserId: request.UserId,
+                        TotalAmount: totalAmount,
+                        EventName: eventInfo?.Title ?? "Unknown Event",
+                        EventLocation: eventInfo?.Location ?? "TBD",
+                        EventDate: eventInfo?.StartDate ?? DateTime.UtcNow,
+                        CustomerName: userInfo?.FullName ?? "Valued Customer",
+                        CustomerEmail: userInfo?.Email ?? string.Empty,
+                        Tickets: tickets.Select(t => new WalletTicketSummary(
+                            Id: t.Id,
+                            TicketTypeId: t.TicketTypeId,
+                            TicketCode: t.TicketCode,
+                            TicketTypeName: t.TicketTypeName,
+                            QrCodeUrl: t.QrCodeUrl,
+                            Price: t.Price
+                        )).ToList(),
+                        CompletedAt: DateTime.UtcNow
+                    ));
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex,
+                        "Failed to publish WalletPurchaseCompletedEvent for order {OrderId}. " +
+                        "SignalR notification and confirmation email will not be sent.",
+                        orderResult.Data.Id);
+                }
 
                 return ApiResponse<PurchaseTicketResponse>.Success(200, "Tickets purchased successfully", new PurchaseTicketResponse
                 {
@@ -250,7 +274,7 @@ public class TicketPurchaseService : ITicketPurchaseService
                     Tickets = tickets,
                     PaymentId = paymentResult.Data.Id,
                     TotalAmount = totalAmount,
-                    Message = responseMessage
+                    Message = "Purchase completed successfully."
                 });
             }
             catch (Exception ex)
@@ -297,6 +321,9 @@ public class TicketPurchaseService : ITicketPurchaseService
             if (holderValidationError is not null)
                 return ApiResponse<PayOsCheckoutResponse>.Fail(400, holderValidationError);
 
+            // Fetch buyer info early for order denormalization
+            var userInfo = await _userServiceClient.GetUserInfoAsync(request.UserId);
+
             // 2. Reserve inventory temporarily
             var reservationId = await _inventoryService.ReserveInventoryAsync(request.TicketItems);
 
@@ -304,16 +331,20 @@ public class TicketPurchaseService : ITicketPurchaseService
             {
                 // 3. Calculate total amount
                 var totalAmount = request.TicketItems.Sum(x => x.UnitPrice * x.Quantity);
-                
+
                 // 5. Create order
                 var orderRequest = new CreateOrderRequest
                 {
                     EventId = request.EventId,
                     UserId = request.UserId,
                     Notes = request.Notes,
+                    BuyerName = userInfo?.FullName,
+                    BuyerEmail = userInfo?.Email,
+                    BuyerAvatarUrl = userInfo?.AvatarUrl,
                     OrderDetails = request.TicketItems.Select(item => new CreateOrderDetailRequest
                     {
                         TicketTypeId = item.TicketTypeId,
+                        TicketTypeName = item.TicketTypeName,
                         Quantity = item.Quantity,
                         UnitPrice = item.UnitPrice
                     }).ToList()
@@ -412,7 +443,9 @@ public class TicketPurchaseService : ITicketPurchaseService
         Guid orderId,
         List<TicketItemRequest> ticketItems,
         Guid eventId,
-        string eventName = "")
+        string eventName = "",
+        string? buyerName = null,
+        string? buyerEmail = null)
     {
         var tickets = new List<TicketDto>();
 
@@ -435,6 +468,24 @@ public class TicketPurchaseService : ITicketPurchaseService
         {
             for (int i = 0; i < item.Quantity; i++)
             {
+                string? holderName;
+                string? holderEmail;
+                string? holderPhone;
+
+                if (item.Holders is not null && item.Holders.Count > i)
+                {
+                    holderName = item.Holders[i].Name;
+                    holderEmail = item.Holders[i].Email;
+                    holderPhone = item.Holders[i].Phone;
+                }
+                else
+                {
+                    // No explicit holder data — buyer is the holder
+                    holderName = buyerName;
+                    holderEmail = buyerEmail;
+                    holderPhone = null;
+                }
+
                 var ticketResult = await _ticketService.CreateTicketAsync(new CreateTicketRequest
                 {
                     OrderId = orderId,
@@ -442,9 +493,9 @@ public class TicketPurchaseService : ITicketPurchaseService
                     EventId = eventId,
                     TicketTypeName = ticketTypeNameMap.GetValueOrDefault(item.TicketTypeId, string.Empty),
                     EventName = eventName,
-                    HolderName = item.Holders is not null && item.Holders.Count > i ? item.Holders[i].Name : null,
-                    HolderEmail = item.Holders is not null && item.Holders.Count > i ? item.Holders[i].Email : null,
-                    HolderPhone = item.Holders is not null && item.Holders.Count > i ? item.Holders[i].Phone : null,
+                    HolderName = holderName,
+                    HolderEmail = holderEmail,
+                    HolderPhone = holderPhone,
                 });
 
                 if (!ticketResult.IsSuccess)
@@ -515,6 +566,7 @@ public class UserInfoDto
 {
     public string FullName { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
+    public string? AvatarUrl { get; set; }
 }
 
 public class TicketTypeInfoDto

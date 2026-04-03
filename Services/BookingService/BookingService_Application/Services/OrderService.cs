@@ -63,6 +63,7 @@ public class OrderService : IOrderService
         {
             var orderDetail = detailRequest.Adapt<OrderDetail>();
             orderDetail.OrderId = order.Id;
+            orderDetail.TicketTypeName = detailRequest.TicketTypeName;
             order.OrderDetails.Add(orderDetail);
         }
 

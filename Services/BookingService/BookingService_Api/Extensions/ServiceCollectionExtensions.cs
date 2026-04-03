@@ -48,6 +48,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISettlementService, SettlementService>();
         services.AddScoped<ISubscriptionPurchaseService, SubscriptionPurchaseService>();
         services.AddScoped<ICheckInService, CheckInService>();
+        services.AddScoped<IAttendeeService, AttendeeService>();
 
         return services;
     }
