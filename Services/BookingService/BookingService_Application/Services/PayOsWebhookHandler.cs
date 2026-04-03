@@ -55,15 +55,19 @@ public class PayOsWebhookHandler(
 
         // 5. Generate tickets (TicketTypeName and EventName are persisted at creation)
         var eventInfo = await eventServiceClient.GetEventInfoAsync(order.EventId);
+        var userInfo = await userServiceClient.GetUserInfoAsync(order.UserId);
         var orderDetails = order.OrderDetails.Select(od => new DTOs.TicketItemRequest
         {
             TicketTypeId = od.TicketTypeId,
+            TicketTypeName = od.TicketTypeName,
             Quantity = od.Quantity,
             UnitPrice = od.UnitPrice
         }).ToList();
         var tickets = await ticketPurchaseService.GenerateTicketsWithQrCodesAsync(
             order.Id, orderDetails, order.EventId,
-            eventName: eventInfo?.Title ?? string.Empty);
+            eventName: eventInfo?.Title ?? string.Empty,
+            buyerName: userInfo?.FullName,
+            buyerEmail: userInfo?.Email);
 
         // Enrich tickets with price for SignalR/email DTOs (Price is not persisted)
         if (tickets.Count > 0)
@@ -114,8 +118,6 @@ public class PayOsWebhookHandler(
 
         try
         {
-            var userInfo = await userServiceClient.GetUserInfoAsync(order.UserId);
-
             await publishEndpoint.Publish(new BookingConfirmedEvent(
                 EventId: order.EventId,
                 UserId: order.UserId,
@@ -141,11 +143,11 @@ public class PayOsWebhookHandler(
                 order.Id);
         }
         var capturedEventInfo = eventInfo;
+        var capturedUserInfo = userInfo;
         _ = Task.Run(async () =>
         {
             try
             {
-                var userInfo = await userServiceClient.GetUserInfoAsync(order.UserId);
                 await notificationServiceClient.SendTicketPurchaseConfirmationAsync(new PurchaseConfirmationRequest
                 {
                     UserId = order.UserId,
@@ -154,8 +156,8 @@ public class PayOsWebhookHandler(
                     EventName = capturedEventInfo?.Title ?? "Unknown Event",
                     EventDate = capturedEventInfo?.StartDate ?? DateTime.Now,
                     EventLocation = capturedEventInfo?.Location ?? "TBD",
-                    CustomerName = userInfo?.FullName ?? "Valued Customer",
-                    CustomerEmail = userInfo?.Email ?? ""
+                    CustomerName = capturedUserInfo?.FullName ?? "Valued Customer",
+                    CustomerEmail = capturedUserInfo?.Email ?? ""
                 });
             }
             catch (Exception ex)
