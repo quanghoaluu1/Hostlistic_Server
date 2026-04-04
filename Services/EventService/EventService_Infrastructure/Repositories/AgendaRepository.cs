@@ -13,7 +13,7 @@ public class AgendaRepository(EventServiceDbContext context) : IAgendaRepository
         var eventEntity = await context.Events
             .AsNoTracking()
             .Where(e => e.Id == eventId)
-            .Select(e => new { e.Id, e.StartDate, e.EndDate })
+            .Select(e => new { e.Id, e.StartDate, e.EndDate, e.TimeZoneId })
             .FirstOrDefaultAsync();
  
         if (eventEntity is null)
@@ -84,6 +84,7 @@ public class AgendaRepository(EventServiceDbContext context) : IAgendaRepository
             EventId = eventEntity.Id,
             EventStartDate = eventEntity.StartDate,
             EventEndDate = eventEntity.EndDate,
+            TimeZoneId = eventEntity.TimeZoneId,
             EventDays = eventDays,
             Tracks = tracks.Select(t => new AgendaTrackData
             {

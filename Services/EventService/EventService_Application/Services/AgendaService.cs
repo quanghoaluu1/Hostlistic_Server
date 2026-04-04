@@ -14,6 +14,26 @@ public class AgendaService(IAgendaRepository agendaRepository) : IAgendaService
         if (queryResult is null)
             return ApiResponse<AgendaResponse>.Fail(404, "Event not found");
 
+        // Resolve event timezone for correct UTC -> local date conversion.
+        // EventDay.Date is stored as a local date (generated with the organizer's timezone).
+        // Session.StartTime is stored in UTC, so we must convert before extracting DateOnly.
+        TimeZoneInfo eventTz = TimeZoneInfo.Utc;
+        if (!string.IsNullOrWhiteSpace(queryResult.TimeZoneId))
+        {
+            try
+            {
+                eventTz = TimeZoneInfo.FindSystemTimeZoneById(queryResult.TimeZoneId);
+            }
+            catch (TimeZoneNotFoundException)
+            {
+                // Fall back to UTC if timezone ID is invalid
+            }
+        }
+
+        // Helper: convert UTC DateTime to local DateOnly using event timezone
+        DateOnly ToLocalDate(DateTime utcTime) =>
+            DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(utcTime, eventTz));
+
         // Map raw query result to response DTOs — flat tracks (backward compatible)
         var trackDtos = queryResult.Tracks.Select(t => new AgendaTrackDto
         {
@@ -42,78 +62,119 @@ public class AgendaService(IAgendaRepository agendaRepository) : IAgendaService
             }).ToList()
         }).ToList();
 
-        // Build day-grouped structure
-        // Index EventDay entities by date for O(1) lookup
-        var eventDaysByDate = queryResult.EventDays
-            .ToDictionary(d => d.Date);
-
-        // Collect all unique dates from sessions
-        var sessionDateGroups = queryResult.Tracks
-            .SelectMany(t => t.Sessions)
-            .Where(s => s.StartTime.HasValue)
-            .GroupBy(s => DateOnly.FromDateTime(s.StartTime!.Value))
-            .ToDictionary(g => g.Key, g => g.Select(s => s.Id).ToHashSet());
-
-        // Union: dates from EventDay entities + dates from sessions
-        var allDates = eventDaysByDate.Keys
-            .Union(sessionDateGroups.Keys)
-            .Distinct()
-            .OrderBy(d => d)
-            .ToList();
-
         var dayDtos = new List<AgendaDayDto>();
-        var dayCounter = 1;
 
-        foreach (var date in allDates)
+        if (queryResult.EventDays.Count > 0)
         {
-            eventDaysByDate.TryGetValue(date, out var eventDay);
-            sessionDateGroups.TryGetValue(date, out var sessionIdsOnDay);
-
-            // Build tracks with only sessions that start on this date
-            var tracksForDay = queryResult.Tracks
-                .Select(t => new AgendaTrackDto
-                {
-                    Id = t.Id,
-                    Name = t.Name,
-                    ColorHex = t.ColorHex,
-                    SortOrder = t.SortOrder,
-                    Sessions = t.Sessions
-                        .Where(s => s.StartTime.HasValue
-                            && DateOnly.FromDateTime(s.StartTime.Value) == date)
-                        .Select(s => new AgendaSessionDto
-                        {
-                            Id = s.Id,
-                            Title = s.Title,
-                            StartTime = s.StartTime,
-                            EndTime = s.EndTime,
-                            TotalCapacity = s.TotalCapacity,
-                            BookedCount = s.BookedCount,
-                            IsFull = s.TotalCapacity.HasValue && s.BookedCount >= s.TotalCapacity.Value,
-                            VenueName = s.VenueName,
-                            Status = s.Status,
-                            IsBookedByCurrentUser = s.IsBookedByCurrentUser,
-                            Speakers = s.Speakers.Select(sp => new SpeakerBriefDto
+            // EventDays are authoritative. Only group sessions into known days.
+            // Sessions outside any EventDay date are silently excluded (edge case:
+            // sessions created outside the event date range).
+            foreach (var eventDay in queryResult.EventDays)
+            {
+                var tracksForDay = queryResult.Tracks
+                    .Select(t => new AgendaTrackDto
+                    {
+                        Id = t.Id,
+                        Name = t.Name,
+                        ColorHex = t.ColorHex,
+                        SortOrder = t.SortOrder,
+                        Sessions = t.Sessions
+                            .Where(s => s.StartTime.HasValue
+                                && ToLocalDate(s.StartTime!.Value) == eventDay.Date)
+                            .Select(s => new AgendaSessionDto
                             {
-                                TalentId = sp.TalentId,
-                                Name = sp.Name,
-                                AvatarUrl = sp.AvatarUrl
+                                Id = s.Id,
+                                Title = s.Title,
+                                StartTime = s.StartTime,
+                                EndTime = s.EndTime,
+                                TotalCapacity = s.TotalCapacity,
+                                BookedCount = s.BookedCount,
+                                IsFull = s.TotalCapacity.HasValue && s.BookedCount >= s.TotalCapacity.Value,
+                                VenueName = s.VenueName,
+                                Status = s.Status,
+                                IsBookedByCurrentUser = s.IsBookedByCurrentUser,
+                                Speakers = s.Speakers.Select(sp => new SpeakerBriefDto
+                                {
+                                    TalentId = sp.TalentId,
+                                    Name = sp.Name,
+                                    AvatarUrl = sp.AvatarUrl
+                                }).ToList()
                             }).ToList()
-                        }).ToList()
-                })
-                .Where(t => t.Sessions.Count > 0)
+                    })
+                    .Where(t => t.Sessions.Count > 0)
+                    .ToList();
+
+                dayDtos.Add(new AgendaDayDto
+                {
+                    EventDayId = eventDay.Id,
+                    DayNumber = eventDay.DayNumber,
+                    Date = eventDay.Date,
+                    Title = eventDay.Title,
+                    Theme = eventDay.Theme,
+                    Tracks = tracksForDay
+                });
+            }
+        }
+        else
+        {
+            // No EventDays: derive days from session local dates (fallback path).
+            var sessionDateGroups = queryResult.Tracks
+                .SelectMany(t => t.Sessions)
+                .Where(s => s.StartTime.HasValue)
+                .GroupBy(s => ToLocalDate(s.StartTime!.Value))
+                .OrderBy(g => g.Key)
                 .ToList();
 
-            dayDtos.Add(new AgendaDayDto
+            var dayCounter = 1;
+            foreach (var dateGroup in sessionDateGroups)
             {
-                EventDayId = eventDay?.Id,
-                DayNumber = eventDay?.DayNumber ?? dayCounter,
-                Date = date,
-                Title = eventDay?.Title,
-                Theme = eventDay?.Theme,
-                Tracks = tracksForDay
-            });
+                var date = dateGroup.Key;
+                var sessionIdsOnDay = dateGroup.Select(s => s.Id).ToHashSet();
 
-            dayCounter++;
+                var tracksForDay = queryResult.Tracks
+                    .Select(t => new AgendaTrackDto
+                    {
+                        Id = t.Id,
+                        Name = t.Name,
+                        ColorHex = t.ColorHex,
+                        SortOrder = t.SortOrder,
+                        Sessions = t.Sessions
+                            .Where(s => sessionIdsOnDay.Contains(s.Id))
+                            .Select(s => new AgendaSessionDto
+                            {
+                                Id = s.Id,
+                                Title = s.Title,
+                                StartTime = s.StartTime,
+                                EndTime = s.EndTime,
+                                TotalCapacity = s.TotalCapacity,
+                                BookedCount = s.BookedCount,
+                                IsFull = s.TotalCapacity.HasValue && s.BookedCount >= s.TotalCapacity.Value,
+                                VenueName = s.VenueName,
+                                Status = s.Status,
+                                IsBookedByCurrentUser = s.IsBookedByCurrentUser,
+                                Speakers = s.Speakers.Select(sp => new SpeakerBriefDto
+                                {
+                                    TalentId = sp.TalentId,
+                                    Name = sp.Name,
+                                    AvatarUrl = sp.AvatarUrl
+                                }).ToList()
+                            }).ToList()
+                    })
+                    .Where(t => t.Sessions.Count > 0)
+                    .ToList();
+
+                dayDtos.Add(new AgendaDayDto
+                {
+                    EventDayId = null,
+                    DayNumber = dayCounter,
+                    Date = date,
+                    Title = null,
+                    Theme = null,
+                    Tracks = tracksForDay
+                });
+
+                dayCounter++;
+            }
         }
 
         var response = new AgendaResponse

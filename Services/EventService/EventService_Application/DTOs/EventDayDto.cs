@@ -28,6 +28,11 @@ public record UpdateEventDayRequest
 
 public record GenerateEventDaysRequest
 {
+    // IANA timezone ID, e.g. "Asia/Ho_Chi_Minh", "America/New_York"
+    // Used to correctly convert UTC event dates to local calendar dates.
+    // If null, falls back to UTC (existing behavior).
+    public string? TimeZoneId { get; init; }
+
     public List<DayMetadata>? DayOverrides { get; init; }
 }
 

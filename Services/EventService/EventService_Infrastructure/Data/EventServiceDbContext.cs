@@ -52,6 +52,8 @@ public class EventServiceDbContext : DbContext
                 .HasForeignKey(e => e.EventTypeId)
                 .OnDelete(DeleteBehavior.SetNull);
             
+            entity.Property(e => e.TimeZoneId).HasMaxLength(100);
+
             entity.Property(e => e.EventMode)
                 .HasConversion<string>()
                     .HasMaxLength(50);

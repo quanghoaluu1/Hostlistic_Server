@@ -46,12 +46,30 @@ public class EventDayService(IEventDayRepository eventDayRepository, IEventRepos
             return ApiResponse<IReadOnlyList<EventDayResponse>>.Fail(409,
                 "Event days already generated. Delete existing days first.");
 
+        // Resolve timezone — default to UTC if not provided
+        TimeZoneInfo tz;
+        try
+        {
+            tz = string.IsNullOrWhiteSpace(request.TimeZoneId)
+                ? TimeZoneInfo.Utc
+                : TimeZoneInfo.FindSystemTimeZoneById(request.TimeZoneId);
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            return ApiResponse<IReadOnlyList<EventDayResponse>>.Fail(400,
+                $"Unknown timezone: '{request.TimeZoneId}'. Use IANA format like 'Asia/Ho_Chi_Minh'.");
+        }
+
+        // Convert UTC stored dates to user's local dates before extracting DateOnly
+        var localStart = TimeZoneInfo.ConvertTimeFromUtc(eventEntity.StartDate!.Value, tz);
+        var localEnd   = TimeZoneInfo.ConvertTimeFromUtc(eventEntity.EndDate!.Value, tz);
+
         var overridesMap = request.DayOverrides?
             .ToDictionary(d => d.DayNumber) ?? new Dictionary<int, DayMetadata>();
 
         var days = new List<EventDay>();
-        var startDate = DateOnly.FromDateTime(eventEntity.StartDate.Value);
-        var endDate = DateOnly.FromDateTime(eventEntity.EndDate.Value);
+        var startDate = DateOnly.FromDateTime(localStart);
+        var endDate   = DateOnly.FromDateTime(localEnd);
         var current = startDate;
         var dayNumber = 1;
 
@@ -69,6 +87,13 @@ public class EventDayService(IEventDayRepository eventDayRepository, IEventRepos
             });
             current = current.AddDays(1);
             dayNumber++;
+        }
+
+        // Only set timezone if not already captured during event creation
+        if (string.IsNullOrWhiteSpace(eventEntity.TimeZoneId))
+        {
+            eventEntity.TimeZoneId = tz.Id;
+            eventRepository.UpdateEventAsync(eventEntity);
         }
 
         await eventDayRepository.AddRangeAsync(days);
