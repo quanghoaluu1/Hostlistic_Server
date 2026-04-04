@@ -31,6 +31,7 @@ public class EventServiceDbContext : DbContext
     public DbSet<QaQuestion> QaQuestions => Set<QaQuestion>();
     public DbSet<QaVote> QaVotes => Set<QaVote>();
     public DbSet<Feedback> Feedbacks => Set<Feedback>();
+    public DbSet<EventDay> EventDays => Set<EventDay>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -98,7 +99,12 @@ public class EventServiceDbContext : DbContext
                 .WithOne(f => f.Event)
                 .HasForeignKey(f => f.EventId)
                 .OnDelete(DeleteBehavior.Cascade);
-            
+
+            entity.HasMany(e => e.EventDays)
+                .WithOne(ed => ed.Event)
+                .HasForeignKey(ed => ed.EventId)
+                .OnDelete(DeleteBehavior.Cascade);
+
         });
 
         // EventType configuration
@@ -333,6 +339,17 @@ public class EventServiceDbContext : DbContext
         modelBuilder.Entity<Feedback>(entity =>
         {
             entity.HasKey(e => e.Id);
+        });
+
+        // EventDay configuration
+        modelBuilder.Entity<EventDay>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Title).HasMaxLength(200);
+            entity.Property(e => e.Theme).HasMaxLength(200);
+            entity.Property(e => e.Description).HasMaxLength(1000);
+            entity.HasIndex(e => new { e.EventId, e.DayNumber }).IsUnique();
+            entity.HasIndex(e => new { e.EventId, e.Date }).IsUnique();
         });
     }
 }

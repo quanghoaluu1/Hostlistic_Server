@@ -29,6 +29,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IFeedbackRepository, FeedbackRepository>();
         services.AddScoped<IVenueRepository, VenueRepository>();
         services.AddScoped<IAgendaRepository, AgendaRepository>();
+        services.AddScoped<IEventDayRepository, EventDayRepository>();
 
         // Services
         services.AddScoped<ISessionService, SessionService>();
@@ -47,6 +48,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISponsorInteractionService, SponsorInteractionService>();
         services.AddScoped<IFeedbackService, FeedbackService>();
         services.AddScoped<IAgendaService, AgendaService>();
+        services.AddScoped<IEventDayService, EventDayService>();
         services.AddScoped<IVenueService, VenueService>();
         services.AddScoped<IUserPlanServiceClient, UserPlanServiceClient>();
         services.AddScoped<ITeamMemberService, TeamMemberService>();

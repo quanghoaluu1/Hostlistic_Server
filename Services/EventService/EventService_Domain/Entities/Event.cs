@@ -36,6 +36,7 @@ public class Event : BaseClass
     public ICollection<CheckIn> CheckIns { get; set; } = new List<CheckIn>();
     public ICollection<Feedback> Feedbacks { get; set; } = new List<Feedback>();
     public ICollection<Venue> Venues { get; set; } = [];
+    public ICollection<EventDay> EventDays { get; set; } = new List<EventDay>();
 }
 
 public class RichTextContent

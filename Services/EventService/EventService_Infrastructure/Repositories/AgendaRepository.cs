@@ -32,7 +32,7 @@ public class AgendaRepository(EventServiceDbContext context) : IAgendaRepository
             .AsSplitQuery()
             .ToListAsync();
  
-        // 3. Batch load booking counts for ALL sessions in this event (single query)
+        // 3. Batch load booking counts for all sessions in this event (single query)
         //    SQL: SELECT SessionId, COUNT(*) FROM SessionBookings
         //         WHERE SessionId IN (...) AND Status = Confirmed
         //         GROUP BY SessionId
@@ -63,12 +63,28 @@ public class AgendaRepository(EventServiceDbContext context) : IAgendaRepository
                 .ToHashSet();
         }
  
-        // 5. Assemble result — O(1) lookups via dictionaries
+        // 5. Load EventDays for this event (single query)
+        var eventDays = await context.EventDays
+            .AsNoTracking()
+            .Where(d => d.EventId == eventId)
+            .OrderBy(d => d.DayNumber)
+            .Select(d => new AgendaEventDayData
+            {
+                Id = d.Id,
+                DayNumber = d.DayNumber,
+                Date = d.Date,
+                Title = d.Title,
+                Theme = d.Theme
+            })
+            .ToListAsync();
+
+        // 6. Assemble result — O(1) lookups via dictionaries
         var result = new AgendaQueryResult
         {
             EventId = eventEntity.Id,
             EventStartDate = eventEntity.StartDate,
             EventEndDate = eventEntity.EndDate,
+            EventDays = eventDays,
             Tracks = tracks.Select(t => new AgendaTrackData
             {
                 Id = t.Id,
