@@ -16,7 +16,8 @@ public record EventRequestDto(
     int? TotalCapacity = null,
     Guid? VenueId = null,
     bool? IsPublic = null,
-    EventStatus? EventStatus = null
+    EventStatus? EventStatus = null,
+    string? TimeZoneId = null
 );
 
 public record EventResponseDto(

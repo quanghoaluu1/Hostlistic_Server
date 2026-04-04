@@ -46,6 +46,7 @@ public class EventService(
         eventEntity.IsPublic = false;
         eventEntity.Id = Guid.NewGuid();
         eventEntity.OrganizerId = organizerId;
+        eventEntity.TimeZoneId = request.TimeZoneId;
 
         var defaultTrack = new Track
         {
@@ -324,6 +325,9 @@ public class EventService(
         {
             eventEntity.EndDate = DateTime.SpecifyKind(request.EndDate.Value, DateTimeKind.Utc);
         }
+
+        if (request.TimeZoneId != null)
+            eventEntity.TimeZoneId = request.TimeZoneId;
     }
 
     private async Task<(bool IsSuccess, string Message, int MaxEvents, int MaxAttendeesPerEvent)> GetActiveEntitlementAsync(

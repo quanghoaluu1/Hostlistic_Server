@@ -8,6 +8,17 @@ public class AgendaResponse
     public DateTime? EventStartDate { get; set; }
     public DateTime? EventEndDate { get; set; }
     public List<AgendaTrackDto> Tracks { get; set; } = [];
+    public List<AgendaDayDto> Days { get; set; } = [];
+}
+
+public class AgendaDayDto
+{
+    public Guid? EventDayId { get; set; }       // null if no EventDay entity exists for this date
+    public int DayNumber { get; set; }
+    public DateOnly Date { get; set; }
+    public string? Title { get; set; }
+    public string? Theme { get; set; }
+    public List<AgendaTrackDto> Tracks { get; set; } = [];
 }
  
 public class AgendaTrackDto
