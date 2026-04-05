@@ -57,6 +57,47 @@ public class WalletServiceTest
     }
 
     [Fact]
+    public async Task CreateWalletAsync_WhenRepositoryThrows_ReturnsFail500()
+    {
+        var request = WalletBuilder.CreateRequest();
+        _walletRepository.GetWalletByUserIdAsync(request.UserId).Returns((Wallet?)null);
+        _walletRepository.AddWalletAsync(Arg.Any<Wallet>())
+            .Returns(_ => Task.FromException<Wallet>(new Exception("db down")));
+
+        var result = await _sut.CreateWalletAsync(request);
+
+        result.IsSuccess.Should().BeFalse();
+        result.StatusCode.Should().Be(500);
+        result.Message.Should().Contain("error occurred while creating");
+    }
+
+    [Fact]
+    public async Task GetWalletByIdAsync_WhenFound_ReturnsSuccess200()
+    {
+        var walletId = Guid.NewGuid();
+        _walletRepository.GetWalletByIdAsync(walletId).Returns(WalletBuilder.CreateEntity(id: walletId));
+
+        var result = await _sut.GetWalletByIdAsync(walletId);
+
+        result.IsSuccess.Should().BeTrue();
+        result.StatusCode.Should().Be(200);
+        result.Data.Should().NotBeNull();
+        result.Data!.Id.Should().Be(walletId);
+    }
+
+    [Fact]
+    public async Task GetWalletByUserIdAsync_WhenNotFound_ReturnsFail404()
+    {
+        var userId = Guid.NewGuid();
+        _walletRepository.GetWalletByUserIdAsync(userId).Returns((Wallet?)null);
+
+        var result = await _sut.GetWalletByUserIdAsync(userId);
+
+        result.IsSuccess.Should().BeFalse();
+        result.StatusCode.Should().Be(404);
+    }
+
+    [Fact]
     public async Task UpdateWalletBalanceAsync_WhenInsufficientFundsForWithdraw_ReturnsFail400()
     {
         var walletId = Guid.NewGuid();
@@ -69,6 +110,37 @@ public class WalletServiceTest
         result.IsSuccess.Should().BeFalse();
         result.StatusCode.Should().Be(400);
         result.Message.Should().Contain("Insufficient balance");
+    }
+
+    [Fact]
+    public async Task UpdateWalletBalanceAsync_WhenWalletNotFound_ReturnsFail404()
+    {
+        var walletId = Guid.NewGuid();
+        _walletRepository.GetWalletByIdAsync(walletId).Returns((Wallet?)null);
+
+        var result = await _sut.UpdateWalletBalanceAsync(
+            walletId,
+            WalletBuilder.BalanceRequest(amount: 50, transactionType: "Deposit"));
+
+        result.IsSuccess.Should().BeFalse();
+        result.StatusCode.Should().Be(404);
+    }
+
+    [Fact]
+    public async Task UpdateWalletBalanceAsync_WithValidWithdraw_ReturnsSuccess200()
+    {
+        var walletId = Guid.NewGuid();
+        var wallet = WalletBuilder.CreateEntity(id: walletId, balance: 500, status: WalletStatus.Active);
+        _walletRepository.GetWalletByIdAsync(walletId).Returns(wallet);
+
+        var result = await _sut.UpdateWalletBalanceAsync(
+            walletId,
+            WalletBuilder.BalanceRequest(amount: 200, transactionType: "Withdraw"));
+
+        result.IsSuccess.Should().BeTrue();
+        result.StatusCode.Should().Be(200);
+        wallet.Balance.Should().Be(300);
+        await _walletRepository.Received(1).SaveChangesAsync();
     }
 
     [Fact]
@@ -87,6 +159,40 @@ public class WalletServiceTest
     }
 
     [Fact]
+    public async Task UpdateWalletBalanceAsync_WithDeposit_UpdatesBalanceAndReturnsSuccess200()
+    {
+        var walletId = Guid.NewGuid();
+        var wallet = WalletBuilder.CreateEntity(id: walletId, balance: 500, status: WalletStatus.Active);
+        _walletRepository.GetWalletByIdAsync(walletId).Returns(wallet);
+
+        var result = await _sut.UpdateWalletBalanceAsync(
+            walletId,
+            WalletBuilder.BalanceRequest(amount: 250, transactionType: "Deposit"));
+
+        result.IsSuccess.Should().BeTrue();
+        result.StatusCode.Should().Be(200);
+        wallet.Balance.Should().Be(750);
+        await _walletRepository.Received(1).UpdateWalletAsync(wallet);
+        await _walletRepository.Received(1).SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task UpdateWalletBalanceAsync_WhenWalletInactive_ReturnsFail400()
+    {
+        var walletId = Guid.NewGuid();
+        var wallet = WalletBuilder.CreateEntity(id: walletId, balance: 500, status: WalletStatus.Frozen);
+        _walletRepository.GetWalletByIdAsync(walletId).Returns(wallet);
+
+        var result = await _sut.UpdateWalletBalanceAsync(
+            walletId,
+            WalletBuilder.BalanceRequest(amount: 100, transactionType: "Deposit"));
+
+        result.IsSuccess.Should().BeFalse();
+        result.StatusCode.Should().Be(400);
+        result.Message.Should().Contain("not active");
+    }
+
+    [Fact]
     public async Task DeleteWalletAsync_WhenWalletNotFound_ReturnsFail404()
     {
         var walletId = Guid.NewGuid();
@@ -96,5 +202,18 @@ public class WalletServiceTest
 
         result.IsSuccess.Should().BeFalse();
         result.StatusCode.Should().Be(404);
+    }
+
+    [Fact]
+    public async Task DeleteWalletAsync_WhenDeleteSucceeds_ReturnsSuccess200()
+    {
+        var walletId = Guid.NewGuid();
+        _walletRepository.DeleteWalletAsync(walletId).Returns(true);
+
+        var result = await _sut.DeleteWalletAsync(walletId);
+
+        result.IsSuccess.Should().BeTrue();
+        result.StatusCode.Should().Be(200);
+        await _walletRepository.Received(1).SaveChangesAsync();
     }
 }

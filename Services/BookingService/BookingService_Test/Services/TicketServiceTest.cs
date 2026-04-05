@@ -52,6 +52,49 @@ public class TicketServiceTest
     }
 
     [Fact]
+    public async Task GetTicketByIdAsync_WhenFound_ReturnsSuccess200()
+    {
+        var ticketId = Guid.NewGuid();
+        _ticketRepository.GetTicketByIdAsync(ticketId).Returns(TicketBuilder.CreateEntity(id: ticketId));
+
+        var result = await _sut.GetTicketByIdAsync(ticketId);
+
+        result.IsSuccess.Should().BeTrue();
+        result.StatusCode.Should().Be(200);
+        result.Data.Should().NotBeNull();
+        result.Data!.Id.Should().Be(ticketId);
+    }
+
+    [Fact]
+    public async Task GetTicketByCodeAsync_WhenNotFound_ReturnsFail404()
+    {
+        _ticketRepository.GetTicketByCodeAsync("NOT-FOUND").Returns((Ticket?)null);
+
+        var result = await _sut.GetTicketByCodeAsync("NOT-FOUND");
+
+        result.IsSuccess.Should().BeFalse();
+        result.StatusCode.Should().Be(404);
+    }
+
+    [Fact]
+    public async Task GetTicketsByOrderIdAsync_ReturnsSuccess200WithCollection()
+    {
+        var orderId = Guid.NewGuid();
+        _ticketRepository.GetTicketsByOrderIdAsync(orderId).Returns(
+        [
+            TicketBuilder.CreateEntity(orderId: orderId),
+            TicketBuilder.CreateEntity(orderId: orderId)
+        ]);
+
+        var result = await _sut.GetTicketsByOrderIdAsync(orderId);
+
+        result.IsSuccess.Should().BeTrue();
+        result.StatusCode.Should().Be(200);
+        result.Data.Should().NotBeNull();
+        result.Data!.Should().HaveCount(2);
+    }
+
+    [Fact]
     public async Task UpdateTicketAsync_WhenNotFound_ReturnsFail404()
     {
         _ticketRepository.GetTicketByIdAsync(Arg.Any<Guid>()).Returns((Ticket?)null);
@@ -60,6 +103,22 @@ public class TicketServiceTest
 
         result.IsSuccess.Should().BeFalse();
         result.StatusCode.Should().Be(404);
+    }
+
+    [Fact]
+    public async Task UpdateTicketAsync_WhenTicketExists_UpdatesIsUsedAndReturnsSuccess200()
+    {
+        var ticketId = Guid.NewGuid();
+        var ticket = TicketBuilder.CreateEntity(id: ticketId);
+        _ticketRepository.GetTicketByIdAsync(ticketId).Returns(ticket);
+
+        var result = await _sut.UpdateTicketAsync(ticketId, TicketBuilder.UpdateRequest(isUsed: true));
+
+        result.IsSuccess.Should().BeTrue();
+        result.StatusCode.Should().Be(200);
+        ticket.IsUsed.Should().BeTrue();
+        await _ticketRepository.Received(1).UpdateTicketAsync(ticket);
+        await _ticketRepository.Received(1).SaveChangesAsync();
     }
 
     [Fact]
@@ -89,6 +148,19 @@ public class TicketServiceTest
     }
 
     [Fact]
+    public async Task RegenerateAllQrCodesAsync_WhenNoTickets_ReturnsZero()
+    {
+        _ticketRepository.GetAllWithOrderAsync().Returns([]);
+
+        var result = await _sut.RegenerateAllQrCodesAsync();
+
+        result.IsSuccess.Should().BeTrue();
+        result.StatusCode.Should().Be(200);
+        result.Data.Should().Be(0);
+        await _ticketRepository.Received(1).SaveChangesAsync();
+    }
+
+    [Fact]
     public async Task DeleteTicketAsync_WhenDeleteFails_ReturnsFail500()
     {
         var ticketId = Guid.NewGuid();
@@ -100,5 +172,31 @@ public class TicketServiceTest
         result.IsSuccess.Should().BeFalse();
         result.StatusCode.Should().Be(500);
         await _ticketRepository.DidNotReceive().SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task DeleteTicketAsync_WhenTicketNotFound_ReturnsFail404()
+    {
+        var ticketId = Guid.NewGuid();
+        _ticketRepository.TicketExistsAsync(ticketId).Returns(false);
+
+        var result = await _sut.DeleteTicketAsync(ticketId);
+
+        result.IsSuccess.Should().BeFalse();
+        result.StatusCode.Should().Be(404);
+    }
+
+    [Fact]
+    public async Task DeleteTicketAsync_WhenDeleteSucceeds_ReturnsSuccess200()
+    {
+        var ticketId = Guid.NewGuid();
+        _ticketRepository.TicketExistsAsync(ticketId).Returns(true);
+        _ticketRepository.DeleteTicketAsync(ticketId).Returns(true);
+
+        var result = await _sut.DeleteTicketAsync(ticketId);
+
+        result.IsSuccess.Should().BeTrue();
+        result.StatusCode.Should().Be(200);
+        await _ticketRepository.Received(1).SaveChangesAsync();
     }
 }

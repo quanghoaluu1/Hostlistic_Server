@@ -31,6 +31,50 @@ public class PaymentServiceTest
     }
 
     [Fact]
+    public async Task GetPaymentByIdAsync_WhenNotFound_ReturnsFail404()
+    {
+        _paymentRepository.GetPaymentByIdAsync(Arg.Any<Guid>()).Returns((Payment?)null);
+
+        var result = await _sut.GetPaymentByIdAsync(Guid.NewGuid());
+
+        result.IsSuccess.Should().BeFalse();
+        result.StatusCode.Should().Be(404);
+    }
+
+    [Fact]
+    public async Task GetPaymentByIdAsync_WhenFound_ReturnsSuccess200()
+    {
+        var paymentId = Guid.NewGuid();
+        _paymentRepository.GetPaymentByIdAsync(paymentId)
+            .Returns(PaymentBuilder.CreateEntity(id: paymentId));
+
+        var result = await _sut.GetPaymentByIdAsync(paymentId);
+
+        result.IsSuccess.Should().BeTrue();
+        result.StatusCode.Should().Be(200);
+        result.Data.Should().NotBeNull();
+        result.Data!.Id.Should().Be(paymentId);
+    }
+
+    [Fact]
+    public async Task GetPaymentsByOrderIdAsync_ReturnsSuccess200WithCollection()
+    {
+        var orderId = Guid.NewGuid();
+        _paymentRepository.GetPaymentsByOrderIdAsync(orderId).Returns(
+        [
+            PaymentBuilder.CreateEntity(orderId: orderId),
+            PaymentBuilder.CreateEntity(orderId: orderId)
+        ]);
+
+        var result = await _sut.GetPaymentsByOrderIdAsync(orderId);
+
+        result.IsSuccess.Should().BeTrue();
+        result.StatusCode.Should().Be(200);
+        result.Data.Should().NotBeNull();
+        result.Data!.Should().HaveCount(2);
+    }
+
+    [Fact]
     public async Task CreatePaymentAsync_WhenPaymentMethodDoesNotExist_ReturnsFail404()
     {
         var request = PaymentBuilder.CreateRequest();
@@ -95,6 +139,24 @@ public class PaymentServiceTest
     }
 
     [Fact]
+    public async Task UpdatePaymentAsync_WhenPaymentExists_UpdatesStatusAndTransactionId()
+    {
+        var paymentId = Guid.NewGuid();
+        var payment = PaymentBuilder.CreateEntity(id: paymentId, status: PaymentStatus.Pending);
+        _paymentRepository.GetPaymentByIdAsync(paymentId).Returns(payment);
+
+        var request = PaymentBuilder.UpdateRequest(status: PaymentStatus.Completed, transactionId: "TX-OK-1");
+        var result = await _sut.UpdatePaymentAsync(paymentId, request);
+
+        result.IsSuccess.Should().BeTrue();
+        result.StatusCode.Should().Be(200);
+        payment.Status.Should().Be(PaymentStatus.Completed);
+        payment.TransactionId.Should().Be("TX-OK-1");
+        await _paymentRepository.Received(1).UpdatePaymentAsync(payment);
+        await _paymentRepository.Received(1).SaveChangesAsync();
+    }
+
+    [Fact]
     public async Task DeletePaymentAsync_WhenDeleteFails_ReturnsFail500()
     {
         var paymentId = Guid.NewGuid();
@@ -106,5 +168,31 @@ public class PaymentServiceTest
         result.IsSuccess.Should().BeFalse();
         result.StatusCode.Should().Be(500);
         await _paymentRepository.DidNotReceive().SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task DeletePaymentAsync_WhenPaymentNotFound_ReturnsFail404()
+    {
+        var paymentId = Guid.NewGuid();
+        _paymentRepository.PaymentExistsAsync(paymentId).Returns(false);
+
+        var result = await _sut.DeletePaymentAsync(paymentId);
+
+        result.IsSuccess.Should().BeFalse();
+        result.StatusCode.Should().Be(404);
+    }
+
+    [Fact]
+    public async Task DeletePaymentAsync_WhenDeleteSucceeds_ReturnsSuccess200()
+    {
+        var paymentId = Guid.NewGuid();
+        _paymentRepository.PaymentExistsAsync(paymentId).Returns(true);
+        _paymentRepository.DeletePaymentAsync(paymentId).Returns(true);
+
+        var result = await _sut.DeletePaymentAsync(paymentId);
+
+        result.IsSuccess.Should().BeTrue();
+        result.StatusCode.Should().Be(200);
+        await _paymentRepository.Received(1).SaveChangesAsync();
     }
 }
