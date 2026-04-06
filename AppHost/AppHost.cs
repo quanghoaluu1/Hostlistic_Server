@@ -20,6 +20,7 @@ var eventDb         = builder.AddConnectionString("EventDbConnection");
 var bookingDb       = builder.AddConnectionString("BookingDbConnection");
 var notificationDb  = builder.AddConnectionString("NotificationDbConnection");
 var aiDb            = builder.AddConnectionString("AiDbConnection");
+var streamingDb     = builder.AddConnectionString("StreamingDbConnection");
 var redis           = builder.AddConnectionString("RedisConnection");
 
 var rabbitMq = builder.AddRabbitMQ("rabbitmq")
@@ -80,6 +81,11 @@ var aiService = builder.AddProject<Projects.AIService_Api>("ai-service")
     .WithEnvironment("Jwt__Audience", "hostlistic")
     .WithEnvironment("Gemini__ApiKey", geminiApiKey);
 
+var streamingService = builder.AddProject<Projects.StreamingService_Api>("streaming-service")
+    .WithReference(streamingDb)
+    .WithEnvironment("Jwt__Key", jwtKey)
+    .WithEnvironment("Jwt__Issuer", "hostlistic")
+    .WithEnvironment("Jwt__Audience", "hostlistic");
 builder.AddProject<Projects.ApiGateway>("api-gateway")
     .WithReference(identityService)
     .WithReference(eventService)

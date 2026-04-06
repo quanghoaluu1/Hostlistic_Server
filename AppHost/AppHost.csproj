@@ -23,5 +23,6 @@
         <ProjectReference Include="../Services/BookingService/BookingService_Api/BookingService_Api.csproj" />
         <ProjectReference Include="../Services/NotificationService/NotificationService_Api/NotificationService_Api.csproj" />
         <ProjectReference Include="../Services/AIService/AIService_Api/AIService_Api.csproj" />
+        <ProjectReference Include="../Services/StreamingService/StreamingService_Api/StreamingService_Api.csproj" />
     </ItemGroup>
 </Project>
