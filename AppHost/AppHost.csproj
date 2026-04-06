@@ -1,0 +1,27 @@
+<Project Sdk="Aspire.AppHost.Sdk/13.2.1">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <UserSecretsId>ab05f147-8daa-4003-b73b-3c32e36e4467</UserSecretsId>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <!-- Core Aspire hosting — NuGet thay vì workload -->
+        <PackageReference Include="Aspire.Hosting.AppHost" Version="13.2.1" />
+        <PackageReference Include="Aspire.Hosting.PostgreSQL" Version="13.2.1" />
+        <PackageReference Include="Aspire.Hosting.Redis" Version="13.2.1" />
+        <PackageReference Include="Aspire.Hosting.RabbitMQ" Version="13.2.1" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../ApiGateway/ApiGateway.csproj" />
+        <ProjectReference Include="../Services/IdentityService/IdentityService_Api/IdentityService_Api.csproj" />
+        <ProjectReference Include="../Services/EventService/EventService_Api/EventService_Api.csproj" />
+        <ProjectReference Include="../Services/BookingService/BookingService_Api/BookingService_Api.csproj" />
+        <ProjectReference Include="../Services/NotificationService/NotificationService_Api/NotificationService_Api.csproj" />
+        <ProjectReference Include="../Services/AIService/AIService_Api/AIService_Api.csproj" />
+    </ItemGroup>
+</Project>

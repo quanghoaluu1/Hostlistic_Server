@@ -71,7 +71,7 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization();
 builder.Services.AddDbContext<IdentityServiceDbContext>(optionsAction =>
 {
-    optionsAction.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
+    optionsAction.UseNpgsql(builder.Configuration.GetConnectionString("IdentityDbConnection"));
 });
 builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
 {
