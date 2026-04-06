@@ -54,6 +54,17 @@ public class OrderRepository : IOrderRepository
             .ToListAsync();
     }
 
+    public async Task<IEnumerable<Order>> GetConfirmedOrdersByUserIdAsync(Guid userId)
+    {
+        return await _context.Orders
+            .AsNoTracking()
+            .Include(o => o.Tickets)
+            .Include(o => o.OrderDetails)
+            .Where(o => o.UserId == userId && o.Status == OrderStatus.Confirmed)
+            .OrderByDescending(o => o.OrderDate)
+            .ToListAsync();
+    }
+    
     public async Task<Order?> GetOrderByOrderCodeAsync(long orderCode)
     {
         return await _context.Orders.Include(o => o.OrderDetails)

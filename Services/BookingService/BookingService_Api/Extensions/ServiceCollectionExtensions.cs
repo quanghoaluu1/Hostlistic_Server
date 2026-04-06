@@ -49,6 +49,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISubscriptionPurchaseService, SubscriptionPurchaseService>();
         services.AddScoped<ICheckInService, CheckInService>();
         services.AddScoped<IAttendeeService, AttendeeService>();
+        services.AddScoped<IRegisteredEventService, RegisteredEventService>();
 
         return services;
     }
