@@ -122,7 +122,7 @@ builder.Services.AddMassTransit(x =>
         if (!string.IsNullOrEmpty(uri))
             cfg.Host(new Uri(uri));
         else
-            cfg.Host(builder.Configuration["RabbitMq:Host"] ?? "localhost", "/", h =>
+            cfg.Host(builder.Configuration["RabbitMq:Host"] ?? "rabbitmq", "/", h =>
             {
                 h.Username(builder.Configuration["RabbitMq:Username"] ?? "guest");
                 h.Password(builder.Configuration["RabbitMq:Password"] ?? "guest");

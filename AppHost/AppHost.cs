@@ -91,6 +91,7 @@ builder.AddProject<Projects.ApiGateway>("api-gateway")
     .WithReference(eventService)
     .WithReference(bookingService)
     .WithReference(notificationService)
-    .WithReference(aiService);
+    // .WithReference(aiService)
+    ;
 
 builder.Build().Run();
