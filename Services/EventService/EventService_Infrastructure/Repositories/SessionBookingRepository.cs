@@ -1,4 +1,4 @@
-﻿using EventService_Domain.Entities;
+using EventService_Domain.Entities;
 using EventService_Domain.Enums;
 using EventService_Domain.Interfaces;
 using EventService_Infrastructure.Data;
@@ -18,6 +18,7 @@ public class SessionBookingRepository : ISessionBookingRepository
     public async Task<SessionBooking?> GetSessionBookingByIdAsync(Guid bookingId)
     {
         return await _context.SessionBookings
+            .AsNoTracking()
             .Include(sb => sb.Session)
             .ThenInclude(s => s.Track)
             .Include(sb => sb.Session)
@@ -29,6 +30,7 @@ public class SessionBookingRepository : ISessionBookingRepository
     public async Task<IEnumerable<SessionBooking>> GetSessionBookingsBySessionIdAsync(Guid sessionId)
     {
         return await _context.SessionBookings
+            .AsNoTracking()
             .Include(sb => sb.Session)
             .Where(sb => sb.SessionId == sessionId)
             .ToListAsync();
@@ -38,22 +40,16 @@ public class SessionBookingRepository : ISessionBookingRepository
     public async Task<IEnumerable<SessionBooking>> GetSessionBookingsByUserIdAsync(Guid userId)
     {
         return await _context.SessionBookings
+            .AsNoTracking()
             .Include(sb => sb.Session)
             .Where(sb => sb.UserId == userId)
             .ToListAsync();
     }
 
-    //Lấy thông tin đặt chỗ của user cho một session cụ thể
-    public async Task<SessionBooking?> GetSessionBookingByUserAndSessionAsync(Guid userId, Guid sessionId)
-    {
-        return await _context.SessionBookings
-            .Include(sb => sb.Session)
-            .FirstOrDefaultAsync(sb => sb.UserId == userId && sb.SessionId == sessionId);
-    }
-
     public async Task<SessionBooking?> GetByUserAndSessionAsync(Guid userId, Guid sessionId)
     {
         return await _context.SessionBookings
+            .AsNoTracking()
             .Include(sb => sb.Session)
             .FirstOrDefaultAsync(sb => sb.UserId == userId && sb.SessionId == sessionId);
     }
@@ -61,6 +57,7 @@ public class SessionBookingRepository : ISessionBookingRepository
     public async Task<List<SessionBooking>> GetByUserAndEventAsync(Guid userId, Guid eventId)
     {
         return await _context.SessionBookings
+            .AsNoTracking()
             .Include(sb => sb.Session)
             .ThenInclude(s => s.Track)
             .Include(sb => sb.Session)
@@ -76,25 +73,38 @@ public class SessionBookingRepository : ISessionBookingRepository
         Guid? excludeSessionId = null)
     {
         var query = _context.SessionBookings
+            .AsNoTracking()
             .Where(sb => sb.UserId == userId
                          && sb.Status == BookingStatus.Confirmed
                          && sb.Session.EventId == eventId
                          && sb.Session.StartTime != null && sb.Session.EndTime != null
                          && sb.Session.StartTime < end
                          && sb.Session.EndTime > start);
- 
+
         if (excludeSessionId.HasValue)
             query = query.Where(sb => sb.SessionId != excludeSessionId.Value);
- 
+
         return await query
             .Select(sb => sb.Session)
             .ToListAsync();
     }
 
+    public async Task<HashSet<Guid>> GetBookedSessionIdsAsync(Guid userId, Guid eventId)
+    {
+        var ids = await _context.SessionBookings
+            .AsNoTracking()
+            .Where(sb => sb.UserId == userId
+                         && sb.Session.EventId == eventId
+                         && sb.Status == BookingStatus.Confirmed)
+            .Select(sb => sb.SessionId)
+            .ToListAsync();
+
+        return [.. ids];
+    }
+
     //Tạo mới một lượt đặt chỗ cho session
     public async Task<SessionBooking> AddSessionBookingAsync(SessionBooking sessionBooking)
     {
-        sessionBooking.Id = Guid.NewGuid();
         sessionBooking.BookingDate = DateTime.UtcNow;
         await _context.SessionBookings.AddAsync(sessionBooking);
         return sessionBooking;

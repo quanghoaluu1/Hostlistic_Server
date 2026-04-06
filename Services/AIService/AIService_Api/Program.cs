@@ -21,7 +21,7 @@ builder.Services.AddOpenApi(options =>
     options.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
 });builder.Services.AddDbContext<AIServiceDbContext>(optionsAction =>
 {
-    optionsAction.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
+    optionsAction.UseNpgsql(builder.Configuration.GetConnectionString("AiDbConnection"));
 });
 builder.Services.AddSingleton<IAiProvider, GeminiProvider>();
 builder.Services.AddApplicationServices();

@@ -185,4 +185,107 @@ public class SessionBookingService(
 
         return ApiResponse<MyScheduleResponse>.Success(200, "Schedule retrieved", response);
     }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  GET SESSIONS WITH BOOKING STATUS
+    //
+    //  Returns all sessions for an event with the current user's booking
+    //  status embedded in each item (IsBooked, AvailableSeats, IsFull).
+    //  Avoids requiring the frontend to make two separate API calls and
+    //  merge the data client-side.
+    //
+    //  NOTE: This method makes N+1 calls for GetBookedCountAsync (one per
+    //  session). This is acceptable for thesis scope given typical session
+    //  counts per event. A future optimization would be to add a batch method
+    //  GetBookedCountsAsync(IEnumerable<Guid> sessionIds) that returns a
+    //  Dictionary<Guid, int> from a single GROUP BY query, eliminating the
+    //  N+1 pattern entirely.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    public async Task<ApiResponse<List<SessionWithBookingStatusDto>>> GetSessionsWithBookingStatusAsync(
+        Guid eventId, Guid userId)
+    {
+        // Single round trip: all sessions for this event (includes Track + Venue nav props)
+        var sessions = await sessionRepository.GetSessionsByEventIdAsync(eventId);
+
+        // Single round trip: set of session IDs the user has confirmed bookings for
+        var bookedIds = await bookingRepository.GetBookedSessionIdsAsync(userId, eventId);
+
+        var result = new List<SessionWithBookingStatusDto>();
+
+        foreach (var session in sessions)
+        {
+            var bookedCount = await sessionRepository.GetBookedCountAsync(session.Id);
+
+            int? availableSeats = session.TotalCapacity.HasValue
+                ? Math.Max(0, session.TotalCapacity.Value - bookedCount)
+                : null;
+
+            result.Add(new SessionWithBookingStatusDto
+            {
+                SessionId = session.Id,
+                Title = session.Title,
+                Description = session.Description,
+                StartTime = session.StartTime,
+                EndTime = session.EndTime,
+                SortOrder = session.SortOrder,
+                SessionStatus = session.Status.ToString(),
+                TrackId = session.TrackId,
+                TrackName = session.Track?.Name ?? string.Empty,
+                TrackColorHex = session.Track?.ColorHex ?? string.Empty,
+                VenueId = session.VenueId,
+                VenueName = session.Venue?.Name ?? string.Empty,
+                TotalCapacity = session.TotalCapacity,
+                BookedCount = bookedCount,
+                AvailableSeats = availableSeats,
+                IsBooked = bookedIds.Contains(session.Id),
+                IsFull = session.TotalCapacity.HasValue && bookedCount >= session.TotalCapacity.Value
+            });
+        }
+
+        var sorted = result
+            .OrderBy(s => s.StartTime)
+            .ThenBy(s => s.SortOrder)
+            .ToList();
+
+        return ApiResponse<List<SessionWithBookingStatusDto>>.Success(200, "Sessions retrieved", sorted);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  GET BOOKING STATUS FOR SESSION
+    //
+    //  Returns the booking status for a single session.
+    //  Used when rendering the Book/Cancel button in session detail pages.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    public async Task<ApiResponse<SessionBookingStatusDto>> GetBookingStatusForSessionAsync(
+        Guid eventId, Guid sessionId, Guid userId)
+    {
+        // Verify session exists in this event
+        var session = await sessionRepository.GetByIdWithinEventAsync(eventId, sessionId);
+        if (session is null)
+            return ApiResponse<SessionBookingStatusDto>.Fail(404, "Session not found in this event");
+
+        // Get the user's booking for this session (may be null)
+        var booking = await bookingRepository.GetByUserAndSessionAsync(userId, sessionId);
+
+        var bookedCount = await sessionRepository.GetBookedCountAsync(sessionId);
+
+        int? availableSeats = session.TotalCapacity.HasValue
+            ? Math.Max(0, session.TotalCapacity.Value - bookedCount)
+            : null;
+
+        var dto = new SessionBookingStatusDto
+        {
+            SessionId = sessionId,
+            IsBooked = booking is not null && booking.Status == BookingStatus.Confirmed,
+            BookingId = booking != null ? (Guid?)booking.Id : null,
+            BookingDate = booking != null ? (DateTime?)booking.BookingDate : null,
+            BookedCount = bookedCount,
+            AvailableSeats = availableSeats,
+            IsFull = session.TotalCapacity.HasValue && bookedCount >= session.TotalCapacity.Value
+        };
+
+        return ApiResponse<SessionBookingStatusDto>.Success(200, "Booking status retrieved", dto);
+    }
 }
