@@ -704,8 +704,12 @@ public class EventInfoDto
 {
     // EventService returns `EventResponseDto` with `Title`
     public string Title { get; set; } = string.Empty;
+    public string? CoverImageUrl { get; set; }
     public DateTime StartDate { get; set; }
+    public DateTime? EndDate { get; set; }
     public string Location { get; set; } = string.Empty;
+    public string EventMode { get; set; } = string.Empty;   // "Online" | "Offline" | "Hybrid"
+    public string EventStatus { get; set; } = string.Empty; // "Published" | "OnGoing" | "Completed"
 }
 
 public class UserInfoDto
