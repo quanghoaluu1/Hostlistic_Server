@@ -7,8 +7,8 @@ public interface ISessionService
 {
     Task<ApiResponse<SessionDto>> GetSessionByIdAsync(Guid eventId, Guid sessionId);
     Task<ApiResponse<IEnumerable<SessionDto>>> GetSessionsByEventIdAsync(Guid eventId);
-    Task<ApiResponse<IEnumerable<SessionDto>>> GetSessionsByTrackIdAsync(Guid eventId, Guid trackId);
-    Task<ApiResponse<IEnumerable<SessionDto>>> GetSessionsByVenueIdAsync(Guid venueId);
+    Task<ApiResponse<PagedResult<SessionDto>>> GetSessionsByTrackIdAsync(Guid eventId, Guid trackId, BaseQueryParams request);
+    Task<ApiResponse<PagedResult<SessionDto>>> GetSessionsByVenueIdAsync(Guid venueId, BaseQueryParams request);
 
     Task<ApiResponse<SessionDto>> UpdateSessionStatusAsync(
         Guid eventId, Guid sessionId, UpdateSessionStatusRequest request);

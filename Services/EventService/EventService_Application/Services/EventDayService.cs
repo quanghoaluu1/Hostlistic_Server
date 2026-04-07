@@ -62,14 +62,14 @@ public class EventDayService(IEventDayRepository eventDayRepository, IEventRepos
 
         // Convert UTC stored dates to user's local dates before extracting DateOnly
         var localStart = TimeZoneInfo.ConvertTimeFromUtc(eventEntity.StartDate!.Value, tz);
-        var localEnd   = TimeZoneInfo.ConvertTimeFromUtc(eventEntity.EndDate!.Value, tz);
+        var localEnd = TimeZoneInfo.ConvertTimeFromUtc(eventEntity.EndDate!.Value, tz);
 
         var overridesMap = request.DayOverrides?
             .ToDictionary(d => d.DayNumber) ?? new Dictionary<int, DayMetadata>();
 
         var days = new List<EventDay>();
         var startDate = DateOnly.FromDateTime(localStart);
-        var endDate   = DateOnly.FromDateTime(localEnd);
+        var endDate = DateOnly.FromDateTime(localEnd);
         var current = startDate;
         var dayNumber = 1;
 

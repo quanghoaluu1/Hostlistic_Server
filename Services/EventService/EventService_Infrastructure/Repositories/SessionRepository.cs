@@ -1,3 +1,4 @@
+using Common;
 using EventService_Domain.Entities;
 using EventService_Domain.Enums;
 using EventService_Domain.Interfaces;
@@ -35,23 +36,27 @@ public class SessionRepository : ISessionRepository
             .ToListAsync();
     }
 
-    public async Task<IEnumerable<Session>> GetSessionsByTrackIdAsync(Guid trackId)
+    public async Task<PagedResult<Session>> GetSessionsByTrackIdAsync(Guid trackId, BaseQueryParams request)
     {
-        return await _context.Sessions
+        var query = _context.Sessions
             .Include(s => s.Venue)
             .Where(s => s.TrackId == trackId)
             .OrderBy(s => s.StartTime)
             .ThenBy(s => s.SortOrder)
-            .ToListAsync();
+            .AsQueryable();
+        query = query.ApplySorting(request.SortBy);
+        return await query.ToPagedResultAsync(request.Page, request.PageSize);
     }
 
-    public async Task<IEnumerable<Session>> GetSessionsByVenueIdAsync(Guid venueId)
+    public async Task<PagedResult<Session>> GetSessionsByVenueIdAsync(Guid venueId, BaseQueryParams request)
     {
-        return await _context.Sessions
+        var query = _context.Sessions
             .Include(s => s.Event)
             .Include(s => s.Track)
             .Where(s => s.VenueId == venueId)
-            .ToListAsync();
+            .AsQueryable();
+        query = query.ApplySorting(request.SortBy);
+        return await query.ToPagedResultAsync(request.Page, request.PageSize);
     }
 
     public async Task<Session?> GetByIdWithinEventAsync(Guid eventId, Guid sessionId)
@@ -64,7 +69,7 @@ public class SessionRepository : ISessionRepository
             .ThenInclude(l => l.Talent)
             .FirstOrDefaultAsync(s => s.Id == sessionId && s.EventId == eventId);
     }
-    
+
     public async Task<bool> HasOverlapInTrackAsync(Guid trackId, DateTime start, DateTime end, Guid? excludeSessionId = null)
     {
         var query = _context.Sessions
@@ -73,25 +78,25 @@ public class SessionRepository : ISessionRepository
                         && s.StartTime != null && s.EndTime != null
                         && s.StartTime < end
                         && s.EndTime > start);
- 
+
         if (excludeSessionId.HasValue)
             query = query.Where(s => s.Id != excludeSessionId.Value);
- 
+
         return await query.AnyAsync();
     }
 
     public async Task<bool> HasOverlapInVenueAsync(Guid venueId, DateTime start, DateTime end, Guid? excludeSessionId = null)
     {
-        var query =  _context.Sessions
+        var query = _context.Sessions
             .Where(s => s.VenueId == venueId
                         && s.Status != SessionStatus.Cancelled
                         && s.StartTime != null && s.EndTime != null
                         && s.StartTime < end
                         && s.EndTime > start);
- 
+
         if (excludeSessionId.HasValue)
             query = query.Where(s => s.Id != excludeSessionId.Value);
- 
+
         return await query.AnyAsync();
     }
 
