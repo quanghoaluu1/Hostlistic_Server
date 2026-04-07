@@ -1,7 +1,6 @@
 using EventService_Application.Interfaces;
 using EventService_Application.Services;
 using EventService_Domain.Interfaces;
-using EventService_Infrastructure.Interfaces;
 using EventService_Infrastructure.Repositories;
 using EventService_Infrastructure.ServiceClients;
 
