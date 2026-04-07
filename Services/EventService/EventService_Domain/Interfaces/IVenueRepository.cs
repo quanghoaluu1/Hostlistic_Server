@@ -13,5 +13,6 @@ namespace EventService_Domain.Interfaces
         Task<IEnumerable<Venue>> GetAllVenuesAsync();
         Task<Venue> UpdateVenueAsync(Venue venue);
         Task<bool> DeleteVenueAsync(Guid id);
+        Task<object> GetVenueDashboardAsync(Guid? eventId = null);
     }
 }

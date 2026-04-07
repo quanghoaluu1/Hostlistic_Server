@@ -7,4 +7,5 @@ public enum EventStatus
     Cancelled,
     OnGoing,
     Completed,
+    Unpublished,
 }
