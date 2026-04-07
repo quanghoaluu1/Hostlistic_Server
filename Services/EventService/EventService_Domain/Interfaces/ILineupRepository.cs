@@ -12,5 +12,6 @@ namespace EventService_Domain.Interfaces
         Task<bool> DeleteLineupAsync(Guid lineupId);
         Task<List<Lineup>> GetLineupsByEventAndTalentsAsync(Guid eventId, Guid? sessionId, List<Guid> talentIds);
         Task<bool> LineupExistsAsync(Guid eventId, Guid? sessionId, Guid talentId);
+        Task<List<Lineup>> GetLineupsByEventIdWithDetailsAsync(Guid eventId);
     }
 }
