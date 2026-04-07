@@ -239,7 +239,7 @@ namespace EventService_Application.Services
             {
                 return ApiResponse<bool>.Fail(404, "Lineup not found");
             }
-            if (existingLineup.Session != null && 
+            if (existingLineup.Session != null &&
                 existingLineup.Session.Status == SessionStatus.OnGoing)
             {
                 return ApiResponse<bool>.Fail(400, "Cannot remove talent from an ongoing session");
@@ -251,5 +251,63 @@ namespace EventService_Application.Services
             }
             return ApiResponse<bool>.Success(200, "Lineup deleted successfully", true);
         }
+
+        public async Task<ApiResponse<PublicLineupResponse>> GetPublicLineupAsync(Guid eventId)
+        {
+            var lineups = await _lineupRepository.GetLineupsByEventIdWithDetailsAsync(eventId);
+
+            var eventWide = lineups.Where(l => l.SessionId == null).ToList();
+            var sessionScoped = lineups.Where(l => l.SessionId != null).ToList();
+
+            var eventWideTalents = eventWide
+                .GroupBy(l => l.TalentId)
+                .Select(g => MapTalent(g.First().Talent))
+                .ToList();
+
+            var sessionTalents = sessionScoped
+                .GroupBy(l => l.SessionId!.Value)
+                .Select(g =>
+                {
+                    var first = g.First();
+                    return new PublicSessionLineupDto
+                    {
+                        SessionId = g.Key,
+                        SessionTitle = first.Session?.Title ?? string.Empty,
+                        SessionStartTime = first.Session?.StartTime,
+                        SessionEndTime = first.Session?.EndTime,
+                        TrackName = first.Session?.Track?.Name,
+                        TrackColorHex = first.Session?.Track?.ColorHex,
+                        Talents = g.GroupBy(l => l.TalentId)
+                                   .Select(tg => MapTalent(tg.First().Talent))
+                                   .ToList()
+                    };
+                })
+                .OrderBy(s => s.SessionStartTime)
+                .ToList();
+
+            var allTalentIds = eventWideTalents.Select(t => t.TalentId)
+                .Concat(sessionTalents.SelectMany(s => s.Talents.Select(t => t.TalentId)))
+                .Distinct()
+                .Count();
+
+            var response = new PublicLineupResponse
+            {
+                EventWideTalents = eventWideTalents,
+                SessionTalents = sessionTalents,
+                TotalTalents = allTalentIds
+            };
+
+            return ApiResponse<PublicLineupResponse>.Success(200, "Lineup retrieved", response);
+        }
+
+        private static PublicTalentDto MapTalent(Talent talent) => new()
+        {
+            TalentId = talent.Id,
+            Name = talent.Name,
+            AvatarUrl = talent.AvatarUrl,
+            Type = talent.Type ?? string.Empty,
+            Bio = talent.Bio,
+            Organization = talent.Organization
+        };
     }
 }

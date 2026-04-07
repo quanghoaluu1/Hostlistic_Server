@@ -11,5 +11,6 @@ namespace EventService_Application.Interfaces
         Task<ApiResponse<List<LineupDto>>> GetAllLineups();
         Task<ApiResponse<LineupDto>> UpdateLineupAsync(LineupDto request);
         Task<ApiResponse<bool>> DeleteLineupAsync(Guid lineupId);
+        Task<ApiResponse<PublicLineupResponse>> GetPublicLineupAsync(Guid eventId);
     }
 }
