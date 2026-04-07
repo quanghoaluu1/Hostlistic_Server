@@ -14,11 +14,20 @@ namespace BookingService_Application.DTOs
         public List<TicketItemRequest> TicketItems { get; set; } = new();
     }
 
+    public class TicketHolderInfo
+    {
+        public string Name { get; set; } = string.Empty;
+        public string? Email { get; set; }
+        public string? Phone { get; set; }
+    }
+
     public class TicketItemRequest
     {
         public Guid TicketTypeId { get; set; }
+        public string TicketTypeName { get; set; } = string.Empty;
         public int Quantity { get; set; }
         public decimal UnitPrice { get; set; }
+        public List<TicketHolderInfo>? Holders { get; set; }
     }
 
     public class PurchaseTicketResponse

@@ -137,7 +137,7 @@ namespace IdentityService_Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<int>("DurationInMonths")
+                    b.Property<int>("DurationInDays")
                         .HasColumnType("integer");
 
                     b.Property<bool>("HasAiAccess")
@@ -145,6 +145,9 @@ namespace IdentityService_Infrastructure.Migrations
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
+
+                    b.Property<int>("MaxAttendeesPerEvent")
+                        .HasColumnType("integer");
 
                     b.Property<int>("MaxEvents")
                         .HasColumnType("integer");

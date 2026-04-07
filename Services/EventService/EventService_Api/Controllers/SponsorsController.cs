@@ -55,4 +55,12 @@ public class SponsorsController(ISponsorService service) : ControllerBase
         if (!result.IsSuccess) return NotFound(result);
         return Ok(result);
     }
+
+    [HttpGet("event/{eventId:guid}")]
+    public async Task<IActionResult> GetSponsorsByEvent(Guid eventId)
+    {
+        var result = await service.GetSponsorsByEventAsync(eventId);
+        return Ok(result);
+    }
+
 }

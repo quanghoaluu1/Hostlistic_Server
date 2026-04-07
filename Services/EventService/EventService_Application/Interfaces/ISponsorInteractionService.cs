@@ -1,5 +1,6 @@
 using Common;
 using EventService_Application.DTOs;
+using EventService_Domain.Enums;
 
 namespace EventService_Application.Interfaces;
 

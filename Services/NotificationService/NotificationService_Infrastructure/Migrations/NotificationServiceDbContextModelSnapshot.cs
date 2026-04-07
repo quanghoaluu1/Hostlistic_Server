@@ -41,6 +41,9 @@ namespace NotificationService_Infrastructure.Migrations
                     b.Property<Guid?>("EventId")
                         .HasColumnType("uuid");
 
+                    b.Property<int>("FailedCount")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");
@@ -51,7 +54,19 @@ namespace NotificationService_Infrastructure.Migrations
                     b.Property<DateTime?>("ScheduledDate")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime?>("SendCompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("SendStartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("SentCount")
+                        .HasColumnType("integer");
+
                     b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TotalRecipients")
                         .HasColumnType("integer");
 
                     b.Property<DateTime>("UpdatedAt")
@@ -104,6 +119,55 @@ namespace NotificationService_Infrastructure.Migrations
                     b.HasIndex("CampaignId");
 
                     b.ToTable("EmailLogs");
+                });
+
+            modelBuilder.Entity("NotificationService_Domain.Entities.EventRecipient", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("BookingConfirmedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<Guid>("EventId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<bool>("IsCheckedIn")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("SyncedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("TicketTypeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("TicketTypeName")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EventId", "IsCheckedIn");
+
+                    b.HasIndex("EventId", "UserId", "TicketTypeId")
+                        .IsUnique()
+                        .HasFilter("\"TicketTypeId\" IS NOT NULL");
+
+                    b.ToTable("EventRecipients");
                 });
 
             modelBuilder.Entity("NotificationService_Domain.Entities.Notification", b =>

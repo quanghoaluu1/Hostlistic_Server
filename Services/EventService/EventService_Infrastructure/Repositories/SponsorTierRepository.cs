@@ -21,6 +21,11 @@ public class SponsorTierRepository(EventServiceDbContext dbContext) : ISponsorTi
         return await dbContext.SponsorTiers.FindAsync(id);
     }
 
+    public async Task<IReadOnlyList<SponsorTier>> GetAllSponsorTiersAsync()
+    {
+        return await dbContext.SponsorTiers.ToListAsync();
+    }
+
     public async Task AddAsync(SponsorTier entity)
     {
         entity.Id = Guid.NewGuid();

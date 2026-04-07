@@ -34,6 +34,7 @@ public class WalletsController : ControllerBase
     }
 
     [HttpPost]
+    [AllowAnonymous]
     public async Task<IActionResult> CreateWallet([FromBody] CreateWalletRequest request)
     {
         var result = await _walletService.CreateWalletAsync(request);

@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /d/hostlistic/Hostlistic_Server/Services/ApiGateway -type f -name *.json -o -name *.cs -o -name *.yml)",
+      "Bash(find D:hostlisticHostlistic_ServerCommon -maxdepth 2 -type f -name *.cs)",
+      "Bash(xargs grep:*)",
+      "Bash(grep -r \"MassTransit\\\\|IBus\\\\|Publish\\\\|Send\" D:hostlisticHostlistic_ServerServicesEventService --include=*.cs)",
+      "Bash(dotnet ef:*)",
+      "Bash(dotnet build:*)",
+      "Bash(grep:*)",
+      "Bash(xargs cat:*)",
+      "Bash(find D:/hostlistic/Hostlistic_Server -name appsettings.json -path */Gateway* -o -name yarp.json)",
+      "Bash(ls /d/hostlistic/Hostlistic_Server/Services/BookingService/BookingService_Api/*.csproj)"
+    ]
+  }
+}

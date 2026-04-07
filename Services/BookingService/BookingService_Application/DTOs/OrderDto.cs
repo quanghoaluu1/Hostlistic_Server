@@ -20,6 +20,9 @@ public class CreateOrderRequest
     public Guid EventId { get; set; }
     public Guid UserId { get; set; }
     public string? Notes { get; set; }
+    public string? BuyerName { get; set; }
+    public string? BuyerEmail { get; set; }
+    public string? BuyerAvatarUrl { get; set; }
     public List<CreateOrderDetailRequest> OrderDetails { get; set; } = new();
 }
 
@@ -27,4 +30,5 @@ public class UpdateOrderRequest
 {
     public OrderStatus Status { get; set; }
     public string? Notes { get; set; }
+    public long? OrderCode { get; set; }
 }

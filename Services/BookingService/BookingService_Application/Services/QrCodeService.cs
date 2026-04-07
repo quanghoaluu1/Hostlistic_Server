@@ -1,51 +1,86 @@
-using BookingService_Application.Interfaces;
-using Microsoft.AspNetCore.Http;
-using QRCoder;
-using System;
-using System.Collections.Generic;
-using System.Drawing.Imaging;
+using System.Security.Cryptography;
 using System.Text;
+using BookingService_Application.Interfaces;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
-namespace BookingService_Application.Services
+namespace BookingService_Application.Services;
+
+public class QrCodeService(IConfiguration configuration, ILogger<QrCodeService> logger) : IQrCodeService
 {
-    public class QrCodeService : IQrCodeService
+    // Key is shared between QR generation (ticket issuance) and verification (check-in scan).
+    // Must match on all instances — store in environment-specific appsettings or secrets manager.
+    private readonly byte[] _keyBytes = Encoding.UTF8.GetBytes(
+        configuration["QrSecret"] ?? throw new InvalidOperationException("QrSecret is not configured"));
+
+    /// <inheritdoc/>
+    public Task<string> GenerateQrPayloadAsync(Guid ticketId, Guid eventId)
     {
-        private readonly IPhotoService _photoService;
+        var message = $"{ticketId}:{eventId}";
+        var sig = ComputeHmacHex(message);
+        return Task.FromResult($"{message}:{sig}");
+    }
 
-        public QrCodeService(IPhotoService photoService)
+    /// <inheritdoc/>
+    public bool VerifyQrPayload(string qrPayload, out Guid ticketId, out Guid eventId)
+    {
+        ticketId = Guid.Empty;
+        eventId = Guid.Empty;
+
+        // Expected format: {guid}:{guid}:{64-char hex}
+        // GUIDs contain hyphens but not colons, so splitting on ':' yields exactly 3 segments.
+        var firstColon = qrPayload.IndexOf(':');
+        if (firstColon < 0)
         {
-            _photoService = photoService;
+            logger.LogWarning("QR verification failed: no colon found in payload (length={Length})", qrPayload.Length);
+            return false;
         }
 
-        public async Task<string> GenerateQrCodeAsync(string ticketCode)
+        var lastColon = qrPayload.LastIndexOf(':');
+        if (lastColon == firstColon)
         {
-            try
-            {
-                var qrGenerator = new QRCodeGenerator();
-                var qrCodeData = qrGenerator.CreateQrCode(ticketCode, QRCodeGenerator.ECCLevel.Q);
-                var qrCode = new QRCode(qrCodeData);
-
-                // Ensure a proper quiet zone (margin) for scanning reliability
-                using var qrCodeImage = qrCode.GetGraphic(20, System.Drawing.Color.Black, System.Drawing.Color.White, drawQuietZones: true);
-                using var stream = new MemoryStream();
-                qrCodeImage.Save(stream, ImageFormat.Png);
-                stream.Position = 0;
-
-                // Convert to IFormFile for existing PhotoService
-                var formFile = new FormFile(stream, 0, stream.Length, "qrcode", $"qr-{ticketCode}.png")
-                {
-                    Headers = new HeaderDictionary(),
-                    ContentType = "image/png"
-                };
-
-                var uploadResult = await _photoService.UploadPhotoAsync(formFile);
-                return uploadResult.SecureUrl?.ToString() ?? string.Empty;
-            }
-            catch (Exception ex)
-            {
-                // Log exception here
-                return string.Empty;
-            }
+            logger.LogWarning("QR verification failed: only one colon found, expected 2 (payload={Payload})", qrPayload);
+            return false;
         }
+
+        var part0 = qrPayload[..firstColon];
+        var part1 = qrPayload[(firstColon + 1)..lastColon];
+        var part2 = qrPayload[(lastColon + 1)..];
+
+        if (!Guid.TryParse(part0, out ticketId))
+        {
+            logger.LogWarning("QR verification failed: part0 is not a valid GUID (part0={Part0})", part0);
+            return false;
+        }
+
+        if (!Guid.TryParse(part1, out eventId))
+        {
+            logger.LogWarning("QR verification failed: part1 is not a valid GUID (part1={Part1})", part1);
+            return false;
+        }
+
+        var message = $"{part0}:{part1}";
+        var expected = ComputeHmacHex(message);
+
+        var match = CryptographicOperations.FixedTimeEquals(
+            Encoding.UTF8.GetBytes(expected),
+            Encoding.UTF8.GetBytes(part2));
+
+        if (!match)
+        {
+            logger.LogWarning(
+                "QR verification failed: HMAC mismatch. ticketId={TicketId}, eventId={EventId}, " +
+                "received_sig={ReceivedSig}, expected_sig={ExpectedSig}, key_length={KeyLength}",
+                ticketId, eventId, part2, expected, _keyBytes.Length);
+        }
+
+        return match;
+    }
+
+    private string ComputeHmacHex(string message)
+    {
+        var messageBytes = Encoding.UTF8.GetBytes(message);
+        var hash = HMACSHA256.HashData(_keyBytes, messageBytes);
+        return Convert.ToHexString(hash).ToLowerInvariant();
     }
 }

@@ -1,17 +1,15 @@
 using System.Reflection;
+using System.Security.Authentication;
 using System.Text;
 using Common;
-using IdentityService_Application.Interfaces;
+using IdentityService_Api.Extensions;
 using IdentityService_Application.Services;
-using IdentityService_Domain.Interfaces;
-using IdentityService_Domain.Repositories;
 using IdentityService_Infrastructure.Data;
 using Mapster;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
-using NotificationService_Application.Interfaces;
 using Scalar.AspNetCore;
 using StackExchange.Redis;
 
@@ -75,8 +73,18 @@ builder.Services.AddDbContext<IdentityServiceDbContext>(optionsAction =>
 {
     optionsAction.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
 });
-builder.Services.AddSingleton<IConnectionMultiplexer>(sp => 
-    ConnectionMultiplexer.Connect(builder.Configuration.GetConnectionString("RedisConnection")!));
+builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+{
+    var connectionString = builder.Configuration.GetConnectionString("RedisConnection")!;
+    var config = ConfigurationOptions.Parse(connectionString);
+    
+    config.SslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13;
+    config.AbortOnConnectFail = false;
+    config.ConnectTimeout = 10000;
+    config.CertificateValidation += (_, _, _, _) => true;
+    
+    return ConnectionMultiplexer.Connect(config);
+});
 
 // Configure Cloudinary
 builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
@@ -84,21 +92,16 @@ builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection(
 var config = TypeAdapterConfig.GlobalSettings;
 config.Scan(Assembly.GetExecutingAssembly());
 builder.Services.AddSingleton(config);
-builder.Services.AddHttpClient();
+builder.Services.AddHttpClient("NotificationService", client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["Services:NotificationService"] ?? "http://notificationservice:8080");
+});
+builder.Services.AddHttpClient("BookingService", client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["Services:BookingService"] ?? "http://bookingservice:8080");
+});
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddScoped<IUserRepository, UserRepository>();
-builder.Services.AddScoped<IOtpService, OtpService>();
-builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
-builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<IPhotoService, PhotoService>();
-builder.Services.AddScoped<IUserTicketService, UserTicketService>();
-builder.Services.AddScoped<IOrganizerBankInfoRepository, OrganizerBankInfoRepository>();
-builder.Services.AddScoped<ISubscriptionPlanRepository, SubscriptionPlanRepository>();
-builder.Services.AddScoped<IUserPlanRepository, UserPlanRepository>();
-builder.Services.AddScoped<IOrganizerBankInfoService, OrganizerBankInfoService>();
-builder.Services.AddScoped<ISubscriptionPlanService, SubscriptionPlanService>();
-builder.Services.AddScoped<IUserPlanService, UserPlanService>();
+builder.Services.AddApplicationServices();
 builder.Services.AddHealthChecks();
 
 var app = builder.Build();

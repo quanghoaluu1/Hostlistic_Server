@@ -1,9 +1,8 @@
 using System.Text;
+using AIService_Api.Extensions;
 using AIService_Application.Interface;
 using AIService_Application.Services;
-using AIService_Domain.Interfaces;
 using AIService_Infrastructure.Data;
-using AIService_Infrastructure.Repositories;
 using Common;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -15,6 +14,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 
 builder.Services.AddControllers();
+builder.Services.AddHttpContextAccessor();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi(options =>
 {
@@ -24,18 +24,28 @@ builder.Services.AddOpenApi(options =>
     optionsAction.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
 });
 builder.Services.AddSingleton<IAiProvider, GeminiProvider>();
-builder.Services.AddScoped<IAiContentService, AiContentService>();
-builder.Services.AddScoped<IAiRequestRepository, AiRequestRepository>();
-builder.Services.AddScoped<IAiGeneratedContentRepository, AiGeneratedContentRepository>();
-builder.Services.AddScoped<IPromptTemplateRepository, PromptTemplateRepository>();
-builder.Services.AddScoped<IPromptTemplateService, PromptTemplateService>();
-builder.Services.AddScoped<IPromptTemplateEngine, PromptTemplateEngine>();
-builder.Services.AddScoped<IEventServiceClient, EventServiceClient>();
+builder.Services.AddApplicationServices();
+// Same config keys as BookingService (ServiceUrls:*). Use IsNullOrWhiteSpace — empty string is not null.
+var eventServiceUrl = builder.Configuration["ServiceUrls:EventService"];
+if (string.IsNullOrWhiteSpace(eventServiceUrl))
+    eventServiceUrl = "http://localhost:5139";
+
 builder.Services.AddHttpClient<IEventServiceClient, EventServiceClient>(client =>
 {
-    client.BaseAddress = new Uri(builder.Configuration["Services:EventService"]!);
+    client.BaseAddress = new Uri(eventServiceUrl.TrimEnd('/'));
     client.Timeout = TimeSpan.FromSeconds(10);
 });
+
+var identityServiceUrl = builder.Configuration["ServiceUrls:IdentityService"];
+if (string.IsNullOrWhiteSpace(identityServiceUrl))
+    identityServiceUrl = "http://localhost:5049";
+
+builder.Services.AddHttpClient("IdentityService", client =>
+{
+    client.BaseAddress = new Uri(identityServiceUrl.TrimEnd('/'));
+    client.Timeout = TimeSpan.FromSeconds(15);
+});
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Production", policy =>

@@ -24,7 +24,61 @@ public class TrackRepository : ITrackRepository
             .FirstOrDefaultAsync(t => t.Id == trackId);
     }
 
-    public async Task<PagedResult<Track>> GetTracksByEventIdAsync(Guid eventId, BaseQueryParams request)
+    //    public async Task<PagedResult<Track>> GetTracksByEventIdAsync(Guid eventId, BaseQueryParams request)
+    public async Task<Track?> GetByIdWithinEventAsync(Guid eventId, Guid trackId)
+    {
+        return await _context.Tracks
+            .Include(t => t.Event)
+            .Include(t => t.Sessions)
+            .FirstOrDefaultAsync(t => t.Id == trackId && t.EventId == eventId);
+    }
+
+
+    public async Task<List<Track>> GetByEventIdAsync(Guid eventId)
+    {
+        return await _context.Tracks
+            .Include(t => t.Sessions)
+            .Where(t => t.EventId == eventId)
+            .OrderBy(t => t.SortOrder)
+            .ToListAsync();
+    }
+    public async Task<List<Track>> GetByEventIdWithSessionsAsync(Guid eventId)
+    {
+        return await _context.Tracks
+            .Include(t => t.Sessions)
+            .ThenInclude(s => s.Venue)
+            .Include(t => t.Sessions)
+            .ThenInclude(s => s.Lineups)
+            .ThenInclude(l => l.Talent)
+            .Where(t => t.EventId == eventId)
+            .OrderBy(t => t.SortOrder)
+            .AsSplitQuery() // Avoid cartesian explosion with multiple Includes
+            .ToListAsync();
+    }
+    public async Task<bool> ExistsAsync(Guid trackId)
+    {
+        return await _context.Tracks.AnyAsync(t => t.Id == trackId);
+    }
+    public async Task<bool> ExistsWithinEventAsync(Guid eventId, Guid trackId)
+    {
+        return await _context.Tracks
+            .AnyAsync(t => t.Id == trackId && t.EventId == eventId);
+    }
+    public async Task<bool> HasSessionsAsync(Guid trackId)
+    {
+        return await _context.Sessions
+            .AnyAsync(s => s.TrackId == trackId);
+    }
+
+    public async Task<int> GetMaxSortOrderAsync(Guid eventId)
+    {
+        return await _context.Tracks
+            .Where(t => t.EventId == eventId)
+            .Select(t => (int?)t.SortOrder)
+            .MaxAsync() ?? 0;
+    }
+
+    public async Task<IEnumerable<Track>> GetTracksByEventIdAsync(Guid eventId)
     {
         var query = _context.Tracks
             .Include(t => t.Sessions)
@@ -36,7 +90,7 @@ public class TrackRepository : ITrackRepository
 
     public async Task<Track> AddTrackAsync(Track track)
     {
-        track.Id = Guid.NewGuid();
+        track.Id = Guid.CreateVersion7();
         await _context.Tracks.AddAsync(track);
         return track;
     }

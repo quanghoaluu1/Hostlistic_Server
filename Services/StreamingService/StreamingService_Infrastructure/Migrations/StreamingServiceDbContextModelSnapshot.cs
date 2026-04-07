@@ -31,6 +31,9 @@ namespace StreamingService_Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<bool>("IsBanned")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("IsCurrentlyConnected")
                         .HasColumnType("boolean");
 
@@ -128,8 +131,14 @@ namespace StreamingService_Infrastructure.Migrations
                     b.Property<Guid>("EventId")
                         .HasColumnType("uuid");
 
-                    b.Property<int>("IsRecordEnabled")
-                        .HasColumnType("integer");
+                    b.Property<bool>("IsChatEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsQnAEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsRecordEnabled")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("LiveKitRoomName")
                         .IsRequired()
@@ -141,6 +150,9 @@ namespace StreamingService_Infrastructure.Migrations
 
                     b.Property<int>("MaxParticipants")
                         .HasColumnType("integer");
+
+                    b.Property<bool>("RequireHostToStart")
+                        .HasColumnType("boolean");
 
                     b.Property<DateTime?>("ScheduledStartAt")
                         .HasColumnType("timestamp with time zone");

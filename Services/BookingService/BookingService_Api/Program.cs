@@ -1,24 +1,26 @@
-using BookingService_Application.Interfaces;
-using BookingService_Application.Services;
-using BookingService_Domain.Interfaces;
+using BookingService_Api.Extensions;
+using BookingService_Api.Hubs;
 using BookingService_Infrastructure.Data;
-using BookingService_Infrastructure.Repositories;
-using BookingService_Infrastructure.ServiceClients;
 using Common;
 using Mapster;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+using PayOS;
 using Scalar.AspNetCore;
 using System.Reflection;
 using System.Text;
+using BookingService_Application.Consumers;
+using BookingService_Application.Services;
+using MassTransit;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
 builder.Services.AddControllers();
+builder.Services.AddHttpContextAccessor();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi(options => options.AddDocumentTransformer<BearerSecuritySchemeTransformer>());
 
@@ -62,51 +64,72 @@ builder.Services.AddDbContext<BookingServiceDbContext>(optionsAction =>
 {
     optionsAction.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
 });
+builder.Services.AddMassTransit(config =>
+{
+    config.AddConsumer<EventCompletedConsumer>();
+    config.AddConsumer<SessionSyncedEventConsumer>();
+    config.AddConsumer<SessionDeletedEventConsumer>();
+    config.AddConsumer<WalletBookingConfirmConsumer>();
+    config.UsingRabbitMq((context, cfg) =>
+    {
+        cfg.Host(builder.Configuration["RabbitMq:Host"] ?? "rabbitmq", "/", h =>
+        {
+            h.Username(builder.Configuration["RabbitMq:Username"] ?? "guest");
+            h.Password(builder.Configuration["RabbitMq:Password"] ?? "guest");
+        });
+        cfg.UseMessageRetry(r => r.Intervals(
+            TimeSpan.FromSeconds(1),
+            TimeSpan.FromSeconds(5),
+            TimeSpan.FromSeconds(15)
+        ));
+        cfg.ConfigureEndpoints(context);
+    });
+});
 var config = TypeAdapterConfig.GlobalSettings;
 config.Scan(Assembly.GetExecutingAssembly());
 builder.Services.AddSingleton(config);
-
-// Register repositories
-builder.Services.AddScoped<IOrderRepository, OrderRepository>();
-builder.Services.AddScoped<IOrderDetailRepository, OrderDetailRepository>();
-builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
-builder.Services.AddScoped<IPaymentMethodRepository, PaymentMethodRepository>();
-builder.Services.AddScoped<ITicketRepository, TicketRepository>();
-builder.Services.AddScoped<IPayoutRequestRepository, PayoutRequestRepository>();
-builder.Services.AddScoped<ITicketPurchaseService, TicketPurchaseService>();
-builder.Services.AddScoped<IInventoryService, InventoryService>();
-builder.Services.AddScoped<IQrCodeService, QrCodeService>();
-builder.Services.AddScoped<IInventoryReservationRepository, InventoryReservationRepository>();
-builder.Services.AddScoped<IWalletRepository, WalletRepository>();
-
-// Register services
-builder.Services.AddScoped<IOrderService, OrderService>();
-builder.Services.AddScoped<IOrderDetailService, OrderDetailService>();
-builder.Services.AddScoped<IPaymentService, PaymentService>();
-builder.Services.AddScoped<IPaymentMethodService, PaymentMethodService>();
-builder.Services.AddScoped<ITicketService, TicketService>();
-builder.Services.AddScoped<IPayoutRequestService, PayoutRequestService>();
-builder.Services.AddScoped<IPhotoService, PhotoService>();
-builder.Services.AddScoped<IWalletService, WalletService>();
-builder.Services.AddScoped<IEventServiceClient, EventServiceClient>();
-builder.Services.AddScoped<IUserServiceClient, UserServiceClient>();
-builder.Services.AddScoped<INotificationServiceClient, NotificationServiceClient>();
+builder.Services.AddSignalR();
 
 builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
+builder.Services.AddApplicationServices();
+
+// IsNullOrWhiteSpace: empty appsettings values are not null, so ?? alone is not enough.
+var eventServiceUrl = builder.Configuration["ServiceUrls:EventService"];
+if (string.IsNullOrWhiteSpace(eventServiceUrl))
+    eventServiceUrl = "http://localhost:5139";
+var notificationServiceUrl = builder.Configuration["ServiceUrls:NotificationService"];
+if (string.IsNullOrWhiteSpace(notificationServiceUrl))
+    notificationServiceUrl = "http://localhost:5097";
+var identityServiceUrl = builder.Configuration["ServiceUrls:IdentityService"];
+if (string.IsNullOrWhiteSpace(identityServiceUrl))
+    identityServiceUrl = "http://localhost:5049";
 
 builder.Services.AddHttpClient("EventService", client =>
 {
-    client.BaseAddress = new Uri("http://localhost:5139");
+    client.BaseAddress = new Uri(eventServiceUrl.TrimEnd('/'));
 });
 
 builder.Services.AddHttpClient("NotificationService", client =>
 {
-    client.BaseAddress = new Uri("http://localhost:5097");
+    client.BaseAddress = new Uri(notificationServiceUrl.TrimEnd('/'));
 });
 
 builder.Services.AddHttpClient("IdentityService", client =>
 {
-    client.BaseAddress = new Uri("http://localhost:5049");
+    client.BaseAddress = new Uri(identityServiceUrl.TrimEnd('/'));
+});
+
+builder.Services.AddSingleton(sp =>
+{
+    var config = sp.GetRequiredService<IConfiguration>();
+    return new PayOSClient(new PayOSOptions
+    {
+        ClientId = config["PayOS:ClientId"]!,
+        ApiKey = config["PayOS:ApiKey"]!,
+        ChecksumKey = config["PayOS:ChecksumKey"]!,
+        TimeoutMs = 30000,
+        MaxRetries = 2
+    });
 });
 builder.Services.AddHealthChecks();
 
@@ -131,5 +154,6 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapHealthChecks("/health");
+app.MapHub<PaymentHub>("/hubs/payment");
 
 app.Run();

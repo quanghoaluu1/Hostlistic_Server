@@ -54,13 +54,11 @@ public class EventServiceDbContext : DbContext
             entity.Property(e => e.EventMode)
                 .HasConversion<string>()
                     .HasMaxLength(50);
+            entity.HasMany(e => e.Venues)
+                .WithOne(v => v.Event)
+                .HasForeignKey(v => v.EventId)
+                .OnDelete(DeleteBehavior.Cascade);
             
-            
-            entity.HasOne(e => e.Venue)
-                .WithMany(v => v.Events)
-                .HasForeignKey(e => e.VenueId)
-                .OnDelete(DeleteBehavior.Restrict);
-
             entity.HasMany(e => e.EventTeamMembers)
                 .WithOne(etm => etm.Event)
                 .HasForeignKey(etm => etm.EventId)
@@ -101,10 +99,6 @@ public class EventServiceDbContext : DbContext
                 .HasForeignKey(f => f.EventId)
                 .OnDelete(DeleteBehavior.Cascade);
             
-            entity.HasMany(e => e.SponsorTiers)
-                .WithOne(st => st.Event)
-                .HasForeignKey(st => st.EventId)
-                .OnDelete(DeleteBehavior.Cascade);
         });
 
         // EventType configuration
@@ -117,14 +111,24 @@ public class EventServiceDbContext : DbContext
         modelBuilder.Entity<EventTeamMember>(entity =>
         {
             entity.HasKey(e => e.Id);
-            
-            entity.Property(e => e.Role).HasConversion<string>().HasMaxLength(50);
-            
+
+            entity.Property(e => e.Role).HasConversion<int>().HasColumnType("integer").IsRequired();
+
             entity.Property(e => e.Permissions)
                 .HasColumnType("jsonb")
                 .HasConversion(
                     v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
                     v => JsonSerializer.Deserialize<Dictionary<string, bool>>(v, (JsonSerializerOptions?)null) ?? new Dictionary<string, bool>());
+
+            entity.Property(e => e.InviteToken).HasMaxLength(64);
+            entity.Property(e => e.UserFullName).HasMaxLength(200);
+            entity.Property(e => e.UserEmail).HasMaxLength(200);
+
+            // Partial unique index for fast token lookup (NULL values are excluded)
+            entity.HasIndex(e => e.InviteToken)
+                .IsUnique()
+                .HasFilter("\"InviteToken\" IS NOT NULL")
+                .HasDatabaseName("IX_EventTeamMembers_InviteToken");
         });
 
         // EventTemplate configuration
@@ -148,6 +152,9 @@ public class EventServiceDbContext : DbContext
                 .WithOne(s => s.Venue)
                 .HasForeignKey(s => s.VenueId)
                 .OnDelete(DeleteBehavior.Restrict);
+            entity.Property(v => v.Name).IsRequired().HasMaxLength(200);
+            entity.Property(v => v.Description).HasMaxLength(1000);
+            entity.HasIndex(v => new { v.EventId, v.Name }).IsUnique();
         });
 
         // Track configuration
@@ -159,6 +166,7 @@ public class EventServiceDbContext : DbContext
                 .WithOne(s => s.Track)
                 .HasForeignKey(s => s.TrackId)
                 .OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(e => new { e.EventId, e.SortOrder });
         });
 
         // Session configuration
@@ -200,12 +208,25 @@ public class EventServiceDbContext : DbContext
                 .WithOne(tt => tt.Session)
                 .HasForeignKey(tt => tt.SessionId)
                 .OnDelete(DeleteBehavior.SetNull);
+            
+            entity.HasIndex(e => new { e.TrackId, e.StartTime, e.EndTime })
+                .HasDatabaseName("IX_Sessions_TrackId_TimeRange");
+            entity.HasIndex(e => new { e.VenueId, e.StartTime, e.EndTime })
+                .HasDatabaseName("IX_Sessions_VenueId_TimeRange")
+                .HasFilter("\"VenueId\" IS NOT NULL"); // Partial index — skip online sessions
+            entity.HasIndex(e => new { e.EventId, e.StartTime, e.SortOrder })
+                .HasDatabaseName("IX_Sessions_EventId_Ordering");
         });
 
         // SessionBooking configuration
         modelBuilder.Entity<SessionBooking>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.UserId, e.SessionId })
+                .IsUnique()
+                .HasDatabaseName("IX_SessionBookings_UserId_SessionId");
+            entity.HasIndex(e => new { e.SessionId, e.Status })
+                .HasDatabaseName("IX_SessionBookings_SessionId_Status");
         });
 
         // Lineup configuration

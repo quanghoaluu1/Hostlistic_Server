@@ -7,6 +7,7 @@ public interface ISponsorTierRepository
 {
     Task<PagedResult<SponsorTier>> GetByEventIdAsync(Guid eventId, BaseQueryParams request);
     Task<SponsorTier?> GetByIdAsync(Guid id);
+    Task<IReadOnlyList<SponsorTier>> GetAllSponsorTiersAsync();
     Task AddAsync(SponsorTier entity);
     Task UpdateAsync(SponsorTier entity);
     Task<bool> DeleteAsync(Guid id);

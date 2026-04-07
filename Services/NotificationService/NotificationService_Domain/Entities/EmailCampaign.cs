@@ -12,6 +12,11 @@ public class EmailCampaign : BaseClass
     public DateTime? ScheduledDate { get; set; }
     public EmailCampaignStatus Status { get; set; } = EmailCampaignStatus.Draft;
     public RecipientGroup RecipientGroup { get; set; }
+    public int TotalRecipients { get; set; }
+    public int SentCount { get; set; }
+    public int FailedCount { get; set; }
+    public DateTime? SendStartedAt { get; set; }
+    public DateTime? SendCompletedAt { get; set; }
     public EmailTargetFilter? TargetFilter { get; set; }
     
     public ICollection<EmailLog> EmailLogs { get; set; } = new List<EmailLog>();

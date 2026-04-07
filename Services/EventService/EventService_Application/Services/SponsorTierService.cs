@@ -7,21 +7,16 @@ using Mapster;
 
 namespace EventService_Application.Services;
 
-public class SponsorTierService(ISponsorTierRepository repository, IEventRepository eventRepository) : ISponsorTierService
+public class SponsorTierService(ISponsorTierRepository repository) : ISponsorTierService
 {
     public async Task<ApiResponse<SponsorTierDto>> CreateAsync(CreateSponsorTierDto dto)
     {
-        if (dto.EventId == Guid.Empty || string.IsNullOrWhiteSpace(dto.Name))
+        if (string.IsNullOrWhiteSpace(dto.Name))
             return ApiResponse<SponsorTierDto>.Fail(400, "Dữ liệu tier không hợp lệ");
-
-        var ev = await eventRepository.GetEventByIdAsync(dto.EventId);
-        if (ev == null)
-            return ApiResponse<SponsorTierDto>.Fail(400, "Sự kiện không tồn tại");
 
         var entity = new SponsorTier
         {
             Id = Guid.NewGuid(),
-            EventId = dto.EventId,
             Name = dto.Name,
             Priority = dto.Priority
         };
@@ -83,5 +78,10 @@ public class SponsorTierService(ISponsorTierRepository repository, IEventReposit
 
         await repository.SaveChangesAsync();
         return ApiResponse<bool>.Success(200, "Xoá thành công", true);
+    }
+
+    public async Task<IReadOnlyList<SponsorTier>> GetAllSponsorTiersAsync()
+    {
+        return await repository.GetAllSponsorTiersAsync();
     }
 }

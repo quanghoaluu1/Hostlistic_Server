@@ -25,6 +25,13 @@ public class EventController(IEventService eventService, IPhotoService photoServ
         var result = await eventService.GetPublicEventsAsync(request);
         return Ok(result);
     }
+    
+    [HttpGet("paged")]
+    public async Task<IActionResult> GetPublicEventsAsync([FromQuery] PublicEventQueryParams queryParams)
+    {
+        var result = await eventService.GetPublicEventsAsync(queryParams);
+        return Ok(result);
+    }
 
     [HttpGet("{eventId:guid}")]
     public async Task<IActionResult> GetEventByIdAsync(Guid eventId)
@@ -73,6 +80,13 @@ public class EventController(IEventService eventService, IPhotoService photoServ
     {
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
         return Guid.Parse(userIdClaim ?? throw new UnauthorizedAccessException("User ID not found in token"));
+    }
+    [HttpGet("{eventId:guid}/stream-auth")]
+    [AllowAnonymous]
+    public async Task<IActionResult> VerifyStreamAccess(Guid eventId, [FromQuery] Guid userId)
+    {
+        var result = await eventService.VerifyStreamAccessAsync(eventId, userId);
+        return Ok(result);
     }
 
 }

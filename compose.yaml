@@ -26,6 +26,28 @@ services:
         limits:
           memory: 256M
 
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"    # AMQP protocol
+      - "15672:15672"  # Management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    networks:
+      - hostlistic_net
+    restart: unless-stopped
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
   identityservice:
     image: hostlistic/identityservice
     build:
@@ -42,7 +64,11 @@ services:
       - CloudinarySettings__CloudName=${CLOUDINARY_CLOUD_NAME}
       - CloudinarySettings__ApiKey=${CLOUDINARY_API_KEY}
       - CloudinarySettings__ApiSecret=${CLOUDINARY_API_SECRET}
+      - ServiceUrls__IdentityService=http://identityservice:8080
       - Google__ClientId=${GOOGLE_CLIENT_ID}
+      - Services__BookingService=http://bookingservice:8080
+      - Services__EventService=http://eventservice:8080
+      - Services__NotificationService=http://notificationservice:8080
     networks:
       - hostlistic_net
     restart: unless-stopped
@@ -66,6 +92,7 @@ services:
       - CloudinarySettings__CloudName=${CLOUDINARY_CLOUD_NAME}
       - CloudinarySettings__ApiKey=${CLOUDINARY_API_KEY}
       - CloudinarySettings__ApiSecret=${CLOUDINARY_API_SECRET}
+      - ServiceUrls__IdentityService=http://identityservice:8080
     networks:
       - hostlistic_net
     restart: unless-stopped
@@ -76,6 +103,9 @@ services:
 
   bookingservice:
     image: hostlistic/bookingservice
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
     build:
       context: .
       dockerfile: Services/BookingService/Dockerfile
@@ -89,6 +119,17 @@ services:
       - CloudinarySettings__CloudName=${CLOUDINARY_CLOUD_NAME}
       - CloudinarySettings__ApiKey=${CLOUDINARY_API_KEY}
       - CloudinarySettings__ApiSecret=${CLOUDINARY_API_SECRET}
+      - PayOs__ClientId=${PAYOS_CLIENT_ID}
+      - PayOs__ApiKey=${PAYOS_API_KEY}
+      - PayOs__ChecksumKey=${PAYOS_CHECKSUM_KEY}
+      - ServiceUrls__EventService=http://eventservice:8080
+      - ServiceUrls__NotificationService=http://notificationservice:8080
+      - ServiceUrls__IdentityService=http://identityservice:8080
+      - FrontendUrl=${FRONTEND_URL}
+      - RabbitMq__Host=rabbitmq
+      - RabbitMq__Username=guest
+      - RabbitMq__Password=guest
+      - QrSecret=${QR_SECRET}
     networks:
       - hostlistic_net
     restart: unless-stopped
@@ -98,6 +139,9 @@ services:
           memory: 512M
 
   notificationservice:
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
     image: hostlistic/notificationservice
     build:
       context: .
@@ -106,7 +150,15 @@ services:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_HTTP_PORTS=8080
       - ConnectionStrings__DefaultConnection=${NOTIFICATION_DB_CONNECTION}
+      - ConnectionStrings__RedisConnection=${REDIS_CONNECTION}
       - Resend__ApiToken=${RESEND_API_KEY}
+      - Jwt__Key=${JWT_SECRET_KEY}
+      - Jwt__Issuer=hostlistic
+      - Jwt__Audience=hostlistic
+      - RabbitMq__Host=rabbitmq
+      - RabbitMq__Username=guest
+      - RabbitMq__Password=guest
+      - Email__DailyLimit=100
     networks:
       - hostlistic_net
     restart: unless-stopped
@@ -129,7 +181,30 @@ services:
       - Jwt__Audience=hostlistic
       - Gemini__ApiKey=${GEMINI_API_KEY}
       - Gemini__Model=gemini-3-flash-preview
-      - Services__EventService=http://eventservice:8080
+      - ServiceUrls__EventService=http://eventservice:8080
+      - ServiceUrls__IdentityService=http://identityservice:8080
+    networks:
+      - hostlistic_net
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+
+  streamingservice:
+    image: hostlistic/streamingservice
+    build:
+      context: .
+      dockerfile: Services/StreamingService/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_HTTP_PORTS=8080
+      - ConnectionStrings__DefaultConnection=${STREAM_DB_CONNECTION}
+      - Jwt__Key=${JWT_SECRET_KEY}
+      - Jwt__Issuer=hostlistic
+      - Jwt__Audience=hostlistic
+      - ServiceUrls__EventService=http://eventservice:8080
+      - ServiceUrls__IdentityService=http://identityservice:8080
     networks:
       - hostlistic_net
     restart: unless-stopped

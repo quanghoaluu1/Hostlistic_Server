@@ -11,7 +11,7 @@ public class Track
     public DateTime? StartTime { get; set; }
     public DateTime? EndTime { get; set; }
     public string ColorHex { get; set; } = string.Empty;
-    
+    public int SortOrder { get; set; }
     
     // Navigation property to parent
     [ForeignKey("EventId")]

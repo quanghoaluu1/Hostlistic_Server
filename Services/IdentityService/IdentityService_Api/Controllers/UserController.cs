@@ -74,6 +74,13 @@ public class UserController : ControllerBase
         return Ok(updateResult);
     }
 
+    [HttpGet("search")]
+    public async Task<IActionResult> SearchByEmail([FromQuery] string email)
+    {
+        var result = await _userService.SearchByEmailAsync(email);
+        return StatusCode(result.StatusCode, result);
+    }
+
     [HttpGet("orders")]
     public async Task<IActionResult> GetMyOrders()
     {

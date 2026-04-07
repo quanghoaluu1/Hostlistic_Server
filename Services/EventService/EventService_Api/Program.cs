@@ -1,19 +1,21 @@
 using Common;
 using EventService_Api;
-using EventService_Application.Interfaces;
-using EventService_Application.Services;
-using EventService_Domain.Interfaces;
+using EventService_Api.Consumers;
+using EventService_Api.Extensions;
+using EventService_Api.Hubs;
 using EventService_Infrastructure.Data;
-using EventService_Infrastructure.Repositories;
 using Mapster;
+using MassTransit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using System.Reflection;
 using System.Text;
 using System.Text.Json.Serialization;
+using EventService_Application.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,6 +26,7 @@ builder.Services.AddControllers()
     {
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 builder.Services.Configure<ApiBehaviorOptions>(options =>
@@ -89,32 +92,30 @@ builder.Services.AddAuthentication(options =>
 });
 builder.Services.AddAuthorization();
 
-// builder.Services.AddSwaggerGen(options =>                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       
-// {
-//     options.SwaggerDoc("v1", new OpenApiInfo
-//     {
-//         Title = "Event API",
-//         Version = "v1"
-//     });
-//
-//     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-//     {
-//         Name = "Authorization",
-//         Type = SecuritySchemeType.Http,
-//         Scheme = "bearer",
-//         BearerFormat = "JWT",
-//         In = ParameterLocation.Header,
-//         Description = "JWT Authorization header using the Bearer scheme."
-//     });
-//
-//     options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
-//     {
-//         [new OpenApiSecuritySchemeReference("Bearer", document)] = []
-//     });
-// });
 builder.Services.AddDbContext<EventServiceDbContext>(optionsAction =>
 {
     optionsAction.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
+});
+
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<IUserIdProvider, SubClaimUserIdProvider>();
+
+builder.Services.AddMassTransit(config =>
+{
+    config.AddConsumer<CheckInCompletedEventConsumer>();
+    config.UsingRabbitMq((context, cfg) =>
+    {
+        cfg.Host(builder.Configuration["RabbitMq:Host"] ?? "rabbitmq", "/", h =>
+        {
+            h.Username(builder.Configuration["RabbitMq:Username"] ?? "guest");
+            h.Password(builder.Configuration["RabbitMq:Password"] ?? "guest");
+        });
+        cfg.UseMessageRetry(r => r.Intervals(
+            TimeSpan.FromSeconds(1),
+            TimeSpan.FromSeconds(5),
+            TimeSpan.FromSeconds(15)));
+        cfg.ConfigureEndpoints(context);
+    });
 });
 var config = TypeAdapterConfig.GlobalSettings;
 config.Scan(Assembly.GetExecutingAssembly(), typeof(EventService_Application.Mappings.MappingConfig).Assembly);
@@ -132,39 +133,14 @@ builder.Services.AddCors(options =>
     });
 });
 builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
-// Register repositories
-builder.Services.AddScoped<ISessionRepository, SessionRepository>();
-builder.Services.AddScoped<ISessionBookingRepository, SessionBookingRepository>();
-builder.Services.AddScoped<ITrackRepository, TrackRepository>();
-builder.Services.AddScoped<IEventTypeRepository, EventTypeRepository>();
-builder.Services.AddScoped<IEventRepository, EventRepository>();
-builder.Services.AddScoped<ITicketTypeRepository, TicketTypeRepository>();
-builder.Services.AddScoped<ITalentRepository, TalentRepository>();
-builder.Services.AddScoped<ILineupRepository, LineupRepository>();
-builder.Services.AddScoped<ICheckInRepository, CheckInRepository>();
-builder.Services.AddScoped<IEventTemplateRepository, EventTemplateRepository>();
-builder.Services.AddScoped<ISponsorRepository, SponsorRepository>();
-builder.Services.AddScoped<ISponsorTierRepository, SponsorTierRepository>();
-builder.Services.AddScoped<ISponsorInteractionRepository, SponsorInteractionRepository>();
-builder.Services.AddScoped<IEventTeamMemberRepository, EventTeamMemberRepository>();
-builder.Services.AddScoped<IFeedbackRepository, FeedbackRepository>();
+builder.Services.AddApplicationServices();
 
-// Register services
-builder.Services.AddScoped<ISessionService, SessionService>();
-builder.Services.AddScoped<ISessionBookingService, SessionBookingService>();
-builder.Services.AddScoped<ITrackService, TrackService>();
-builder.Services.AddScoped<IEventTypeService, EventTypeService>();
-builder.Services.AddScoped<IEventService, EventService>();
-builder.Services.AddScoped<ITicketTypeService, TicketTypeService>();
-builder.Services.AddScoped<IPhotoService, PhotoService>();
-builder.Services.AddScoped<ITalentService, TalentService>();
-builder.Services.AddScoped<ILineupService, LineupService>();
-builder.Services.AddScoped<ICheckInService, CheckInService>();
-builder.Services.AddScoped<IEventTemplateService, EventTemplateService>();
-builder.Services.AddScoped<ISponsorService, SponsorService>();
-builder.Services.AddScoped<ISponsorTierService, SponsorTierService>();
-builder.Services.AddScoped<ISponsorInteractionService, SponsorInteractionService>();
-builder.Services.AddScoped<IFeedbackService, FeedbackService>();
+var identityServiceUrl = builder.Configuration["ServiceUrls:IdentityService"] ?? "http://localhost:5049";
+builder.Services.AddHttpClient("IdentityService", client =>
+{
+    client.BaseAddress = new Uri(identityServiceUrl.TrimEnd('/'));
+});
+
 builder.Services.AddHealthChecks();
 var app = builder.Build();
 
@@ -188,5 +164,6 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapHealthChecks("/health");
+app.MapHub<CheckInHub>("/hubs/checkin");
 
 app.Run();

@@ -2,6 +2,7 @@
 using EventService_Application.DTOs;
 using EventService_Application.Interfaces;
 using EventService_Domain.Entities;
+using EventService_Domain.Enums;
 using EventService_Domain.Interfaces;
 using Mapster;
 
@@ -27,16 +28,16 @@ namespace EventService_Application.Services
                 return ApiResponse<BatchLineupResultDto>.Fail(404, "Event not found");
             }
 
-            if (existingEvent.Sessions.Any())
-            {
-                if (request.SessionId == null || existingEvent.Sessions.All(s => s.Id != request.SessionId))
-                {
-                    return ApiResponse<BatchLineupResultDto>.Fail(
-                        400,
-                        "Invalid or missing SessionId for the specified Event"
-                    );
-                }
-            }
+            // if (existingEvent.Sessions.Any())
+            // {
+            //     if (request.SessionId == null || existingEvent.Sessions.All(s => s.Id != request.SessionId))
+            //     {
+            //         return ApiResponse<BatchLineupResultDto>.Fail(
+            //             400,
+            //             "Invalid or missing SessionId for the specified Event"
+            //         );
+            //     }
+            // }
 
             var uniqueTalentIds = request.TalentIds.Distinct().ToList();
 
@@ -83,7 +84,7 @@ namespace EventService_Application.Services
             {
                 await _lineupRepository.AddLineupAsync(lineup);
             }
-
+            var talentLookup = existingTalents.ToDictionary(t => t.Id);
             var result = new BatchLineupResultDto
             {
                 Created = newLineups.Select(l => new LineupDto
@@ -91,9 +92,8 @@ namespace EventService_Application.Services
                     Id = l.Id,
                     EventId = l.EventId,
                     SessionId = l.SessionId,
-                    Talent = l.Talent.Adapt<TalentDto>()
+                    Talent = talentLookup[l.TalentId].Adapt<TalentDto>()
                 }).ToList(),
-
                 SkippedTalentIds = existingTalentIdsInLineup.ToList()
             };
 
@@ -206,15 +206,11 @@ namespace EventService_Application.Services
                 }
             }
 
-            if (existingLineup.Talent != request.Talent.Adapt<Talent>())
+            if (existingLineup.TalentId != request.Talent.Id)
             {
-                var existingTalent =
-                    await _talentRepository.GetTalentByIdAsync(request.Talent.Id);
-
+                var existingTalent = await _talentRepository.GetTalentByIdAsync(request.Talent.Id);
                 if (existingTalent == null)
-                {
                     return ApiResponse<LineupDto>.Fail(404, "Talent not found");
-                }
             }
 
             var duplicated = await _lineupRepository.LineupExistsAsync(
@@ -258,9 +254,10 @@ namespace EventService_Application.Services
             {
                 return ApiResponse<bool>.Fail(404, "Lineup not found");
             }
-            if (existingLineup.Event.CheckIns.Any() || (existingLineup.Session != null && existingLineup.Session.Status == EventService_Domain.Enums.SessionStatus.OnGoing))
+            if (existingLineup.Session != null && 
+                existingLineup.Session.Status == SessionStatus.OnGoing)
             {
-                return ApiResponse<bool>.Fail(400, "Cannot delete lineup with existing check-ins");
+                return ApiResponse<bool>.Fail(400, "Cannot remove talent from an ongoing session");
             }
             var deleted = await _lineupRepository.DeleteLineupAsync(lineupId);
             if (!deleted)

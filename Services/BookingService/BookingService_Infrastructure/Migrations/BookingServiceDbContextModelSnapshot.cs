@@ -22,6 +22,111 @@ namespace BookingService_Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("BookingService_Domain.Entities.CheckIn", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AttendeeEmail")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("AttendeeName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CheckInTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("CheckInType")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("CheckedInByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("EventId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("EventTitle")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("SessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SessionName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TicketCode")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("TicketId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("TicketTypeName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EventId");
+
+                    b.HasIndex("TicketId", "SessionId");
+
+                    b.ToTable("CheckIns", (string)null);
+                });
+
+            modelBuilder.Entity("BookingService_Domain.Entities.EventSettlement", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("EventId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("GrossRevenue")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("NetRevenue")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("OrganizerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("PlatformFeeAmount")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("PlatformFeePercent")
+                        .HasColumnType("numeric");
+
+                    b.Property<DateTime?>("SettledAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TotalOrders")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TotalTicketsSold")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("WalletId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("EventSettlements");
+                });
+
             modelBuilder.Entity("BookingService_Domain.Entities.InventoryReservation", b =>
                 {
                     b.Property<Guid>("Id")
@@ -61,11 +166,23 @@ namespace BookingService_Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("BuyerAvatarUrl")
+                        .HasColumnType("text");
+
+                    b.Property<string>("BuyerEmail")
+                        .HasColumnType("text");
+
+                    b.Property<string>("BuyerName")
+                        .HasColumnType("text");
+
                     b.Property<Guid>("EventId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("Notes")
                         .HasColumnType("text");
+
+                    b.Property<long?>("OrderCode")
+                        .HasColumnType("bigint");
 
                     b.Property<DateTime>("OrderDate")
                         .HasColumnType("timestamp with time zone");
@@ -77,6 +194,10 @@ namespace BookingService_Infrastructure.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("OrderCode")
+                        .IsUnique()
+                        .HasFilter("\"OrderCode\" IS NOT NULL");
 
                     b.ToTable("Orders");
                 });
@@ -95,6 +216,10 @@ namespace BookingService_Infrastructure.Migrations
 
                     b.Property<Guid>("TicketTypeId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("TicketTypeName")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<decimal>("UnitPrice")
                         .HasPrecision(18, 2)
@@ -212,11 +337,65 @@ namespace BookingService_Infrastructure.Migrations
                     b.ToTable("PayoutRequests");
                 });
 
+            modelBuilder.Entity("BookingService_Domain.Entities.SessionSnapshot", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("EndTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("EventId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("LastSyncedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Location")
+                        .HasColumnType("text");
+
+                    b.Property<int>("SessionOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("StartTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("TrackId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EventId");
+
+                    b.ToTable("SessionSnapshots", (string)null);
+                });
+
             modelBuilder.Entity("BookingService_Domain.Entities.Ticket", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<string>("EventName")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("HolderEmail")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("HolderName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("HolderPhone")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     b.Property<bool>("IsUsed")
                         .HasColumnType("boolean");
@@ -237,6 +416,11 @@ namespace BookingService_Infrastructure.Migrations
 
                     b.Property<Guid>("TicketTypeId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("TicketTypeName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
 
                     b.HasKey("Id");
 
@@ -325,6 +509,17 @@ namespace BookingService_Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Wallets");
+                });
+
+            modelBuilder.Entity("BookingService_Domain.Entities.CheckIn", b =>
+                {
+                    b.HasOne("BookingService_Domain.Entities.Ticket", "Ticket")
+                        .WithMany()
+                        .HasForeignKey("TicketId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Ticket");
                 });
 
             modelBuilder.Entity("BookingService_Domain.Entities.OrderDetail", b =>

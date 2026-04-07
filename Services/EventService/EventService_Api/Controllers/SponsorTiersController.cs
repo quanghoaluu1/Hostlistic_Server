@@ -33,6 +33,12 @@ public class SponsorTiersController(ISponsorTierService service) : ControllerBas
         var result = await service.GetByEventIdAsync(eventId, request);
         return Ok(result);
     }
+    [HttpGet]
+    public async Task<IActionResult> GetAll()
+    {
+        var tiers = await service.GetAllSponsorTiersAsync();
+        return Ok(tiers);
+    }
 
     [HttpPatch("{id:guid}")]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateSponsorTierDto dto)

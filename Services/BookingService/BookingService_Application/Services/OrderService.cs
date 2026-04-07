@@ -26,6 +26,15 @@ public class OrderService : IOrderService
         return ApiResponse<OrderDto>.Success(200, "Order retrieved successfully", orderDto);
     }
 
+    public async Task<ApiResponse<OrderDto>> GetOrderByPayOsCodeAsync(long orderCode)
+    {
+        var order = await _orderRepository.GetOrderByOrderCodeAsync(orderCode);
+        if (order is null)
+            return ApiResponse<OrderDto>.Fail(404, "Order not found");
+        var orderDto = order.Adapt<OrderDto>();
+        return ApiResponse<OrderDto>.Success(200, "Order retrieved successfully", orderDto);
+    }
+
     public async Task<ApiResponse<IEnumerable<OrderDto>>> GetOrdersByEventIdAsync(Guid eventId)
     {
         var orders = await _orderRepository.GetOrdersByEventIdAsync(eventId);
@@ -47,12 +56,14 @@ public class OrderService : IOrderService
 
         var order = request.Adapt<Order>();
         order.Status = BookingService_Domain.Enum.OrderStatus.Pending;
+        order.OrderDetails.Clear();
 
         // Create order details
         foreach (var detailRequest in request.OrderDetails)
         {
             var orderDetail = detailRequest.Adapt<OrderDetail>();
             orderDetail.OrderId = order.Id;
+            orderDetail.TicketTypeName = detailRequest.TicketTypeName;
             order.OrderDetails.Add(orderDetail);
         }
 
@@ -72,6 +83,8 @@ public class OrderService : IOrderService
         // Update properties
         existingOrder.Status = request.Status;
         existingOrder.Notes = request.Notes;
+        if (request.OrderCode is not null)
+            existingOrder.OrderCode = request.OrderCode;
 
         await _orderRepository.UpdateOrderAsync(existingOrder);
         await _orderRepository.SaveChangesAsync();

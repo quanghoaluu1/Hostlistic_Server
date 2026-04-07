@@ -2,30 +2,151 @@ using Common;
 using EventService_Application.DTOs;
 using EventService_Application.Interfaces;
 using EventService_Domain.Entities;
+using EventService_Domain.Enums;
 using EventService_Domain.Interfaces;
-using Mapster;
 
 namespace EventService_Application.Services;
 
-public class SessionBookingService : ISessionBookingService
+public class SessionBookingService(
+    ISessionBookingRepository bookingRepository,
+    ISessionRepository sessionRepository) : ISessionBookingService
 {
-    private readonly ISessionBookingRepository _sessionBookingRepository;
-    private readonly ISessionRepository _sessionRepository;
+    // ═══════════════════════════════════════════════════════════════════════
+    //  BOOK SESSION
+    //
+    //  Validation chain:
+    //    1. Session exists + belongs to event
+    //    2. Session is in bookable state (Scheduled or OnGoing)
+    //    3. User hasn't already booked this session
+    //    4. Capacity check (if session has a cap)
+    //    5. Conflict detection → SOFT WARNING (booking proceeds)
+    //
+    //  The soft warning pattern:
+    //    Response is 201 Created (success), but the body includes a
+    //    Warnings[] array listing sessions that overlap in time.
+    //    Frontend displays these as non-blocking toast notifications.
+    //    The user is informed but not blocked — they may intentionally
+    //    want to attend partial sessions across tracks.
+    // ═══════════════════════════════════════════════════════════════════════
 
-    public SessionBookingService(ISessionBookingRepository sessionBookingRepository, ISessionRepository sessionRepository)
+    public async Task<ApiResponse<SessionBookingResponse>> BookSessionAsync(
+        Guid eventId, Guid sessionId, Guid userId)
     {
-        _sessionBookingRepository = sessionBookingRepository;
-        _sessionRepository = sessionRepository;
+        // ── Guard 1: Session exists + belongs to event ──
+        var session = await sessionRepository.GetByIdWithinEventAsync(eventId, sessionId);
+        if (session is null)
+            return ApiResponse<SessionBookingResponse>.Fail(404, "Session not found in this event");
+
+        // ── Guard 2: Session must be bookable ──
+        if (session.Status is SessionStatus.Cancelled)
+            return ApiResponse<SessionBookingResponse>.Fail(400,
+                "Cannot book a cancelled session");
+
+        if (session.Status is SessionStatus.Completed)
+            return ApiResponse<SessionBookingResponse>.Fail(400,
+                "Cannot book a completed session");
+
+        // ── Guard 3: Not already booked ──
+        var hasActiveBooking = await bookingRepository.UserHasBookingForSessionAsync(userId, sessionId);
+        if (hasActiveBooking)
+            return ApiResponse<SessionBookingResponse>.Fail(409,
+                "You have already booked this session");
+
+        // ── Guard 4: Capacity check ──
+        if (session.TotalCapacity.HasValue)
+        {
+            var bookedCount = await sessionRepository.GetBookedCountAsync(sessionId);
+            if (bookedCount >= session.TotalCapacity.Value)
+                return ApiResponse<SessionBookingResponse>.Fail(409,
+                    "Session is full — no available seats");
+        }
+
+        // ── Step 5: Conflict detection — SOFT WARNING ──
+        // Find overlapping sessions this user has already booked
+        List<ConflictWarning>? warnings = null;
+
+        if (session.StartTime.HasValue && session.EndTime.HasValue)
+        {
+            var conflictingSessions = await bookingRepository.GetConflictingSessionsAsync(
+                userId, eventId,
+                session.StartTime.Value,
+                session.EndTime.Value,
+                excludeSessionId: sessionId);
+
+            if (conflictingSessions.Count > 0)
+            {
+                warnings = conflictingSessions.Select(c => new ConflictWarning
+                {
+                    ConflictingSessionId = c.Id,
+                    ConflictingSessionTitle = c.Title,
+                    TrackName = c.Track?.Name,
+                    StartTime = c.StartTime,
+                    EndTime = c.EndTime
+                }).ToList();
+                // NOTE: We DO NOT return here — booking proceeds with warning
+            }
+        }
+
+        // ── Create booking ──
+        var booking = new SessionBooking
+        {
+            Id = Guid.CreateVersion7(),
+            SessionId = sessionId,
+            UserId = userId,
+            Status = BookingStatus.Confirmed,
+            BookingDate = DateTime.UtcNow
+        };
+
+        await bookingRepository.AddSessionBookingAsync(booking);
+        await bookingRepository.SaveChangesAsync();
+
+        // ── Build response ──
+        var response = new SessionBookingResponse
+        {
+            Id = booking.Id,
+            SessionId = sessionId,
+            SessionTitle = session.Title,
+            StartTime = session.StartTime,
+            EndTime = session.EndTime,
+            TrackName = session.Track?.Name,
+            TrackColorHex = session.Track?.ColorHex,
+            VenueName = session.Venue?.Name,
+            Status = BookingStatus.Confirmed,
+            BookingDate = booking.BookingDate,
+            Warnings = warnings
+        };
+
+        return ApiResponse<SessionBookingResponse>.Success(201, "Session booked", response);
     }
 
-    public async Task<ApiResponse<SessionBookingDto>> GetSessionBookingByIdAsync(Guid bookingId)
-    {
-        var sessionBooking = await _sessionBookingRepository.GetSessionBookingByIdAsync(bookingId);
-        if (sessionBooking == null)
-            return ApiResponse<SessionBookingDto>.Fail(404, "Session booking not found");
+    // ═══════════════════════════════════════════════════════════════════════
+    //  CANCEL BOOKING
+    // ═══════════════════════════════════════════════════════════════════════
 
-        var sessionBookingDto = sessionBooking.Adapt<SessionBookingDto>();
-        return ApiResponse<SessionBookingDto>.Success(200, "Session booking retrieved successfully", sessionBookingDto);
+    public async Task<ApiResponse<bool>> CancelBookingAsync(
+        Guid eventId, Guid sessionId, Guid userId)
+    {
+        // Find the user's booking for this session
+        var booking = await bookingRepository.GetByUserAndSessionAsync(userId, sessionId);
+
+        if (booking is null)
+            return ApiResponse<bool>.Fail(404, "No booking found for this session");
+
+        // Verify it belongs to the correct event
+        if (booking.Session.EventId != eventId)
+            return ApiResponse<bool>.Fail(404, "Booking not found in this event");
+
+        if (booking.Status != BookingStatus.Confirmed)
+            return ApiResponse<bool>.Fail(400,
+                $"Cannot cancel a {booking.Status} booking");
+
+        // Soft delete — change status, don't remove record
+        // Preserves audit trail and prevents unique constraint issues on re-booking
+        booking.Status = BookingStatus.Cancelled;
+        await bookingRepository.UpdateSessionBookingAsync(booking);
+        await bookingRepository.SaveChangesAsync();
+
+        return ApiResponse<bool>.Success(200, "Booking cancelled", true);
     }
 
     public async Task<ApiResponse<PagedResult<SessionBookingDto>>> GetSessionBookingsBySessionIdAsync(Guid sessionId, BaseQueryParams request)
@@ -55,56 +176,40 @@ public class SessionBookingService : ISessionBookingService
             );
         return ApiResponse<PagedResult<SessionBookingDto>>.Success(200, "Session bookings retrieved successfully", result);
     }
+    // ═══════════════════════════════════════════════════════════════════════
+    //  MY SCHEDULE
+    //
+    //  Returns all confirmed session bookings for the user within an event.
+    //  Used for the "My Schedule" tab in the attendee portal.
+    //  Sorted by session start time — reads like a personal agenda.
+    // ═══════════════════════════════════════════════════════════════════════
 
-    public async Task<ApiResponse<SessionBookingDto>> CreateSessionBookingAsync(CreateSessionBookingRequest request)
+    public async Task<ApiResponse<MyScheduleResponse>> GetMyScheduleAsync(
+        Guid eventId, Guid userId)
     {
-        // Check if session exists
-        var sessionExists = await _sessionRepository.SessionExistsAsync(request.SessionId);
-        if (!sessionExists)
-            return ApiResponse<SessionBookingDto>.Fail(404, "Session not found");
+        var bookings = await bookingRepository.GetByUserAndEventAsync(userId, eventId);
 
-        // Check if user already has a booking for this session
-        var existingBooking = await _sessionBookingRepository.UserHasBookingForSessionAsync(request.UserId, request.SessionId);
-        if (existingBooking)
-            return ApiResponse<SessionBookingDto>.Fail(400, "User already has a booking for this session");
+        var items = bookings.Select(b => new MyScheduleItemDto
+        {
+            BookingId = b.Id,
+            SessionId = b.SessionId,
+            SessionTitle = b.Session.Title,
+            StartTime = b.Session.StartTime,
+            EndTime = b.Session.EndTime,
+            TrackName = b.Session.Track?.Name,
+            TrackColorHex = b.Session.Track?.ColorHex,
+            VenueName = b.Session.Venue?.Name,
+            SessionStatus = b.Session.Status,
+            BookingDate = b.BookingDate
+        }).ToList();
 
-        var sessionBooking = request.Adapt<SessionBooking>();
-        sessionBooking.Status = EventService_Domain.Enums.BookingStatus.Confirmed;
+        var response = new MyScheduleResponse
+        {
+            EventId = eventId,
+            TotalBookings = items.Count,
+            Bookings = items
+        };
 
-        await _sessionBookingRepository.AddSessionBookingAsync(sessionBooking);
-        await _sessionBookingRepository.SaveChangesAsync();
-
-        var sessionBookingDto = sessionBooking.Adapt<SessionBookingDto>();
-        return ApiResponse<SessionBookingDto>.Success(201, "Session booking created successfully", sessionBookingDto);
-    }
-
-    public async Task<ApiResponse<SessionBookingDto>> UpdateSessionBookingAsync(Guid bookingId, UpdateSessionBookingRequest request)
-    {
-        var existingBooking = await _sessionBookingRepository.GetSessionBookingByIdAsync(bookingId);
-        if (existingBooking == null)
-            return ApiResponse<SessionBookingDto>.Fail(404, "Session booking not found");
-
-        // Update properties
-        existingBooking.Status = request.Status;
-
-        await _sessionBookingRepository.UpdateSessionBookingAsync(existingBooking);
-        await _sessionBookingRepository.SaveChangesAsync();
-
-        var sessionBookingDto = existingBooking.Adapt<SessionBookingDto>();
-        return ApiResponse<SessionBookingDto>.Success(200, "Session booking updated successfully", sessionBookingDto);
-    }
-
-    public async Task<ApiResponse<bool>> DeleteSessionBookingAsync(Guid bookingId)
-    {
-        var exists = await _sessionBookingRepository.SessionBookingExistsAsync(bookingId);
-        if (!exists)
-            return ApiResponse<bool>.Fail(404, "Session booking not found");
-
-        var deleted = await _sessionBookingRepository.DeleteSessionBookingAsync(bookingId);
-        if (!deleted)
-            return ApiResponse<bool>.Fail(500, "Failed to delete session booking");
-
-        await _sessionBookingRepository.SaveChangesAsync();
-        return ApiResponse<bool>.Success(200, "Session booking deleted successfully", true);
+        return ApiResponse<MyScheduleResponse>.Success(200, "Schedule retrieved", response);
     }
 }

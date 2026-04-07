@@ -7,14 +7,6 @@ namespace EventService_Infrastructure.Repositories;
 
 public class SponsorRepository(EventServiceDbContext dbContext) : ISponsorRepository
 {
-    public async Task<IReadOnlyList<Sponsor>> GetByEventIdAsync(Guid eventId)
-    {
-        return await dbContext.Sponsors
-            .Include(s => s.Tier)
-            .Where(x => x.EventId == eventId)
-            .ToListAsync();
-    }
-
     public async Task<IReadOnlyList<Sponsor>> GetByTierIdAsync(Guid tierId)
     {
         return await dbContext.Sponsors
@@ -52,5 +44,25 @@ public class SponsorRepository(EventServiceDbContext dbContext) : ISponsorReposi
     public Task SaveChangesAsync()
     {
         return dbContext.SaveChangesAsync();
+    }
+
+    public async Task<IEnumerable<Sponsor>> GetByEventIdAsync(Guid eventId)
+    {
+        return await dbContext.Sponsors
+            .Where(s => s.EventId == eventId)
+            .Include(s => s.Tier)
+            .ToListAsync();
+    }
+
+    public async Task<Sponsor?> GetByIdWithInteractionsAsync(Guid sponsorId)
+    {
+        return await dbContext.Sponsors
+            .Include(s => s.SponsorInteractions)
+            .FirstOrDefaultAsync(s => s.Id == sponsorId);
+    }
+
+    public async Task<bool> ExistsAsync(Guid sponsorId)
+    {
+        return await dbContext.Sponsors.AnyAsync(s => s.Id == sponsorId);
     }
 }

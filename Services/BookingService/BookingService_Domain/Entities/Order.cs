@@ -9,7 +9,12 @@ public class Order
     public Guid UserId { get; set; }
     public DateTime OrderDate { get; set; } = DateTime.UtcNow;
     public OrderStatus Status { get; set; }
+    public long? OrderCode { get; set; }
     public string? Notes { get; set; } 
+    
+    public string? BuyerName { get; set; }
+    public string? BuyerEmail { get; set; }
+    public string? BuyerAvatarUrl { get; set; }
     
     // Navigation properties to children
     public ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();

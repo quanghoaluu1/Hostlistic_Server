@@ -15,7 +15,7 @@ public class EventRepository(EventServiceDbContext dbContext) : IEventRepository
             .ThenInclude(s => s.Lineups)
             .ThenInclude(l => l.Talent)
             .Include(e => e.EventType)
-            .Include(e => e.Venue).ToListAsync();
+            .ToListAsync();
     }
 
     public async Task<PagedResult<Event>> GetAllEventsAsync(string? name, int pageNumber, int pageSize, string? sortBy = null)
@@ -43,7 +43,6 @@ public class EventRepository(EventServiceDbContext dbContext) : IEventRepository
                 .ThenInclude(t => t.Sessions)
             .ThenInclude(s => s.Lineups)
             .ThenInclude(l => l.Talent)
-            .Include(e => e.Venue)
             .Include(e => e.EventType)
             .FirstOrDefaultAsync(e => e.Id == eventId);
     }
@@ -57,6 +56,8 @@ public class EventRepository(EventServiceDbContext dbContext) : IEventRepository
     {
         return dbContext.Events.Update(@event).Entity;
     }
+
+    
 
     public IQueryable<Event> GetQueryable()
     {
@@ -76,4 +77,5 @@ public class EventRepository(EventServiceDbContext dbContext) : IEventRepository
     {
         await dbContext.SaveChangesAsync();
     }
+    
 }

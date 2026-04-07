@@ -82,8 +82,9 @@ namespace EventService_Infrastructure.Migrations
                     b.Property<DateTime?>("EndDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int?>("EventMode")
-                        .HasColumnType("integer");
+                    b.Property<string>("EventMode")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<int>("EventStatus")
                         .HasColumnType("integer");
@@ -97,6 +98,9 @@ namespace EventService_Infrastructure.Migrations
                     b.Property<string>("Location")
                         .HasColumnType("text");
 
+                    b.Property<Guid>("OrganizerId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime?>("StartDate")
                         .HasColumnType("timestamp with time zone");
 
@@ -109,14 +113,9 @@ namespace EventService_Infrastructure.Migrations
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid?>("VenueId")
-                        .HasColumnType("uuid");
-
                     b.HasKey("Id");
 
                     b.HasIndex("EventTypeId");
-
-                    b.HasIndex("VenueId");
 
                     b.ToTable("Events");
                 });
@@ -130,16 +129,29 @@ namespace EventService_Infrastructure.Migrations
                     b.Property<string>("CustomTitle")
                         .HasColumnType("text");
 
+                    b.Property<DateTime?>("DeclinedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<Guid>("EventId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("InviteToken")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime?>("InviteTokenExpiry")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("InvitedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid>("InvitedByUserId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime?>("JoinedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Dictionary<string, bool>>("Permissions")
+                    b.Property<string>("Permissions")
                         .IsRequired()
                         .HasColumnType("jsonb");
 
@@ -149,12 +161,25 @@ namespace EventService_Infrastructure.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
+                    b.Property<string>("UserEmail")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("UserFullName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
                     b.HasIndex("EventId");
+
+                    b.HasIndex("InviteToken")
+                        .IsUnique()
+                        .HasDatabaseName("IX_EventTeamMembers_InviteToken")
+                        .HasFilter("\"InviteToken\" IS NOT NULL");
 
                     b.ToTable("EventTeamMembers");
                 });
@@ -399,6 +424,9 @@ namespace EventService_Infrastructure.Migrations
                     b.Property<int?>("QaMode")
                         .HasColumnType("integer");
 
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime?>("StartTime")
                         .HasColumnType("timestamp with time zone");
 
@@ -420,11 +448,15 @@ namespace EventService_Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("EventId");
+                    b.HasIndex("EventId", "StartTime", "SortOrder")
+                        .HasDatabaseName("IX_Sessions_EventId_Ordering");
 
-                    b.HasIndex("TrackId");
+                    b.HasIndex("TrackId", "StartTime", "EndTime")
+                        .HasDatabaseName("IX_Sessions_TrackId_TimeRange");
 
-                    b.HasIndex("VenueId");
+                    b.HasIndex("VenueId", "StartTime", "EndTime")
+                        .HasDatabaseName("IX_Sessions_VenueId_TimeRange")
+                        .HasFilter("\"VenueId\" IS NOT NULL");
 
                     b.ToTable("Sessions");
                 });
@@ -449,7 +481,12 @@ namespace EventService_Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("SessionId");
+                    b.HasIndex("SessionId", "Status")
+                        .HasDatabaseName("IX_SessionBookings_SessionId_Status");
+
+                    b.HasIndex("UserId", "SessionId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_SessionBookings_UserId_SessionId");
 
                     b.ToTable("SessionBookings");
                 });
@@ -520,9 +557,6 @@ namespace EventService_Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("EventId")
-                        .HasColumnType("uuid");
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");
@@ -531,8 +565,6 @@ namespace EventService_Infrastructure.Migrations
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("EventId");
 
                     b.ToTable("SponsorTiers");
                 });
@@ -654,12 +686,15 @@ namespace EventService_Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime?>("StartTime")
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("EventId");
+                    b.HasIndex("EventId", "SortOrder");
 
                     b.ToTable("Tracks");
                 });
@@ -673,6 +708,16 @@ namespace EventService_Infrastructure.Migrations
                     b.Property<int>("Capacity")
                         .HasColumnType("integer");
 
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid>("EventId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("LayoutPublicId")
+                        .HasColumnType("text");
+
                     b.Property<string>("LayoutUrl")
                         .HasColumnType("text");
 
@@ -682,9 +727,13 @@ namespace EventService_Infrastructure.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("EventId", "Name")
+                        .IsUnique();
 
                     b.ToTable("Venues");
                 });
@@ -732,14 +781,7 @@ namespace EventService_Infrastructure.Migrations
                         .HasForeignKey("EventTypeId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.HasOne("EventService_Domain.Entities.Venue", "Venue")
-                        .WithMany("Events")
-                        .HasForeignKey("VenueId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.Navigation("EventType");
-
-                    b.Navigation("Venue");
                 });
 
             modelBuilder.Entity("EventService_Domain.Entities.EventTeamMember", b =>
@@ -958,17 +1000,6 @@ namespace EventService_Infrastructure.Migrations
                     b.Navigation("Sponsor");
                 });
 
-            modelBuilder.Entity("EventService_Domain.Entities.SponsorTier", b =>
-                {
-                    b.HasOne("EventService_Domain.Entities.Event", "Event")
-                        .WithMany("SponsorTiers")
-                        .HasForeignKey("EventId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Event");
-                });
-
             modelBuilder.Entity("EventService_Domain.Entities.TicketType", b =>
                 {
                     b.HasOne("EventService_Domain.Entities.Event", "Event")
@@ -998,6 +1029,17 @@ namespace EventService_Infrastructure.Migrations
                     b.Navigation("Event");
                 });
 
+            modelBuilder.Entity("EventService_Domain.Entities.Venue", b =>
+                {
+                    b.HasOne("EventService_Domain.Entities.Event", "Event")
+                        .WithMany("Venues")
+                        .HasForeignKey("EventId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Event");
+                });
+
             modelBuilder.Entity("EventService_Domain.Entities.Event", b =>
                 {
                     b.Navigation("CheckIns");
@@ -1010,13 +1052,13 @@ namespace EventService_Infrastructure.Migrations
 
                     b.Navigation("Sessions");
 
-                    b.Navigation("SponsorTiers");
-
                     b.Navigation("Sponsors");
 
                     b.Navigation("TicketTypes");
 
                     b.Navigation("Tracks");
+
+                    b.Navigation("Venues");
                 });
 
             modelBuilder.Entity("EventService_Domain.Entities.Poll", b =>
@@ -1068,8 +1110,6 @@ namespace EventService_Infrastructure.Migrations
 
             modelBuilder.Entity("EventService_Domain.Entities.Venue", b =>
                 {
-                    b.Navigation("Events");
-
                     b.Navigation("Sessions");
                 });
 

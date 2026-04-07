@@ -10,5 +10,6 @@ public interface IEventService
     Task<ApiResponse<EventResponseDto>> GetEventByIdAsync(Guid eventId);
     Task<ApiResponse<EventResponseDto>> UpdateEventAsync(Guid eventId, EventRequestDto request, string? publicId);
     Task<ApiResponse<PagedResult<MyEventDto>>> GetMyEventAsync(Guid userId, MyEventQueryParams queryParams);
-    Task<ApiResponse<PagedResult<EventResponseDto>>> GetPublicEventsAsync(EventRequest request);
+    Task<ApiResponse<PagedResult<PublicEventDto>>> GetPublicEventsAsync(PublicEventQueryParams queryParams);
+    Task<ApiResponse<StreamAuthResponseDto>> VerifyStreamAccessAsync(Guid eventId, Guid userId);
 }
