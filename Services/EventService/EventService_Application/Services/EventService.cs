@@ -47,7 +47,8 @@ public class EventService(
         eventEntity.Id = Guid.NewGuid();
         eventEntity.OrganizerId = organizerId;
         eventEntity.TimeZoneId = request.TimeZoneId;
-
+        eventEntity.AgendaMode = AgendaMode.Auto;
+        
         var defaultTrack = new Track
         {
             Id = Guid.NewGuid(),
@@ -304,6 +305,18 @@ public class EventService(
     return ApiResponse<PagedResult<PublicEventDto>>
         .Success(200, "Public events retrieved successfully", result);
 }
+
+    public async Task<ApiResponse<bool>> ToggleAgendaModeAsync(Guid eventId)
+    {
+        var eventEntity = await eventRepository.GetEventByIdAsync(eventId);
+        if (eventEntity == null)
+            return ApiResponse<bool>.Fail(404, "Event not found");
+        eventEntity.AgendaMode = eventEntity.AgendaMode == AgendaMode.Auto ? AgendaMode.Custom : AgendaMode.Auto;
+        eventRepository.UpdateEventAsync(eventEntity);
+        await eventRepository.SaveChangesAsync();
+        return ApiResponse<bool>.Success(200, "Agenda mode toggled successfully", eventEntity.AgendaMode == AgendaMode.Auto);
+        
+    }
 
     private void ApplyEventUpdate(Event eventEntity, EventRequestDto request)
     {

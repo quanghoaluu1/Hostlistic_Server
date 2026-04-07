@@ -1,5 +1,3 @@
-using EventService_Infrastructure.Interfaces;
-
 namespace EventService_Test;
 
 public class AgendaServiceTest

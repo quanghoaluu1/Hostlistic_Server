@@ -1,6 +1,6 @@
 ﻿using EventService_Domain.Enums;
+using EventService_Domain.Interfaces;
 using EventService_Infrastructure.Data;
-using EventService_Infrastructure.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 namespace EventService_Infrastructure.Repositories;
@@ -13,7 +13,7 @@ public class AgendaRepository(EventServiceDbContext context) : IAgendaRepository
         var eventEntity = await context.Events
             .AsNoTracking()
             .Where(e => e.Id == eventId)
-            .Select(e => new { e.Id, e.StartDate, e.EndDate, e.TimeZoneId })
+            .Select(e => new { e.Id, e.StartDate, e.EndDate, e.TimeZoneId, e.AgendaMode })
             .FirstOrDefaultAsync();
  
         if (eventEntity is null)
@@ -82,6 +82,7 @@ public class AgendaRepository(EventServiceDbContext context) : IAgendaRepository
         var result = new AgendaQueryResult
         {
             EventId = eventEntity.Id,
+            AgendaMode = eventEntity.AgendaMode,
             EventStartDate = eventEntity.StartDate,
             EventEndDate = eventEntity.EndDate,
             TimeZoneId = eventEntity.TimeZoneId,
