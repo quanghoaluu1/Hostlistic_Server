@@ -10,47 +10,36 @@ public partial class PromptTemplateEngine : IPromptTemplateEngine
      /// <summary>
     /// Render template: xử lý {{#if}}, {{#each}}, {{placeholder}}
     /// </summary>
-    public string Render(string template, Dictionary<string, string> parameters)
-    {
-        var result = template;
 
-        // 1. {{#if key}}...{{else}}...{{/if}}
-        result = IfElseRegex().Replace(result, match =>
+        public string Render(string template, Dictionary<string, string> parameters)
         {
-            var key = match.Groups[1].Value;
-            var ifBlock = match.Groups[2].Value;
-            var elseBlock = match.Groups[3].Value;
+            var result = template;
 
-            return HasValue(parameters, key)
-                ? Render(ifBlock, parameters)
-                : Render(elseBlock, parameters);
-        });
+            // Step 1: Handle conditional blocks {{#key}}...{{/key}}
+            var conditionalPattern = new Regex(@"\{\{#(\w+)\}\}(.*?)\{\{/\1\}\}", RegexOptions.Singleline);
+            result = conditionalPattern.Replace(result, match =>
+            {
+                var key = match.Groups[1].Value;
+                // Show block content only if key exists and is non-empty
+                if (parameters.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value))
+                    return match.Groups[2].Value; // keep inner content (will be further replaced)
+                return ""; // remove entire block
+            });
 
-        // 2. {{#if key}}...{{/if}} (không có else)
-        result = IfRegex().Replace(result, match =>
-        {
-            var key = match.Groups[1].Value;
-            var content = match.Groups[2].Value;
+            // Step 2: Simple key replacement {{key}}
+            foreach (var (key, value) in parameters)
+            {
+                result = result.Replace($"{{{{{key}}}}}", value ?? "");
+            }
 
-            return HasValue(parameters, key)
-                ? Render(content, parameters)
-                : string.Empty;
-        });
+            // Step 3: Clean up leftover unreplaced tags
+            result = Regex.Replace(result, @"\{\{.*?\}\}", "");
 
-        // 3. {{placeholder}} → giá trị thực
-        result = PlaceholderRegex().Replace(result, match =>
-        {
-            var key = match.Groups[1].Value;
-            return parameters.TryGetValue(key, out var value)
-                ? value
-                : string.Empty; // Không để lại [key], giữ prompt sạch
-        });
+            // Step 4: Clean up excessive blank lines
+            result = Regex.Replace(result, @"\n{3,}", "\n\n");
 
-        // 4. Clean up: xóa dòng trống thừa (>2 liên tiếp → 2)
-        result = ExcessiveNewlinesRegex().Replace(result, "\n\n");
-
-        return result.Trim();
-    }
+            return result.Trim();
+        }
 
     /// <summary>
     /// Build parameters từ EventDetailDto — reuse cho mọi content type
@@ -271,29 +260,64 @@ public partial class PromptTemplateEngine : IPromptTemplateEngine
     else
     {
         parameters["talent_bio"] = talent.Bio ?? "";
-        parameters["source_text"] = "";
+parameters["source_text"] = "";
 
-        var hasAnyBio = !string.IsNullOrWhiteSpace(talent.Bio);
-        var hasOrg = !string.IsNullOrWhiteSpace(talent.Organization);
+var hasAnyBio = !string.IsNullOrWhiteSpace(talent.Bio);
+var hasOrg = !string.IsNullOrWhiteSpace(talent.Organization);
 
-        parameters["mode_instruction"] = (hasAnyBio, hasOrg) switch
-        {
-            (true, true) =>
-                "Generate a professional introduction using ONLY the provided name, role, "
-              + "organization, and biography. Do NOT invent or assume any additional details.",
-            (false, true) =>
-                "Generate a brief professional introduction using ONLY the provided name, "
-              + "role, and organization. The biography is not available — keep the intro "
-              + "short and factual. Do NOT fabricate credentials or achievements.",
-            (true, false) =>
-                "Generate a professional introduction using the provided name, role, "
-              + "and biography. Organization is not specified — do not guess it.",
-            (false, false) =>
-                "ONLY the speaker's name and role type are available. Generate a minimal, "
-              + "placeholder-style introduction (1-2 sentences max). Clearly indicate that "
-              + "additional details should be provided by the organizer. "
-              + "Do NOT fabricate any biographical information whatsoever."
-        };
+if (request.AllowWebKnowledge)
+{
+    parameters["mode_instruction"] = (hasAnyBio, hasOrg) switch
+    {
+        (true, true) =>
+            "This speaker may be a well-known public figure. You MAY use your training "
+          + "knowledge to ENRICH the provided biography. Keep all facts from the bio, "
+          + "and add notable achievements or context if you recognize them. "
+          + "If you are not confident about who this person is, use ONLY the provided data.",
+
+        (true, false) =>
+            "This speaker may be a well-known public figure. You MAY use your training "
+          + "knowledge to enrich the provided biography and infer their organization. "
+          + "If you are not confident, use ONLY the provided bio.",
+
+        (false, true) =>
+            "This speaker may be a well-known public figure. You MAY use your training "
+          + "knowledge to write a professional introduction based on their name and "
+          + "organization. If you are not confident about who this person is, write a "
+          + "brief factual intro using ONLY the provided name, role, and organization.",
+
+        (false, false) =>
+            "This speaker may be a well-known public figure. You MAY use your training "
+          + "knowledge to write a professional introduction. Include their notable role, "
+          + "key achievements, and relevance to the event. If you are not confident about "
+          + "who this person is, fall back to a minimal placeholder and state that "
+          + "additional details should be confirmed by the organizer."
+    };
+}
+else
+{
+    parameters["mode_instruction"] = (hasAnyBio, hasOrg) switch
+    {
+        (true, true) =>
+            "Generate a professional introduction using ONLY the provided name, role, "
+          + "organization, and biography. Do NOT invent or assume any additional details.",
+
+        (false, true) =>
+            "Generate a brief professional introduction using ONLY the provided name, "
+          + "role, and organization. The biography is not available — keep the intro "
+          + "short and factual. Do NOT fabricate credentials or achievements.",
+
+        (true, false) =>
+            "Generate a professional introduction using the provided name, role, "
+          + "and biography. Organization is not specified — do not guess it.",
+
+        (false, false) =>
+            "ONLY the speaker's name and role type are available. Generate a minimal, "
+          + "placeholder-style introduction (1-2 sentences max). Clearly indicate that "
+          + "additional details should be provided by the organizer. "
+          + "Do NOT fabricate any biographical information whatsoever."
+    };
+}
     }
 
     if (!string.IsNullOrWhiteSpace(request.AdditionalContext))

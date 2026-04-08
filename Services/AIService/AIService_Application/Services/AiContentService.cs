@@ -395,6 +395,7 @@ public partial class AiContentService(
     // ── Step 6: Build parameters (mode-aware) ──
     var parameters = promptTemplateEngine.BuildSpeakerIntroParameters(
         eventEntity, talent, talentSessionNames, isEventWide, request);
+    logger.LogInformation("Parameters : {Param}", parameters);
     var renderedUserPrompt = promptTemplateEngine.Render(
         template.UserPromptTemplate, parameters);
 
@@ -436,6 +437,8 @@ public partial class AiContentService(
             "Generating speaker intro for talent {TalentId}, mode={Mode}, event {EventId}",
             request.TalentId, request.Mode, request.EventId);
 
+        logger.LogInformation("System prompt: {Prompt}", template.SystemPrompt);
+        logger.LogInformation("User prompt: {Prompt}", renderedUserPrompt);
         var aiResult = await aiProvider.GenerateContentAsync(
             template.SystemPrompt,
             renderedUserPrompt,
