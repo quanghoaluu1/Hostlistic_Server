@@ -18,4 +18,14 @@ public interface IAiContentService
         GenerateSocialPostRequest request,
         Guid organizerId,
         CancellationToken ct = default);
+    
+    Task<ApiResponse<AiContentResponse>> GenerateSpeakerIntroAsync(
+        GenerateSpeakerIntroRequest request,
+        Guid organizerId,
+        CancellationToken ct = default);
+
+    Task<ApiResponse<AiContentResponse>> GenerateSessionAbstractAsync(
+        GenerateSessionAbstractRequest request,
+        Guid organizerId,
+        CancellationToken ct = default);
 }

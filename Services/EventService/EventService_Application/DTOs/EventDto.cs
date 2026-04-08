@@ -39,11 +39,21 @@ public record EventResponseDto(
 );
 public record VenueResponseDto(Guid Id, string Name, string Address, string Capacity);
 
-public record SessionResponseDto(Guid Id, string Title, DateTime StartTime, DateTime EndTime, TalentDetailDto[] Talents);
+public record SessionResponseDto(
+    Guid Id,
+    string Title,
+    string Description,          
+    DateTime StartTime,
+    DateTime EndTime,
+    TalentDetailDto[] Talents);
 
 public record TrackResponseDto(Guid Id, string Name, string Description, List<SessionResponseDto> Sessions);
 
-public record TalentDetailDto(Guid Id, string Name, string Type);
-    
+public record TalentDetailDto(
+    Guid Id,
+    string Name,
+    string Type,
+    string? Bio,                   
+    string? Organization);     
     
     
