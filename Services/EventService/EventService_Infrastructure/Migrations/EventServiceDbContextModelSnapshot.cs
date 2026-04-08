@@ -491,6 +491,53 @@ namespace EventService_Infrastructure.Migrations
                     b.ToTable("SessionBookings");
                 });
 
+            modelBuilder.Entity("EventService_Domain.Entities.SessionEngagementRestriction", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("EventId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Scope")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SessionId");
+
+                    b.HasIndex("SessionId", "UserId", "Scope", "IsActive")
+                        .HasDatabaseName("IX_SessionEngagementRestrictions_SessionUserScope");
+
+                    b.ToTable("SessionEngagementRestrictions");
+                });
+
             modelBuilder.Entity("EventService_Domain.Entities.Sponsor", b =>
                 {
                     b.Property<Guid>("Id")
@@ -968,6 +1015,17 @@ namespace EventService_Infrastructure.Migrations
                 {
                     b.HasOne("EventService_Domain.Entities.Session", "Session")
                         .WithMany("SessionBookings")
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Session");
+                });
+
+            modelBuilder.Entity("EventService_Domain.Entities.SessionEngagementRestriction", b =>
+                {
+                    b.HasOne("EventService_Domain.Entities.Session", "Session")
+                        .WithMany()
                         .HasForeignKey("SessionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();

@@ -144,7 +144,6 @@ if (app.Environment.IsDevelopment())
     app.MapScalarApiReference();
 }
 app.UseCors("Production");
-app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();
