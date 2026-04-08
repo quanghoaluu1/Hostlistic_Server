@@ -18,6 +18,23 @@ public class GenerateSessionAbstractRequest
     [Required]
     [RegularExpression("^(en|vi)$", ErrorMessage = "Language must be 'en' or 'vi'")]
     public string Language { get; init; } = "en";
+    
+    /// <summary>
+    /// "from_metadata" = generate abstract from session title, speakers, track info.
+    /// "expand" = organizer provides a short description, AI expands into full abstract.
+    /// </summary>
+    [Required]
+    [RegularExpression("^(from_metadata|expand)$",
+        ErrorMessage = "Mode must be 'from_metadata' or 'expand'")]
+    public string Mode { get; init; } = "from_metadata";
+
+    /// <summary>
+    /// Required when mode = "expand". Organizer's short description or bullet points
+    /// that the AI will expand into a professional session abstract.
+    /// </summary>
+    [MinLength(20)]
+    [MaxLength(3000)]
+    public string? SourceText { get; init; }
 
     /// <summary>
     /// Target audience context: "general", "technical", "executive"

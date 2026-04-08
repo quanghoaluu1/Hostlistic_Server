@@ -311,9 +311,6 @@ public Dictionary<string, string> BuildSessionAbstractParameters(
     {
         // ── Session context ──
         ["session_title"] = session.Title,
-        ["session_description"] = !string.IsNullOrWhiteSpace(session.Description)
-            ? session.Description
-            : "No description provided by organizer",
         ["session_start_time"] = session.StartTime.ToString("hh:mm tt"),
         ["session_end_time"] = session.EndTime.ToString("hh:mm tt"),
         ["session_date"] = session.StartTime.ToString("MMMM dd, yyyy"),
@@ -322,8 +319,7 @@ public Dictionary<string, string> BuildSessionAbstractParameters(
         // ── Track context ──
         ["track_name"] = track.Name,
         ["track_description"] = !string.IsNullOrWhiteSpace(track.Description)
-            ? track.Description
-            : "",
+            ? track.Description : "",
 
         // ── Event context ──
         ["event_title"] = eventDetail.Title,
@@ -331,17 +327,18 @@ public Dictionary<string, string> BuildSessionAbstractParameters(
         ["event_mode"] = eventDetail.EventMode ?? "Offline",
 
         // ── Request context ──
+        ["mode"] = request.Mode,
         ["tone"] = request.Tone,
         ["language"] = request.Language == "vi" ? "Vietnamese" : "English",
         ["target_audience"] = request.TargetAudience switch
         {
             "technical" => "a technical audience (developers, engineers, specialists)",
-            "executive" => "executives and decision-makers (focus on business value and outcomes)",
-            _           => "a general audience (mixed backgrounds and expertise levels)"
+            "executive" => "executives and decision-makers (focus on business value)",
+            _ => "a general audience (mixed backgrounds and expertise levels)"
         },
     };
 
-    // ── Speakers for this session ──
+    // ── Speakers ──
     if (session.Talents.Length > 0)
     {
         var speakers = session.Talents.Select(t =>
@@ -349,12 +346,61 @@ public Dictionary<string, string> BuildSessionAbstractParameters(
                 ? $"{t.Name} ({t.Type})"
                 : $"{t.Name} ({t.Type}, {t.Organization})");
         parameters["session_speakers"] = string.Join(", ", speakers);
-        parameters["speaker_count"] = session.Talents.Length.ToString();
     }
     else
     {
         parameters["session_speakers"] = "TBA";
-        parameters["speaker_count"] = "0";
+    }
+
+    // ── Mode-specific parameters ──
+    if (request.Mode == "expand")
+    {
+        var sourceText = request.SourceText!.Trim();
+
+        const int softCharLimit = 2500;
+        if (sourceText.Length > softCharLimit)
+            sourceText = string.Concat(sourceText.AsSpan(0, softCharLimit), "\n[...truncated]");
+
+        parameters["source_text"] = sourceText;
+        parameters["session_description"] = "";
+        parameters["mode_instruction"] =
+            "EXPAND the provided source text into a professional session abstract. "
+          + "Keep all facts from the source. Add structure (What You'll Learn, "
+          + "Who Should Attend) but do NOT invent topics or claims not present "
+          + "in the source text. The result should be richer and more detailed "
+          + "than the input while remaining faithful to it.";
+    }
+    else // from_metadata
+    {
+        parameters["source_text"] = "";
+        parameters["session_description"] = !string.IsNullOrWhiteSpace(session.Description)
+            ? session.Description : "";
+
+        var hasDesc = !string.IsNullOrWhiteSpace(session.Description);
+        var hasSpeakers = session.Talents.Length > 0;
+
+        parameters["mode_instruction"] = (hasDesc, hasSpeakers) switch
+        {
+            (true, true) =>
+                "Generate a professional session abstract using the provided title, "
+              + "description, speaker information, and track context. "
+              + "Do NOT invent topics not implied by the existing data.",
+
+            (true, false) =>
+                "Generate a session abstract using the provided title and description. "
+              + "Speakers are TBA — do not fabricate speaker names or credentials.",
+
+            (false, true) =>
+                "Generate a session abstract based on the title and speaker expertise. "
+              + "No description was provided — infer the session scope from the title "
+              + "and track context only. Keep it concise.",
+
+            (false, false) =>
+                "ONLY the session title and track name are available. Generate a brief, "
+              + "placeholder-style abstract (2-3 sentences max). Clearly indicate that "
+              + "additional details will be announced. Do NOT fabricate specific topics "
+              + "or learning outcomes."
+        };
     }
 
     // ── Optional fields ──
