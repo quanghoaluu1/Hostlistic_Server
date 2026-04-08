@@ -34,6 +34,7 @@ public class GenerateSpeakerIntroRequest
     /// </summary>
     [MaxLength(5000)]
     public string? SourceText { get; init; }
+    public bool AllowWebKnowledge { get; init; } = false;
 
     /// <summary>
     /// Optional: additional details the organizer wants highlighted
