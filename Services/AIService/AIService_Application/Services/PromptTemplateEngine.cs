@@ -221,6 +221,152 @@ public partial class PromptTemplateEngine : IPromptTemplateEngine
         parameters[lengthKey] = "true";
         return parameters;
     }
+    
+    public Dictionary<string, string> BuildSpeakerIntroParameters(
+    EventDetailDto eventDetail,
+    LineupTalentDto talent,
+    List<string> talentSessionNames,
+    bool isEventWide,
+    GenerateSpeakerIntroRequest request)
+{
+    var parameters = new Dictionary<string, string>
+    {
+        ["talent_name"] = talent.Name,
+        ["talent_type"] = talent.Type,
+        ["talent_organization"] = talent.Organization ?? "Not specified",
+
+        ["event_title"] = eventDetail.Title,
+        ["event_type"] = eventDetail.EventTypeName,
+        ["event_date"] = eventDetail.StartDate?.ToString("MMMM dd, yyyy") ?? "TBD",
+
+        ["mode"] = request.Mode,
+        ["tone"] = request.Tone,
+        ["language"] = request.Language == "vi" ? "Vietnamese" : "English",
+    };
+
+    // ── Session assignments (now uses lineup data correctly) ──
+    if (isEventWide && talentSessionNames.Count == 0)
+    {
+        parameters["talent_sessions"] = "Event-wide speaker (featured across the entire event)";
+    }
+    else if (talentSessionNames.Count > 0)
+    {
+        parameters["talent_sessions"] = string.Join("; ", talentSessionNames);
+    }
+    else
+    {
+        parameters["talent_sessions"] = "To be announced";
+    }
+
+    // ── Mode-specific parameters (UNCHANGED from previous version) ──
+    if (request.Mode == "summarize")
+    {
+        parameters["source_text"] = request.SourceText!;
+        parameters["mode_instruction"] =
+            "SUMMARIZE the provided source text into a concise 2-4 sentence professional "
+          + "introduction. Preserve key facts (credentials, titles, achievements) "
+          + "but remove unnecessary detail. Do NOT add any information not present "
+          + "in the source text.";
+    }
+    else
+    {
+        parameters["talent_bio"] = talent.Bio ?? "";
+        parameters["source_text"] = "";
+
+        var hasAnyBio = !string.IsNullOrWhiteSpace(talent.Bio);
+        var hasOrg = !string.IsNullOrWhiteSpace(talent.Organization);
+
+        parameters["mode_instruction"] = (hasAnyBio, hasOrg) switch
+        {
+            (true, true) =>
+                "Generate a professional introduction using ONLY the provided name, role, "
+              + "organization, and biography. Do NOT invent or assume any additional details.",
+            (false, true) =>
+                "Generate a brief professional introduction using ONLY the provided name, "
+              + "role, and organization. The biography is not available — keep the intro "
+              + "short and factual. Do NOT fabricate credentials or achievements.",
+            (true, false) =>
+                "Generate a professional introduction using the provided name, role, "
+              + "and biography. Organization is not specified — do not guess it.",
+            (false, false) =>
+                "ONLY the speaker's name and role type are available. Generate a minimal, "
+              + "placeholder-style introduction (1-2 sentences max). Clearly indicate that "
+              + "additional details should be provided by the organizer. "
+              + "Do NOT fabricate any biographical information whatsoever."
+        };
+    }
+
+    if (!string.IsNullOrWhiteSpace(request.AdditionalContext))
+        parameters["additional_context"] = request.AdditionalContext;
+
+    return parameters;
+}
+public Dictionary<string, string> BuildSessionAbstractParameters(
+    EventDetailDto eventDetail,
+    SessionDetailDto session,
+    TrackDetailDto track,
+    GenerateSessionAbstractRequest request)
+{
+    var parameters = new Dictionary<string, string>
+    {
+        // ── Session context ──
+        ["session_title"] = session.Title,
+        ["session_description"] = !string.IsNullOrWhiteSpace(session.Description)
+            ? session.Description
+            : "No description provided by organizer",
+        ["session_start_time"] = session.StartTime.ToString("hh:mm tt"),
+        ["session_end_time"] = session.EndTime.ToString("hh:mm tt"),
+        ["session_date"] = session.StartTime.ToString("MMMM dd, yyyy"),
+        ["session_duration"] = $"{(session.EndTime - session.StartTime).TotalMinutes:0} minutes",
+
+        // ── Track context ──
+        ["track_name"] = track.Name,
+        ["track_description"] = !string.IsNullOrWhiteSpace(track.Description)
+            ? track.Description
+            : "",
+
+        // ── Event context ──
+        ["event_title"] = eventDetail.Title,
+        ["event_type"] = eventDetail.EventTypeName,
+        ["event_mode"] = eventDetail.EventMode ?? "Offline",
+
+        // ── Request context ──
+        ["tone"] = request.Tone,
+        ["language"] = request.Language == "vi" ? "Vietnamese" : "English",
+        ["target_audience"] = request.TargetAudience switch
+        {
+            "technical" => "a technical audience (developers, engineers, specialists)",
+            "executive" => "executives and decision-makers (focus on business value and outcomes)",
+            _           => "a general audience (mixed backgrounds and expertise levels)"
+        },
+    };
+
+    // ── Speakers for this session ──
+    if (session.Talents.Length > 0)
+    {
+        var speakers = session.Talents.Select(t =>
+            string.IsNullOrEmpty(t.Organization)
+                ? $"{t.Name} ({t.Type})"
+                : $"{t.Name} ({t.Type}, {t.Organization})");
+        parameters["session_speakers"] = string.Join(", ", speakers);
+        parameters["speaker_count"] = session.Talents.Length.ToString();
+    }
+    else
+    {
+        parameters["session_speakers"] = "TBA";
+        parameters["speaker_count"] = "0";
+    }
+
+    // ── Optional fields ──
+    if (!string.IsNullOrWhiteSpace(request.KeyTakeaways))
+        parameters["key_takeaways"] = request.KeyTakeaways;
+
+    if (!string.IsNullOrWhiteSpace(request.AdditionalContext))
+        parameters["additional_context"] = request.AdditionalContext;
+
+    return parameters;
+}
+    
     public (string subject, string htmlBody) ParseEmailResponse(string rawContent)
     {
         var sanitized = SanitizeHtml(rawContent);
