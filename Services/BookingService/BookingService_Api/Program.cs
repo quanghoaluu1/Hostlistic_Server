@@ -62,18 +62,26 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddDbContext<BookingServiceDbContext>(optionsAction =>
 {
-    optionsAction.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
+    optionsAction.UseNpgsql(builder.Configuration.GetConnectionString("BookingDbConnection"));
 });
 builder.Services.AddMassTransit(config =>
 {
     config.AddConsumer<EventCompletedConsumer>();
+    config.AddConsumer<SessionSyncedEventConsumer>();
+    config.AddConsumer<SessionDeletedEventConsumer>();
+    config.AddConsumer<WalletBookingConfirmConsumer>();
+    config.AddConsumer<FreePurchaseCompletedConsumer>();
     config.UsingRabbitMq((context, cfg) =>
     {
-        cfg.Host(builder.Configuration["RabbitMq:Host"] ?? "rabbitmq", "/", h =>
-        {
-            h.Username(builder.Configuration["RabbitMq:Username"] ?? "guest");
-            h.Password(builder.Configuration["RabbitMq:Password"] ?? "guest");
-        });
+        var uri = builder.Configuration.GetConnectionString("rabbitmq");
+        if (!string.IsNullOrEmpty(uri))
+            cfg.Host(new Uri(uri));
+        else
+            cfg.Host(builder.Configuration["RabbitMq:Host"] ?? "rabbitmq", "/", h =>
+            {
+                h.Username(builder.Configuration["RabbitMq:Username"] ?? "guest");
+                h.Password(builder.Configuration["RabbitMq:Password"] ?? "guest");
+            });
         cfg.UseMessageRetry(r => r.Intervals(
             TimeSpan.FromSeconds(1),
             TimeSpan.FromSeconds(5),

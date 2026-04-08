@@ -15,6 +15,12 @@ namespace BookingService_Application.Interfaces
 
         Task<List<TicketDto>> GenerateTicketsWithQrCodesAsync(
             Guid orderId,
-            List<TicketItemRequest> ticketItems);
+            List<TicketItemRequest> ticketItems,
+            Guid eventId,
+            string eventName = "",
+            string? buyerName = null,
+            string? buyerEmail = null);
+
+        Task<ApiResponse<FreeTicketPurchaseResponse>> PurchaseFreeTicketsAsync(FreeTicketPurchaseRequest request);
     }
 }

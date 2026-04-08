@@ -1,6 +1,6 @@
 ﻿using EventService_Domain.Enums;
 
-namespace EventService_Infrastructure.Interfaces;
+namespace EventService_Domain.Interfaces;
 
 public interface IAgendaRepository
 {
@@ -10,9 +10,21 @@ public interface IAgendaRepository
 public class AgendaQueryResult
 {
     public Guid EventId { get; set; }
+    public AgendaMode AgendaMode { get; set; }
     public DateTime? EventStartDate { get; set; }
     public DateTime? EventEndDate { get; set; }
+    public string? TimeZoneId { get; set; }
     public List<AgendaTrackData> Tracks { get; set; } = [];
+    public List<AgendaEventDayData> EventDays { get; set; } = [];
+}
+
+public class AgendaEventDayData
+{
+    public Guid Id { get; set; }
+    public int DayNumber { get; set; }
+    public DateOnly Date { get; set; }
+    public string? Title { get; set; }
+    public string? Theme { get; set; }
 }
  
 public class AgendaTrackData

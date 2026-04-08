@@ -12,6 +12,10 @@ public class Order
     public long? OrderCode { get; set; }
     public string? Notes { get; set; } 
     
+    public string? BuyerName { get; set; }
+    public string? BuyerEmail { get; set; }
+    public string? BuyerAvatarUrl { get; set; }
+    
     // Navigation properties to children
     public ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();
     public ICollection<Ticket> Tickets { get; set; } = new List<Ticket>();

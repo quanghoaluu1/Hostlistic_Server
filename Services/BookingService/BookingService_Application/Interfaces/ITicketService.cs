@@ -11,4 +11,5 @@ public interface ITicketService
     Task<ApiResponse<TicketDto>> CreateTicketAsync(CreateTicketRequest request);
     Task<ApiResponse<TicketDto>> UpdateTicketAsync(Guid ticketId, UpdateTicketRequest request);
     Task<ApiResponse<bool>> DeleteTicketAsync(Guid ticketId);
+    Task<ApiResponse<int>> RegenerateAllQrCodesAsync();
 }

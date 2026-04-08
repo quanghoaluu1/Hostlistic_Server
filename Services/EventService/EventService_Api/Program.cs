@@ -1,5 +1,6 @@
 using Common;
 using EventService_Api;
+using EventService_Api.Consumers;
 using EventService_Api.Extensions;
 using EventService_Api.Hubs;
 using EventService_Infrastructure.Data;
@@ -101,22 +102,28 @@ builder.Services.AddAuthentication(options =>
     };
 });
 builder.Services.AddAuthorization();
-builder.Services.AddSignalR();
-
 builder.Services.AddDbContext<EventServiceDbContext>(optionsAction =>
 {
-    optionsAction.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
+    optionsAction.UseNpgsql(builder.Configuration.GetConnectionString("EventDbConnection"));
 });
+
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<IUserIdProvider, SubClaimUserIdProvider>();
 
 builder.Services.AddMassTransit(config =>
 {
+    config.AddConsumer<CheckInCompletedEventConsumer>();
     config.UsingRabbitMq((context, cfg) =>
     {
-        cfg.Host(builder.Configuration["RabbitMq:Host"] ?? "rabbitmq", "/", h =>
-        {
-            h.Username(builder.Configuration["RabbitMq:Username"] ?? "guest");
-            h.Password(builder.Configuration["RabbitMq:Password"] ?? "guest");
-        });
+        var uri = builder.Configuration.GetConnectionString("rabbitmq");
+        if (!string.IsNullOrEmpty(uri))
+            cfg.Host(new Uri(uri));
+        else
+            cfg.Host(builder.Configuration["RabbitMq:Host"] ?? "rabbitmq", "/", h =>
+            {
+                h.Username(builder.Configuration["RabbitMq:Username"] ?? "guest");
+                h.Password(builder.Configuration["RabbitMq:Password"] ?? "guest");
+            });
         cfg.UseMessageRetry(r => r.Intervals(
             TimeSpan.FromSeconds(1),
             TimeSpan.FromSeconds(5),
@@ -172,5 +179,6 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHealthChecks("/health");
 app.MapHub<EventEngagementHub>("/hubs/event-engagement");
+app.MapHub<CheckInHub>("/hubs/checkin");
 
 app.Run();

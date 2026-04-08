@@ -2,12 +2,17 @@ using Common;
 using EventService_Application.DTOs;
 using EventService_Application.Interfaces;
 using EventService_Domain.Entities;
+using EventService_Domain.Enums;
 using EventService_Domain.Interfaces;
 using Mapster;
 
 namespace EventService_Application.Services;
 
-public class SponsorService(ISponsorRepository repository, ISponsorTierRepository sponsorTierRepository, IEventRepository eventRepository) : ISponsorService
+public class SponsorService(
+    ISponsorRepository repository,
+    ISponsorTierRepository sponsorTierRepository,
+    IEventRepository eventRepository
+) : ISponsorService
 {
     public async Task<ApiResponse<SponsorDto>> CreateAsync(CreateSponsorDto dto)
     {
@@ -19,8 +24,8 @@ public class SponsorService(ISponsorRepository repository, ISponsorTierRepositor
             return ApiResponse<SponsorDto>.Fail(400, "Sự kiện không tồn tại");
 
         var tier = await sponsorTierRepository.GetByIdAsync(dto.TierId);
-        if (tier == null || tier.EventId != dto.EventId)
-            return ApiResponse<SponsorDto>.Fail(400, "Tier không hợp lệ cho sự kiện này");
+        if (tier == null)
+            return ApiResponse<SponsorDto>.Fail(400, "Tier không tồn tại");
 
         var entity = new Sponsor
         {
@@ -81,8 +86,8 @@ public class SponsorService(ISponsorRepository repository, ISponsorTierRepositor
         if (dto.TierId.HasValue)
         {
             var tier = await sponsorTierRepository.GetByIdAsync(dto.TierId.Value);
-            if (tier == null || tier.EventId != entity.EventId)
-                return ApiResponse<SponsorDto>.Fail(400, "Tier không hợp lệ cho sự kiện này");
+            if (tier == null)
+                return ApiResponse<SponsorDto>.Fail(400, "Tier không tồn tại");
             entity.TierId = dto.TierId.Value;
         }
 
@@ -102,4 +107,21 @@ public class SponsorService(ISponsorRepository repository, ISponsorTierRepositor
         await repository.SaveChangesAsync();
         return ApiResponse<bool>.Success(200, "Xoá thành công", true);
     }
+
+    public async Task<IEnumerable<SponsorPublicDto>> GetSponsorsByEventAsync(Guid eventId)
+    {
+        var sponsors = await repository.GetByEventIdAsync(eventId);
+
+        return sponsors.Select(s => new SponsorPublicDto
+        {
+            Id = s.Id,
+            Name = s.Name,
+            LogoUrl = s.LogoUrl,
+            Description = s.Description,
+            WebsiteUrl = s.WebsiteUrl,
+            TierName = s.Tier.Name
+        });
+    }
+
+    
 }

@@ -1,7 +1,6 @@
 using EventService_Application.Interfaces;
 using EventService_Application.Services;
 using EventService_Domain.Interfaces;
-using EventService_Infrastructure.Interfaces;
 using EventService_Infrastructure.Repositories;
 using EventService_Infrastructure.ServiceClients;
 
@@ -29,6 +28,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IFeedbackRepository, FeedbackRepository>();
         services.AddScoped<IVenueRepository, VenueRepository>();
         services.AddScoped<IAgendaRepository, AgendaRepository>();
+        services.AddScoped<IEventDayRepository, EventDayRepository>();
 
         // Services
         services.AddScoped<ISessionService, SessionService>();
@@ -47,6 +47,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISponsorInteractionService, SponsorInteractionService>();
         services.AddScoped<IFeedbackService, FeedbackService>();
         services.AddScoped<IAgendaService, AgendaService>();
+        services.AddScoped<IEventDayService, EventDayService>();
         services.AddScoped<IVenueService, VenueService>();
         services.AddScoped<IUserPlanServiceClient, UserPlanServiceClient>();
         services.AddScoped<ITeamMemberService, TeamMemberService>();

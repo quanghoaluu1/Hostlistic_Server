@@ -16,9 +16,11 @@ using NotificationService_Application.Interfaces;
 
 namespace IdentityService_Application.Services;
 
-public class AuthService(IUserRepository userRepository, IRefreshTokenRepository refreshTokenRepository, IConfiguration configuration, IOtpService otpService, INotificationServiceClient notificationServiceClient, IBookingServiceClient bookingServiceClient)
+public class AuthService(IUserRepository userRepository, IRefreshTokenRepository refreshTokenRepository, IConfiguration configuration, IOtpService otpService, INotificationServiceClient notificationServiceClient, IBookingServiceClient bookingServiceClient, IUserPlanRepository userPlanRepository)
     : IAuthService
 {
+    private static readonly Guid FreePlanId = new Guid("4efa28eb-3376-47f8-967e-56b50bf545f7");
+
     public async Task<ApiResponse<bool>> RegisterAsync(RegisterRequest request)
     {
         if (await userRepository.IsExistByEmailAsync(request.Email)) return ApiResponse<bool>.Fail(400,"Email already exists");
@@ -28,6 +30,16 @@ public class AuthService(IUserRepository userRepository, IRefreshTokenRepository
         await userRepository.AddUserAsync(newUser);
         await userRepository.SaveChangesAsync();
         await bookingServiceClient.CreateWalletAsync(newUser.Id);
+        await userPlanRepository.AddAsync(new UserPlan
+        {
+            Id = Guid.CreateVersion7(),
+            UserId = newUser.Id,
+            SubscriptionPlanId = FreePlanId,
+            StartDate = DateTime.UtcNow,
+            EndDate = null,
+            IsActive = true
+        });
+        await userPlanRepository.SaveChangesAsync();
         return ApiResponse<bool>.Success(201,"User created successfully", true);
     }
     
@@ -132,6 +144,17 @@ public class AuthService(IUserRepository userRepository, IRefreshTokenRepository
             };
             await userRepository.AddUserAsync(user);
             await userRepository.SaveChangesAsync();
+            await bookingServiceClient.CreateWalletAsync(user.Id);
+            await userPlanRepository.AddAsync(new UserPlan
+            {
+                Id = Guid.NewGuid(),
+                UserId = user.Id,
+                SubscriptionPlanId = FreePlanId,
+                StartDate = DateTime.UtcNow,
+                EndDate = null,
+                IsActive = true
+            });
+            await userPlanRepository.SaveChangesAsync();
         }
         if (!user.IsActive) return ApiResponse<AuthResponse>.Fail(400, "User is deactivated");
         var accessToken = GenerateJwtToken(user);

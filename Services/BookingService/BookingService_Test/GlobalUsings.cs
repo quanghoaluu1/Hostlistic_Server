@@ -1,0 +1,10 @@
+﻿global using Xunit;
+global using NSubstitute;
+global using FluentAssertions;
+global using Common;
+global using BookingService_Application.DTOs;
+global using BookingService_Application.Interfaces;
+global using BookingService_Application.Services;
+global using BookingService_Domain.Entities;
+global using BookingService_Domain.Enum;
+global using BookingService_Domain.Interfaces;

@@ -46,7 +46,9 @@ public class EventService(
         eventEntity.IsPublic = false;
         eventEntity.Id = Guid.NewGuid();
         eventEntity.OrganizerId = organizerId;
-
+        eventEntity.TimeZoneId = request.TimeZoneId;
+        eventEntity.AgendaMode = AgendaMode.Auto;
+        
         var defaultTrack = new Track
         {
             Id = Guid.NewGuid(),
@@ -304,6 +306,18 @@ public class EventService(
         .Success(200, "Public events retrieved successfully", result);
 }
 
+    public async Task<ApiResponse<bool>> ToggleAgendaModeAsync(Guid eventId)
+    {
+        var eventEntity = await eventRepository.GetEventByIdAsync(eventId);
+        if (eventEntity == null)
+            return ApiResponse<bool>.Fail(404, "Event not found");
+        eventEntity.AgendaMode = eventEntity.AgendaMode == AgendaMode.Auto ? AgendaMode.Custom : AgendaMode.Auto;
+        eventRepository.UpdateEventAsync(eventEntity);
+        await eventRepository.SaveChangesAsync();
+        return ApiResponse<bool>.Success(200, "Agenda mode toggled successfully", eventEntity.AgendaMode == AgendaMode.Auto);
+        
+    }
+
     private void ApplyEventUpdate(Event eventEntity, EventRequestDto request)
     {
         eventEntity.Title = request.Title ?? eventEntity.Title;
@@ -324,6 +338,9 @@ public class EventService(
         {
             eventEntity.EndDate = DateTime.SpecifyKind(request.EndDate.Value, DateTimeKind.Utc);
         }
+
+        if (request.TimeZoneId != null)
+            eventEntity.TimeZoneId = request.TimeZoneId;
     }
 
     private async Task<(bool IsSuccess, string Message, int MaxEvents, int MaxAttendeesPerEvent)> GetActiveEntitlementAsync(

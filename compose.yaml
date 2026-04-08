@@ -56,7 +56,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_HTTP_PORTS=8080
-      - ConnectionStrings__DefaultConnection=${IDENTITY_DB_CONNECTION}
+      - ConnectionStrings__IdentityDbConnection=${IDENTITY_DB_CONNECTION}
       - ConnectionStrings__RedisConnection=${REDIS_CONNECTION}
       - Jwt__Key=${JWT_SECRET_KEY}
       - Jwt__Issuer=hostlistic
@@ -85,7 +85,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_HTTP_PORTS=8080
-      - ConnectionStrings__DefaultConnection=${EVENT_DB_CONNECTION}
+      - ConnectionStrings__EventDbConnection=${EVENT_DB_CONNECTION}
       - Jwt__Key=${JWT_SECRET_KEY}
       - Jwt__Issuer=hostlistic
       - Jwt__Audience=hostlistic
@@ -112,7 +112,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_HTTP_PORTS=8080
-      - ConnectionStrings__DefaultConnection=${BOOKING_DB_CONNECTION}
+      - ConnectionStrings__BookingDbConnection=${BOOKING_DB_CONNECTION}
       - Jwt__Key=${JWT_SECRET_KEY}
       - Jwt__Issuer=hostlistic
       - Jwt__Audience=hostlistic
@@ -129,6 +129,7 @@ services:
       - RabbitMq__Host=rabbitmq
       - RabbitMq__Username=guest
       - RabbitMq__Password=guest
+      - QrSecret=${QR_SECRET}
     networks:
       - hostlistic_net
     restart: unless-stopped
@@ -148,7 +149,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_HTTP_PORTS=8080
-      - ConnectionStrings__DefaultConnection=${NOTIFICATION_DB_CONNECTION}
+      - ConnectionStrings__NotificationDbConnection=${NOTIFICATION_DB_CONNECTION}
       - ConnectionStrings__RedisConnection=${REDIS_CONNECTION}
       - Resend__ApiToken=${RESEND_API_KEY}
       - Jwt__Key=${JWT_SECRET_KEY}
@@ -174,7 +175,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_HTTP_PORTS=8080
-      - ConnectionStrings__DefaultConnection=${AI_DB_CONNECTION}
+      - ConnectionStrings__AiDbConnection=${AI_DB_CONNECTION}
       - Jwt__Key=${JWT_SECRET_KEY}
       - Jwt__Issuer=hostlistic
       - Jwt__Audience=hostlistic
@@ -194,11 +195,11 @@ services:
     image: hostlistic/streamingservice
     build:
       context: .
-      dockerfile: Services/StreamingService/StreamingService_Api/Dockerfile
+      dockerfile: Services/StreamingService/Dockerfile
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_HTTP_PORTS=8080
-      - ConnectionStrings__DefaultConnection=${STREAM_DB_CONNECTION}
+      - ConnectionStrings__StreamingDbConnection=${STREAM_DB_CONNECTION}
       - Jwt__Key=${JWT_SECRET_KEY}
       - Jwt__Issuer=hostlistic
       - Jwt__Audience=hostlistic

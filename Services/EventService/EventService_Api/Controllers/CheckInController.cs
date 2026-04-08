@@ -6,6 +6,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace EventService_Api.Controllers;
 
+// DEPRECATED: Check-in management has moved to BookingService (/api/checkin).
+// These endpoints are kept for backward compatibility during migration.
+// They will be removed once YARP routing is updated in Phase 5.
 [ApiController]
 [Route("api/[controller]")]
 public class CheckInController : ControllerBase
@@ -17,7 +20,9 @@ public class CheckInController : ControllerBase
         _checkInService = checkInService;
     }
 
+    // DEPRECATED: Use GET /api/checkin/{checkInId} in BookingService instead.
     [HttpGet("{checkInId:guid}")]
+    [Obsolete("Use BookingService GET /api/checkin/{checkInId}")]
     public async Task<IActionResult> GetCheckInById(Guid checkInId)
     {
         var result = await _checkInService.GetCheckInByIdAsync(checkInId);
@@ -25,7 +30,9 @@ public class CheckInController : ControllerBase
         return Ok(result);
     }
 
+    // DEPRECATED: Use GET /api/checkin/event/{eventId} in BookingService instead.
     [HttpGet("event/{eventId:guid}")]
+    [Obsolete("Use BookingService GET /api/checkin/event/{eventId}")]
     public async Task<IActionResult> GetCheckInsByEventId(Guid eventId)
     {
         var result = await _checkInService.GetCheckInsByEventIdAsync(eventId);
@@ -33,7 +40,9 @@ public class CheckInController : ControllerBase
         return Ok(result);
     }
 
+    // DEPRECATED: Use GET /api/checkin/session/{sessionId} in BookingService instead.
     [HttpGet("session/{sessionId:guid}")]
+    [Obsolete("Use BookingService GET /api/checkin/session/{sessionId}")]
     public async Task<IActionResult> GetCheckInsBySessionId(Guid sessionId)
     {
         var result = await _checkInService.GetCheckInsBySessionIdAsync(sessionId);
@@ -41,7 +50,9 @@ public class CheckInController : ControllerBase
         return Ok(result);
     }
 
+    // DEPRECATED: Use GET /api/checkin/event/{eventId}/ticket/{ticketId} in BookingService instead.
     [HttpGet("ticket/{ticketId:guid}")]
+    [Obsolete("Use BookingService GET /api/checkin/event/{eventId}/ticket/{ticketId}")]
     public async Task<IActionResult> GetCheckInByTicketId(Guid ticketId)
     {
         var result = await _checkInService.GetCheckInByTicketIdAsync(ticketId);
@@ -49,8 +60,10 @@ public class CheckInController : ControllerBase
         return Ok(result);
     }
 
+    // DEPRECATED: Use POST /api/checkin/scan in BookingService instead.
     [Authorize]
     [HttpPost]
+    [Obsolete("Use BookingService POST /api/checkin/scan")]
     public async Task<IActionResult> CreateCheckIn([FromBody] CreateCheckInRequest request)
     {
         var userId = GetCurrentUserId();

@@ -46,8 +46,33 @@ public class EventRecipientRepository(NotificationServiceDbContext dbContext) : 
         RecipientGroup group,
         EmailTargetFilter? filter)
     {
-        var query = BuildQuery(eventId, group, filter);
-        return await query.CountAsync();
+        // Use a simple distinct-user count instead of the full BuildQuery (which uses
+        // GroupBy + g.First() for deduplication — that translation can fail in some
+        // EF Core versions). Counting distinct UserIds is equivalent and always translates.
+        IQueryable<EventRecipient> query = dbContext.EventRecipients
+            .Where(r => r.EventId == eventId);
+
+        switch (group)
+        {
+            case RecipientGroup.SpecificTicketType:
+                if (filter?.TicketTypeIds is { Count: > 0 })
+                    query = query.Where(r => filter.TicketTypeIds.Contains(r.TicketTypeId!.Value));
+                break;
+
+            case RecipientGroup.NotCheckedIn:
+                query = query.Where(r => !r.IsCheckedIn);
+                break;
+
+            case RecipientGroup.ManualList:
+                if (filter?.SpecificUserIds is { Count: > 0 })
+                    query = query.Where(r => filter.SpecificUserIds.Contains(r.UserId));
+                break;
+        }
+
+        if (filter?.PurchasedAfter.HasValue == true)
+            query = query.Where(r => r.BookingConfirmedAt >= filter.PurchasedAfter.Value);
+
+        return await query.Select(r => r.UserId).Distinct().CountAsync();
     }
  
     public async Task SaveChangesAsync()

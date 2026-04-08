@@ -1,17 +1,20 @@
 using Common;
+using Common.Messages;
 using EventService_Application.DTOs;
 using EventService_Application.Interfaces;
 using EventService_Domain.Entities;
 using EventService_Domain.Enums;
 using EventService_Domain.Interfaces;
 using Mapster;
+using MassTransit;
 
 namespace EventService_Application.Services;
 
-public class SessionService(   
+public class SessionService(
     ITrackRepository trackRepository,
     IEventRepository eventRepository,
-    ISessionRepository sessionRepository) : ISessionService
+    ISessionRepository sessionRepository,
+    IPublishEndpoint publishEndpoint) : ISessionService
 {
 
 
@@ -118,6 +121,7 @@ public class SessionService(
                     "Venue conflict: another session at this venue overlaps with the given time range");
         }
  
+        eventEntity.PromoteToCustomAgenda();
         // ── All guards passed — create entity ──
         var maxSort = await sessionRepository.GetMaxSortOrderInTrackAsync(request.TrackId);
  
@@ -139,11 +143,21 @@ public class SessionService(
  
         await sessionRepository.AddSessionAsync(session);
         await sessionRepository.SaveChangesAsync();
- 
+
+        await publishEndpoint.Publish(new SessionSyncedEvent(
+            SessionId: session.Id,
+            EventId: session.EventId,
+            TrackId: session.TrackId,
+            Title: session.Title,
+            StartTime: session.StartTime!.Value,
+            EndTime: session.EndTime!.Value,
+            Location: null,
+            SessionOrder: session.SortOrder));
+
         // Re-fetch to get navigation properties for DTO mapping
         var created = await sessionRepository.GetByIdWithinEventAsync(eventId, session.Id);
         var dto = await MapToDtoAsync(created!);
- 
+
         return ApiResponse<SessionDto>.Success(201, "Session created", dto);
     }
 
@@ -180,7 +194,6 @@ public class SessionService(
         if (eventEntity.EndDate.HasValue && end > eventEntity.EndDate.Value)
             return ApiResponse<SessionDto>.Fail(400,
                 "Session cannot end after event end date");
- 
         // ── Handle track change (move session to different track) ──
         var targetTrackId = request.TrackId ?? session.TrackId;
         if (request.TrackId.HasValue && request.TrackId.Value != session.TrackId)
@@ -208,7 +221,7 @@ public class SessionService(
                 return ApiResponse<SessionDto>.Fail(409,
                     "Venue conflict: another session at this venue overlaps with the given time range");
         }
- 
+        eventEntity.PromoteToCustomAgenda();
         // ── Apply changes ──
         session.TrackId = targetTrackId;
         session.VenueId = request.VenueId;
@@ -221,10 +234,20 @@ public class SessionService(
  
         await sessionRepository.UpdateSessionAsync(session);
         await sessionRepository.SaveChangesAsync();
- 
+
+        await publishEndpoint.Publish(new SessionSyncedEvent(
+            SessionId: session.Id,
+            EventId: session.EventId,
+            TrackId: session.TrackId,
+            Title: session.Title,
+            StartTime: session.StartTime!.Value,
+            EndTime: session.EndTime!.Value,
+            Location: null,
+            SessionOrder: session.SortOrder));
+
         var updated = await sessionRepository.GetByIdWithinEventAsync(eventId, sessionId);
         var dto = await MapToDtoAsync(updated!);
- 
+
         return ApiResponse<SessionDto>.Success(200, "Session updated", dto);
     }
 
@@ -241,7 +264,11 @@ public class SessionService(
  
         await sessionRepository.DeleteSessionAsync(sessionId);
         await sessionRepository.SaveChangesAsync();
- 
+
+        await publishEndpoint.Publish(new SessionDeletedEvent(
+            SessionId: sessionId,
+            EventId: eventId));
+
         return ApiResponse<bool>.Success(200, "Session deleted", true);
     }
     public async Task<ApiResponse<SessionDto>> UpdateSessionStatusAsync(

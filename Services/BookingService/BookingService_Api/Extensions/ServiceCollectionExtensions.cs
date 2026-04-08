@@ -5,6 +5,7 @@ using BookingService_Api.Services;
 using BookingService_Domain.Interfaces;
 using BookingService_Infrastructure.Repositories;
 using BookingService_Infrastructure.ServiceClients;
+using BookingService_Infrastructure.Services;
 
 namespace BookingService_Api.Extensions;
 
@@ -13,6 +14,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
         // Repositories
+        services.AddScoped<ISessionSnapshotRepository, SessionSnapshotRepository>();
         services.AddScoped<IOrderRepository, OrderRepository>();
         services.AddScoped<IOrderDetailRepository, OrderDetailRepository>();
         services.AddScoped<IPaymentRepository, PaymentRepository>();
@@ -45,6 +47,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPaymentNotifier, SignalRPaymentNotifier>();
         services.AddScoped<ISettlementService, SettlementService>();
         services.AddScoped<ISubscriptionPurchaseService, SubscriptionPurchaseService>();
+        services.AddScoped<ICheckInService, CheckInService>();
+        services.AddScoped<IAttendeeService, AttendeeService>();
+        services.AddScoped<IRegisteredEventService, RegisteredEventService>();
 
         return services;
     }
