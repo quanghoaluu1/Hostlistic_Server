@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using Common;
 using IdentityService_Domain.Enum;
+using IdentityService_Domain.Enums;
 
 namespace IdentityService_Domain.Entities;
 

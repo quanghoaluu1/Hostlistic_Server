@@ -8,6 +8,7 @@ public interface IOrderRepository
     Task<IEnumerable<Order>> GetOrdersByEventIdAsync(Guid eventId);
     Task<IEnumerable<Order>> GetOrdersByUserIdAsync(Guid userId);
     Task<IEnumerable<Order>> GetConfirmedOrdersByUserIdAsync(Guid userId);
+    IQueryable<Order> GetOrderQueryable();
     Task<IEnumerable<Order>> GetConfirmedOrdersByEventIdAsync(Guid eventId);
     Task<Order?> GetOrderByOrderCodeAsync(long orderCode);
     Task<Order> AddOrderAsync(Order order);

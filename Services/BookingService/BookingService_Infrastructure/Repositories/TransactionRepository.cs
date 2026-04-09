@@ -30,11 +30,10 @@ public class TransactionRepository : ITransactionRepository
             .ToListAsync();
     }
 
-    public async Task<IEnumerable<Transaction>> GetByReferenceAsync(Guid referenceId, string referenceType)
+    public async Task<Transaction?> GetByReferenceAsync(Guid referenceId, string referenceType)
     {
         return await _context.Transactions
-            .Where(t => t.ReferenceId == referenceId && t.ReferenceType == referenceType)
-            .ToListAsync();
+            .FirstOrDefaultAsync(t => t.ReferenceId == referenceId && t.ReferenceType == referenceType);
     }
 
     public async Task<IEnumerable<Transaction>> GetByStatusAsync(TransactionStatus status)
@@ -51,7 +50,12 @@ public class TransactionRepository : ITransactionRepository
         await _context.Transactions.AddAsync(transaction);
         return transaction;
     }
-
+    
+    public Task<Transaction> UpdateAsync(Transaction transaction)
+    {
+        _context.Transactions.Update(transaction);
+        return Task.FromResult(transaction);
+    }
     public async Task SaveChangesAsync()
     {
         await _context.SaveChangesAsync();

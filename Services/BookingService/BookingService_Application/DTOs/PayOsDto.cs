@@ -41,3 +41,11 @@ public class PayOsCheckoutResponse
     public long OrderCode { get; set; } 
     public int ExpiresInMinutes { get; set; } = 15;
 }
+
+public record PayoutResult
+(
+    bool IsSuccess,
+    string? PayoutId,
+    string? ReferenceId,
+   string? ErrorMessage
+);
