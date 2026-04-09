@@ -24,6 +24,12 @@ public class OrderRepository : IOrderRepository
             .FirstOrDefaultAsync(o => o.Id == orderId);
     }
 
+    public IQueryable<Order> GetOrderQueryable()
+    {
+        
+        return _context.Orders;
+    }
+
     public async Task<IEnumerable<Order>> GetOrdersByEventIdAsync(Guid eventId)
     {
         return await _context.Orders

@@ -5,6 +5,7 @@ using BookingService_Domain.Enum;
 using BookingService_Domain.Interfaces;
 using Common;
 using Mapster;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -21,7 +22,103 @@ public class SettlementService(
     ILogger<SettlementService> logger
     ) : ISettlementService
 {
-    public async Task<ApiResponse<EventSettlementDto>> SettleEventAsync(Guid eventId, Guid organizerId)
+    public async Task<ApiResponse<List<UnsettledEventDto>>> GetPendingSettlementsAsync(CancellationToken ct = default)
+    {
+        var settleEventIds = await settlementRepository.GetEventIds();
+        var orderQueryable = orderRepository.GetOrderQueryable();
+        var unsettleEvents = await orderQueryable.AsNoTracking()
+            .Where(o => o.Status == OrderStatus.Confirmed && !settleEventIds.Contains(o.EventId))
+            .GroupBy(o => new {o.EventId})
+            .Select(g => new UnsettledEventDto
+            {
+                EventId = g.Key.EventId,
+                GrossRevenue = g.SelectMany(o => o.OrderDetails).Sum(od => od.UnitPrice * od.Quantity),
+                TotalOrders = g.Count(),
+                TotalTicketsSold = g.SelectMany(o => o.OrderDetails).Sum(od => od.Quantity),
+            })
+            .ToListAsync(ct);
+        var pendingSettlement = await settlementRepository.GetByStatusAsync(SettlementStatus.Pending);
+        var result = pendingSettlement.Select(s => s.Adapt<EventSettlementDto>()).ToList();
+        return ApiResponse<List<UnsettledEventDto>>.Success(200, "Pending settlements retrieved successfully", unsettleEvents);
+    }
+
+    public async Task<ApiResponse<List<EventSettlementDto>>> GetAllSettlementsAsync(CancellationToken ct = default)
+    {
+        var settlements = await settlementRepository.GetAllAsync();
+        return ApiResponse<List<EventSettlementDto>>.Success(200, "Settlements retrieved successfully", settlements.Adapt<List<EventSettlementDto>>());
+    }
+
+    public async Task<ApiResponse<SettlementPreviewDto>> PreviewSettlementAsync(Guid eventId, Guid organizerId,
+        CancellationToken ct = default)
+    {
+        var existingSettlement = await settlementRepository.GetByEventIdAsync(eventId);
+        if (existingSettlement is not null && existingSettlement.Status == SettlementStatus.Settled)
+        {
+            logger.LogInformation("Event {EventId} already settled", eventId);
+            return ApiResponse<SettlementPreviewDto>.Success(200, "Event already settled",
+                existingSettlement.Adapt<SettlementPreviewDto>());
+        }
+        var orderQueryable = orderRepository.GetOrderQueryable();
+        var orderData = await orderQueryable.AsNoTracking()
+            .Where(o => o.EventId == eventId && o.Status == OrderStatus.Confirmed)
+            .Select(o => new
+            {
+                Details = o.OrderDetails.Select(d => new {d.Quantity, d.UnitPrice}).ToList(),
+            })
+            .ToListAsync(ct);
+        if (orderData.Count == 0)
+        {
+            var noRevenueSettlement = new EventSettlement
+            {
+                Id = Guid.CreateVersion7(),
+                EventId = eventId,
+                OrganizerId = organizerId,
+                GrossRevenue = 0,
+                PlatformFeePercent = 0,
+                PlatformFeeAmount = 0,
+                NetRevenue = 0,
+                TotalTicketsSold = 0,
+                TotalOrders = 0,
+                Status = SettlementStatus.NoRevenue,
+                SettledAt = DateTime.UtcNow
+            };
+
+            await settlementRepository.AddAsync(noRevenueSettlement);
+            await settlementRepository.SaveChangesAsync();
+
+            return ApiResponse<SettlementPreviewDto>.Success(200, "No revenue to settle",
+                noRevenueSettlement.Adapt<SettlementPreviewDto>());
+        }
+        var grossRevenue = orderData.SelectMany(o => o.Details).Sum(d => d.Quantity * d.UnitPrice);
+        var totalOrders = orderData.Count;
+        var totalTickets = orderData.SelectMany(o => o.Details).Sum(d => d.Quantity);
+        var userPlan = await userPlanServiceClient.GetByUserIdAsync(organizerId);
+        var activePlan = userPlan.FirstOrDefault();
+        if (activePlan?.SubscriptionPlan is null)
+            return ApiResponse<SettlementPreviewDto>.Fail(400, 
+                "Organizer has no active subscription plan");
+        var feePercent = (decimal)activePlan.SubscriptionPlan.CommissionRate;
+        var platformFeeAmount = Math.Round(grossRevenue * feePercent / 100, 0); // VND không lẻ
+        var netRevenue = grossRevenue - platformFeeAmount;
+
+        var preview = new SettlementPreviewDto(
+            EventId: eventId,
+            EventTitle: "",
+            OrganizerId: organizerId,
+            GrossRevenue: grossRevenue,
+            PlatformFeePercent: feePercent,
+            PlatformFeeAmount: platformFeeAmount,
+            NetAmount: netRevenue,
+            TotalOrders: totalOrders,
+            TotalTicketsSold: totalTickets,
+            AlreadySettled: false
+        );
+        return ApiResponse<SettlementPreviewDto>.Success(200, "Retrieve Settlement Preview",preview);
+
+    }
+    
+    
+    public async Task<ApiResponse<EventSettlementDto>> SettleEventAsync(Guid eventId, Guid organizerId, Guid adminId, string? notes = null, CancellationToken ct = default)
     {
         try
         {
@@ -47,6 +144,7 @@ public class SettlementService(
                     NetRevenue = 0,
                     TotalTicketsSold = 0,
                     TotalOrders = 0,
+                    Notes = notes,
                     Status = SettlementStatus.NoRevenue,
                     SettledAt = DateTime.UtcNow
                 };
@@ -64,7 +162,11 @@ public class SettlementService(
             var totalTicketsSold = allOrderDetails.Sum(od => od.Quantity);
             
             var userPlan = await userPlanServiceClient.GetByUserIdAsync(organizerId);
-            var feePercent = (decimal)userPlan.Single().SubscriptionPlan.CommissionRate;
+            var activePlan = userPlan.FirstOrDefault();
+            if (activePlan?.SubscriptionPlan is null)
+                return ApiResponse<EventSettlementDto>.Fail(400, 
+                    "Organizer has no active subscription plan");
+            var feePercent = (decimal)activePlan.SubscriptionPlan.CommissionRate;
             var platformFeeAmount = Math.Round(grossRevenue * feePercent / 100, 0); // VND không lẻ
             var netRevenue = grossRevenue - platformFeeAmount;
             
@@ -130,7 +232,45 @@ public class SettlementService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Settlement failed for event {EventId}", eventId);
-            return ApiResponse<EventSettlementDto>.Fail(500, $"Settlement failed: {ex.Message}");
+            return ApiResponse<EventSettlementDto>.Fail(500, $"Settlement failed. Please try again.");
         }
+    }
+    
+    public async Task<ApiResponse<EventSettlementDto>> RejectSettlementAsync(
+        Guid eventId, Guid adminId, string reason, CancellationToken ct = default)
+    {
+        var settlement = await settlementRepository.GetByEventIdAndStatusAsync(eventId, SettlementStatus.Pending);
+
+        if (settlement is null)
+        {
+            // Create a rejection record if no pending settlement exists
+            settlement = new EventSettlement
+            {
+                Id = Guid.NewGuid(),
+                EventId = eventId,
+                OrganizerId = Guid.Empty, // Resolve from EventService if needed
+                Status = SettlementStatus.Rejected,
+                RejectionReason = reason,
+                Notes = reason,
+                SettledByAdminId = adminId,
+                SettledAt = DateTime.UtcNow,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            await settlementRepository.AddAsync(settlement);
+        }
+        else
+        {
+            settlement.Status = SettlementStatus.Rejected;
+            settlement.RejectionReason = reason;
+            settlement.SettledByAdminId = adminId;
+            settlement.SettledAt = DateTime.UtcNow;
+        }
+
+        await settlementRepository.SaveChangesAsync();
+
+        logger.LogInformation("Rejected settlement for event {EventId}: {Reason}", eventId, reason);
+
+        return ApiResponse<EventSettlementDto>.Success(200, "Rejected",settlement.Adapt<EventSettlementDto>());
     }
 }

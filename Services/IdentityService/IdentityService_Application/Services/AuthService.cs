@@ -8,6 +8,7 @@ using IdentityService_Application.DTOs;
 using IdentityService_Application.Interfaces;
 using IdentityService_Domain.Entities;
 using IdentityService_Domain.Enum;
+using IdentityService_Domain.Enums;
 using IdentityService_Domain.Interfaces;
 using Mapster;
 using Microsoft.Extensions.Configuration;

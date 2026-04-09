@@ -69,7 +69,10 @@ public class OrganizerBankInfoService(IOrganizerBankInfoRepository repository) :
             entity.AccountNumber = dto.AccountNumber;
         if (!string.IsNullOrWhiteSpace(dto.AccountName))
             entity.AccountName = dto.AccountName;
-
+        if (!string.IsNullOrWhiteSpace(dto.BankBin))
+        {
+            entity.BankBin = dto.BankBin;
+        }
         if (dto.OrganizationId.HasValue)
             entity.OrganizationId = dto.OrganizationId;
         if (dto.UserId.HasValue)
