@@ -13,6 +13,6 @@ public interface IUserRepository
     Task SaveChangesAsync();
     Task<User?> GetUserByGoogleIdAsync(string googleId);
     Task<List<User>> SearchByEmailAsync(string email, int maxResults = 5);
-    Task<(int totalUsers, List<object> userData)> GetUserDashboardRawAsync(DateTime start);
+    Task<(int totalUsers, List<DateTime> userData)> GetUserDashboardRawAsync(DateTime start);
     Task<PagedResult<User>> GetUsersAsync(BaseQueryParams request);
 }

@@ -98,7 +98,7 @@ public class EventController(IEventService eventService, IPhotoService photoServ
     }
 
     [HttpGet("dashboard")]
-    [Authorize]
+    [AllowAnonymous]
     public async Task<IActionResult> GetDashboard([FromQuery] int? year, [FromQuery] int? month)
     {
         var result = await eventService.GetEventDashboardAsync(year, month);

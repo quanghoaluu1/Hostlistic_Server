@@ -4,8 +4,6 @@ using IdentityService_Application.Interfaces;
 using IdentityService_Domain.Interfaces;
 using Mapster;
 using Microsoft.AspNetCore.Http;
-using System.Net.Http.Headers;
-using System.Net.Http.Json;
 
 namespace IdentityService_Application.Services;
 
@@ -147,88 +145,55 @@ public class UserService : IUserService
 
     public async Task<ApiResponse<UserDashboardDto>> GetUserDashboardAsync()
     {
-        var today = DateTime.UtcNow;
+        var today = DateTime.UtcNow.Date;
 
-        var startOfWeek = GetStartOfWeek(today);
+        // Lấy đầu tuần (thứ 2)
+        int diff = (7 + (today.DayOfWeek - DayOfWeek.Monday)) % 7;
+        var startOfWeek = today.AddDays(-diff);
+
         var startOf7WeeksAgo = startOfWeek.AddDays(-7 * 6);
+
         // ===== USER DATA =====
-        var (totalUsers, userData) =
+        var (totalUsers, userDates) =
             await _userRepository.GetUserDashboardRawAsync(startOf7WeeksAgo);
+        // userDates: List<DateTime>
 
-        // convert week về DateTime
-        var first = userData.FirstOrDefault();
-        var type = first?.GetType();
-
-        var yearProp = type?.GetProperty("Year");
-        var weekProp = type?.GetProperty("Week");
-        var countProp = type?.GetProperty("Count");
-
-        var lookup = userData.ToDictionary(
-            x => (
-                Year: (int)yearProp!.GetValue(x)!,
-                Week: (int)weekProp!.GetValue(x)!
-            ),
-            x => (int)countProp!.GetValue(x)!
-        );
+        // ===== GROUP BY WEEK =====
+        var lookup = userDates
+            .GroupBy(d => GetStartOfWeek(d))
+            .ToDictionary(g => g.Key, g => g.Count());
 
         // ===== BUILD USER TREND =====
         var userTrend = Enumerable.Range(0, 7)
             .Select(i =>
             {
                 var weekStart = startOf7WeeksAgo.AddDays(i * 7);
+                var weekEnd = weekStart.AddDays(6);
 
-                lookup.TryGetValue(
-                    (weekStart.Year, weekStart.DayOfYear / 7),
-                    out var count
-                );
+                lookup.TryGetValue(weekStart, out var count);
 
                 return new UserTrendDto
                 {
                     Week = weekStart,
+
+                    WeekLabel = $"{weekStart:dd/MM} - {weekEnd:dd/MM}",
+
                     Users = count
                 };
             })
             .ToList();
 
-        // ===== EVENT DATA (CALL SERVICE) =====
-        var eventDashboard = await GetEventTrendAsync();
-
-        var eventTrend = eventDashboard.Data.ByDate
-            .GroupBy(x => x.Date.Month)
-            .Select(g => new EventTrendDto
-            {
-                Month = g.Key,
-                Events = g.Sum(x => x.Count)
-            })
-            .OrderBy(x => x.Month)
-            .ToList();
         var result = new UserDashboardDto
         {
             TotalUsers = totalUsers,
-            UserTrend = userTrend,
-            EventTrend = eventTrend
+            UserTrend = userTrend
         };
-        return ApiResponse<UserDashboardDto>.Success(200, "User dashboard data retrieved successfully", result);
-    }
 
-    private async Task<ApiResponse<EventDashboardDto>> GetEventTrendAsync()
-    {
-        var token = _httpContextAccessor.HttpContext?
-            .Request.Headers["Authorization"]
-            .ToString();
-
-        if (!string.IsNullOrEmpty(token))
-        {
-            _httpClient.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", token.Replace("Bearer ", ""));
-        }
-
-        var response = await _httpClient
-            .GetFromJsonAsync<ApiResponse<EventDashboardDto>>("https://localhost:7075/api/Event/dashboard");
-        //var raw = await _httpClient.GetStringAsync("https://localhost:7075/api/Event/dashboard");
-        //Console.WriteLine(raw);
-
-        return response!;
+        return ApiResponse<UserDashboardDto>.Success(
+            200,
+            "User dashboard data retrieved successfully",
+            result
+        );
     }
 
     private DateTime GetStartOfWeek(DateTime date)

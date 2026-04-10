@@ -67,26 +67,15 @@ public class UserRepository : IUserRepository
         return await query.ToPagedResultAsync(request.Page, request.PageSize);
     }
 
-    public async Task<(int totalUsers, List<object> userData)> GetUserDashboardRawAsync(DateTime start)
+    public async Task<(int totalUsers, List<DateTime> userData)> GetUserDashboardRawAsync(DateTime start)
     {
         var totalUsers = await _dbContext.Users
             .CountAsync(u => u.IsActive);
 
-        var userData = await _dbContext.Users
+        var users = await _dbContext.Users
             .Where(u => u.CreatedAt >= start)
-            .GroupBy(u => new
-            {
-                Year = u.CreatedAt.Year,
-                Week = u.CreatedAt.DayOfYear / 7 // tránh dùng method custom (EF không translate)
-            })
-            .Select(g => new
-            {
-                g.Key.Year,
-                g.Key.Week,
-                Count = g.Count()
-            })
-            .ToListAsync<dynamic>();
-
-        return (totalUsers, userData.Cast<object>().ToList());
+            .Select(u => u.CreatedAt)
+            .ToListAsync();
+        return (totalUsers, users);
     }
 }

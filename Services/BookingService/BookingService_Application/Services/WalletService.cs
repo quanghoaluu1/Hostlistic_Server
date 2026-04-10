@@ -22,6 +22,12 @@ public class WalletService : IWalletService
         _transactionRepository = transactionRepository;
     }
 
+    public WalletService(IWalletRepository walletRepository, ILogger<WalletService> logger)
+    {
+        _walletRepository = walletRepository;
+        _logger = logger;
+    }
+
     public async Task<ApiResponse<WalletDto>> GetWalletByIdAsync(Guid walletId)
     {
         try
@@ -161,25 +167,40 @@ public class WalletService : IWalletService
 
     public async Task<object> GetAdminWeeklyCashflowAsync()
     {
-        var today = DateTime.UtcNow;
+        var today = DateTime.UtcNow.AddHours(7);
 
-        var startOfWeek = GetStartOfWeek(today);
+        var startOfWeek = GetStartOfWeek(today).Date;
         var endOfWeek = startOfWeek.AddDays(7);
 
-        var data = await _transactionRepository
-            .GetWeeklyTransactionsRawAsync(startOfWeek, endOfWeek);
+        var transactions = await _transactionRepository
+            .GetTransactionsAsync(startOfWeek, endOfWeek);
+
+        var grouped = transactions
+            .GroupBy(t => t.CreatedAt.Date)
+            .ToDictionary(g => g.Key, g => g.ToList());
 
         var chart = Enumerable.Range(0, 7)
             .Select(i =>
             {
                 var date = startOfWeek.AddDays(i);
-                var existing = data.FirstOrDefault(x => x.Date == date);
+
+                var daily = grouped.ContainsKey(date)
+                    ? grouped[date]
+                    : new List<Transaction>();
+
+                var moneyIn = daily
+                    .Where(x => x.Type == TransactionType.EventRevenue)
+                    .Sum(x => x.Amount);
+
+                var moneyOut = daily
+                    .Where(x => x.Type == TransactionType.Payout)
+                    .Sum(x => x.Amount);
 
                 return new
                 {
                     date,
-                    moneyIn = existing?.MoneyIn ?? 0,
-                    moneyOut = existing?.MoneyOut ?? 0
+                    moneyIn,
+                    moneyOut
                 };
             })
             .OrderBy(x => x.date)
@@ -199,47 +220,48 @@ public class WalletService : IWalletService
 
     public async Task<object> GetOrganizerWeeklyCashflowAsync(Guid walletId)
     {
-        var today = DateTime.UtcNow;
+        //var today = DateTime.UtcNow;
 
-        var startOfWeek = GetStartOfWeek(today);
-        var endOfWeek = startOfWeek.AddDays(7);
+        //var startOfWeek = GetStartOfWeek(today);
+        //var endOfWeek = startOfWeek.AddDays(7);
 
-        var data = await _transactionRepository
-            .GetWeeklyTransactionsRawAsync(
-                startOfWeek,
-                endOfWeek,
-                walletId: walletId,
-                true
-            );
+        //var data = await _transactionRepository
+        //    .GetWeeklyTransactionsRawAsync(
+        //        startOfWeek,
+        //        endOfWeek,
+        //        walletId: walletId,
+        //        true
+        //    );
 
-        var chart = Enumerable.Range(0, 7)
-            .Select(i =>
-            {
-                var date = startOfWeek.AddDays(i);
-                var existing = data.FirstOrDefault(x => x.Date == date);
+        //var chart = Enumerable.Range(0, 7)
+        //    .Select(i =>
+        //    {
+        //        var date = startOfWeek.AddDays(i);
+        //        var existing = data.FirstOrDefault(x => x.Date == date);
 
-                return new
-                {
-                    date,
-                    revenue = existing?.MoneyIn ?? 0,
-                    payout = existing?.MoneyOut ?? 0
-                };
-            })
-            .OrderBy(x => x.date)
-            .ToList();
+        //        return new
+        //        {
+        //            date,
+        //            revenue = existing?.MoneyIn ?? 0,
+        //            payout = existing?.MoneyOut ?? 0
+        //        };
+        //    })
+        //    .OrderBy(x => x.date)
+        //    .ToList();
 
-        var totalRevenue = chart.Sum(x => x.revenue);
-        var totalPayout = chart.Sum(x => x.payout);
-        var balance = await _walletRepository.GetWalletByIdAsync(walletId);
+        //var totalRevenue = chart.Sum(x => x.revenue);
+        //var totalPayout = chart.Sum(x => x.payout);
+        //var balance = await _walletRepository.GetWalletByIdAsync(walletId);
 
-        return new
-        {
-            totalRevenue,
-            totalPayout,
-            balance = balance?.Balance ?? 0,
-            net = totalRevenue - totalPayout,
-            chart
-        };
+        //return new
+        //{
+        //    totalRevenue,
+        //    totalPayout,
+        //    balance = balance?.Balance ?? 0,
+        //    net = totalRevenue - totalPayout,
+        //    chart
+        //};
+        return null;
     }
     private DateTime GetStartOfWeek(DateTime date)
     {

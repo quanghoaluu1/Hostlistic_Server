@@ -125,9 +125,10 @@ public class UserController : ControllerBase
     }
 
     [HttpGet("dashboard")]
+    [AllowAnonymous]
     public async Task<IActionResult> GetUserDashboard()
     {
-        var userId = GetCurrentUserId();
+        //var userId = GetCurrentUserId();
         var result = await _userService.GetUserDashboardAsync();
 
         if (!result.IsSuccess)
@@ -145,6 +146,7 @@ public class UserController : ControllerBase
     }
 
     [HttpGet("user-list")]
+    [AllowAnonymous]
     public async Task<IActionResult> GetUserList([FromQuery] BaseQueryParams queryParams)
     {
         var result = await _userService.GetUserList(queryParams);
