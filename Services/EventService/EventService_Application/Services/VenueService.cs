@@ -56,14 +56,14 @@ namespace EventService_Application.Services
             return ApiResponse<VenueResponse>.Success(200, "Retrieved venue.", venue.Adapt<VenueResponse>());
         }
 
-        public async Task<ApiResponse<IReadOnlyList<VenueResponse>>> GetByEventIdAsync(Guid eventId)
+        public async Task<ApiResponse<PagedResult<VenueResponse>>> GetByEventIdAsync(Guid eventId, BaseQueryParams? queryParams = null)
         {
             // No pagination — room count per event is inherently low (2–20).
             // Thesis rationale: "Pagination adds query overhead without meaningful benefit
             // when cardinality is bounded by physical/virtual room constraints."
-            var venues = await venueRepository.GetByEventIdAsync(eventId);
-            var response = venues.Adapt<IReadOnlyList<VenueResponse>>();
-            return ApiResponse<IReadOnlyList<VenueResponse>>.Success(200, "Retrieved venues.", response);
+            var venues = await venueRepository.GetByEventIdAsync(eventId, queryParams);
+            var response = venues.Adapt<PagedResult<VenueResponse>>();
+            return ApiResponse<PagedResult<VenueResponse>>.Success(200, "Retrieved venues.", response);
         }
 
         public async Task<ApiResponse<VenueResponse>> UpdateAsync(

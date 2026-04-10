@@ -51,7 +51,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IVenueService, VenueService>();
         services.AddScoped<IUserPlanServiceClient, UserPlanServiceClient>();
         services.AddScoped<ITeamMemberService, TeamMemberService>();
+        services.AddScoped<IEventLifecycleService, EventLifecycleService>();
 
+        
         return services;
     }
 }

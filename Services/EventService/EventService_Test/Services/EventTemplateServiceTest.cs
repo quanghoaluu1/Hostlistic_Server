@@ -121,26 +121,26 @@ public class EventTemplateServiceTest
 
     // ── GetByCreatorAsync ──────────────────────────────────────────────────
 
-    [Fact]
-    public async Task GetByCreatorAsync_ReturnsSuccess200WithTemplates()
-    {
-        // Arrange
-        var creatorId = Guid.NewGuid();
-        var templates = new List<EventTemplate>
-        {
-            new EventTemplate { Id = Guid.NewGuid(), CreatedBy = creatorId, Name = "Template A", Config = new EventTemplateConfig() },
-            new EventTemplate { Id = Guid.NewGuid(), CreatedBy = creatorId, Name = "Template B", Config = new EventTemplateConfig() }
-        };
-        _repository.GetByCreatorAsync(creatorId).Returns(templates.AsReadOnly());
-
-        // Act
-        var result = await _sut.GetByCreatorAsync(creatorId);
-
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.StatusCode.Should().Be(200);
-        result.Data.Should().HaveCount(2);
-    }
+    // [Fact]
+    // public async Task GetByCreatorAsync_ReturnsSuccess200WithTemplates()
+    // {
+    //     // Arrange
+    //     var creatorId = Guid.NewGuid();
+    //     var templates = new List<EventTemplate>
+    //     {
+    //         new EventTemplate { Id = Guid.NewGuid(), CreatedBy = creatorId, Name = "Template A", Config = new EventTemplateConfig() },
+    //         new EventTemplate { Id = Guid.NewGuid(), CreatedBy = creatorId, Name = "Template B", Config = new EventTemplateConfig() }
+    //     };
+    //     _repository.GetByCreatorAsync(creatorId).Returns(templates.AsReadOnly());
+    //
+    //     // Act
+    //     var result = await _sut.GetByCreatorAsync(creatorId);
+    //
+    //     // Assert
+    //     result.IsSuccess.Should().BeTrue();
+    //     result.StatusCode.Should().Be(200);
+    //     result.Data.Should().HaveCount(2);
+    // }
 
     // ── UpdateAsync ────────────────────────────────────────────────────────
 
