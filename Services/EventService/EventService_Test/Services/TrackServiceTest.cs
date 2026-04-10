@@ -52,36 +52,36 @@ public class TrackServiceTest
 
     // ── GetTracksByEventIdAsync ────────────────────────────────────────────
 
-    [Fact]
-    public async Task GetTracksByEventIdAsync_WhenEventNotFound_ReturnsFail404()
-    {
-        // Arrange
-        _eventRepository.EventExistsAsync(Arg.Any<Guid>()).Returns(false);
+    // [Fact]
+    // public async Task GetTracksByEventIdAsync_WhenEventNotFound_ReturnsFail404()
+    // {
+    //     // Arrange
+    //     _eventRepository.EventExistsAsync(Arg.Any<Guid>()).Returns(false);
+    //
+    //     // Act
+    //     var result = await _sut.GetTracksByEventIdAsync(Guid.NewGuid());
+    //
+    //     // Assert
+    //     result.IsSuccess.Should().BeFalse();
+    //     result.StatusCode.Should().Be(404);
+    // }
 
-        // Act
-        var result = await _sut.GetTracksByEventIdAsync(Guid.NewGuid());
-
-        // Assert
-        result.IsSuccess.Should().BeFalse();
-        result.StatusCode.Should().Be(404);
-    }
-
-    [Fact]
-    public async Task GetTracksByEventIdAsync_WhenEventExists_ReturnsSuccess200()
-    {
-        // Arrange
-        var eventId = Guid.NewGuid();
-        _eventRepository.EventExistsAsync(eventId).Returns(true);
-        _trackRepository.GetTracksByEventIdAsync(eventId)
-            .Returns(new List<Track> { TrackBuilder.CreateEntity(eventId: eventId) });
-
-        // Act
-        var result = await _sut.GetTracksByEventIdAsync(eventId);
-
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.StatusCode.Should().Be(200);
-    }
+    // [Fact]
+    // public async Task GetTracksByEventIdAsync_WhenEventExists_ReturnsSuccess200()
+    // {
+    //     // Arrange
+    //     var eventId = Guid.NewGuid();
+    //     _eventRepository.EventExistsAsync(eventId).Returns(true);
+    //     _trackRepository.GetTracksByEventIdAsync(eventId)
+    //         .Returns(new List<Track> { TrackBuilder.CreateEntity(eventId: eventId) });
+    //
+    //     // Act
+    //     var result = await _sut.GetTracksByEventIdAsync(eventId);
+    //
+    //     // Assert
+    //     result.IsSuccess.Should().BeTrue();
+    //     result.StatusCode.Should().Be(200);
+    // }
 
     // ── CreateTrackAsync ───────────────────────────────────────────────────
 

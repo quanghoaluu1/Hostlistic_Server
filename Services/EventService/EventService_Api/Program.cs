@@ -16,6 +16,7 @@ using System.Reflection;
 using System.Text;
 using System.Text.Json.Serialization;
 using EventService_Application.Services;
+using EventService_Infrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -148,7 +149,7 @@ builder.Services.AddCors(options =>
 });
 builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
 builder.Services.AddApplicationServices();
-builder.Services.AddHostedService<EventService_Infrastructure.Services.EventStatusWorker>();
+builder.Services.AddHostedService<EventStatusWorker>();
 
 var identityServiceUrl = builder.Configuration["ServiceUrls:IdentityService"] ?? "http://localhost:5049";
 builder.Services.AddHttpClient("IdentityService", client =>

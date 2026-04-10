@@ -9,7 +9,7 @@ namespace EventService_Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class EventController(IEventService eventService, IPhotoService photoService) : ControllerBase
+public class EventController(IEventService eventService, IPhotoService photoService, IEventLifecycleService lifecycleService) : ControllerBase
 {
     [HttpPost]
     [Authorize]
@@ -84,11 +84,7 @@ public class EventController(IEventService eventService, IPhotoService photoServ
         return StatusCode(result.StatusCode, result);
     }
 
-    private Guid GetCurrentUserId()
-    {
-        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        return Guid.Parse(userIdClaim ?? throw new UnauthorizedAccessException("User ID not found in token"));
-    }
+    
     [HttpGet("{eventId:guid}/stream-auth")]
     [AllowAnonymous]
     public async Task<IActionResult> VerifyStreamAccess(Guid eventId, [FromQuery] Guid userId)
@@ -110,5 +106,32 @@ public class EventController(IEventService eventService, IPhotoService photoServ
     {
         var result = await eventService.UpdateEventStatus(eventId);
         return Ok(result);
+    }
+    
+    [HttpPatch("{eventId:guid}/start")]
+    public async Task<IActionResult> StartEvent(Guid eventId)
+    {
+        var result = await lifecycleService.StartEventAsync(eventId, GetCurrentUserId());
+        return StatusCode(result.StatusCode, result);
+    }
+    
+    [HttpPatch("{eventId:guid}/complete")]
+    public async Task<IActionResult> CompleteEvent(Guid eventId)
+    {
+        var result = await lifecycleService.CompleteEventAsync(eventId, GetCurrentUserId());
+        return StatusCode(result.StatusCode, result);
+    }
+    
+    [HttpPatch("{eventId:guid}/cancel")]
+    public async Task<IActionResult> CancelEvent(Guid eventId, [FromBody] CancelEventRequest request)
+    {
+        var result = await lifecycleService.CancelEventAsync(eventId, GetCurrentUserId(), request.Reason);
+        return StatusCode(result.StatusCode, result);
+    }
+    
+    private Guid GetCurrentUserId()
+    {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        return Guid.Parse(userIdClaim ?? throw new UnauthorizedAccessException("User ID not found in token"));
     }
 }

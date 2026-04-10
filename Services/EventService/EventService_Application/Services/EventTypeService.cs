@@ -29,7 +29,7 @@ public class EventTypeService(IEventTypeRepository eventTypeRepository) : IEvent
     public async Task<ApiResponse<PagedResult<EventTypeResponse>>> GetAllEventTypesAsync(BaseQueryParams request)
     {
         var eventTypes = await eventTypeRepository.GetAllEventTypesAsync(request);
-        var result = eventTypes.Adapt<List<EventTypeResponse>>();
+        var result = eventTypes.Items.Adapt<List<EventTypeResponse>>();
         var pagedResult = new PagedResult<EventTypeResponse>(result, eventTypes.TotalItems, eventTypes.CurrentPage, eventTypes.PageSize);
         return ApiResponse<PagedResult<EventTypeResponse>>.Success(200, "Event types retrieved successfully", pagedResult);
     }
