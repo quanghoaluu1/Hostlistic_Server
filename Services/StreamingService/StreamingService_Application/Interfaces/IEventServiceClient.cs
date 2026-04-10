@@ -17,4 +17,14 @@ public class ApiResponse<T>
 public interface IEventServiceClient
 {
     Task<StreamAuthResponseDto> VerifyStreamAccessAsync(Guid eventId, Guid userId, CancellationToken cancellationToken = default);
+    Task<EventChatAccessResponseDto> GetEventChatAccessAsync(Guid eventId, Guid sessionId, Guid userId, CancellationToken cancellationToken = default);
+}
+
+public class EventChatAccessResponseDto
+{
+    public Guid SessionId { get; set; }
+    public Guid UserId { get; set; }
+    public string Role { get; set; } = string.Empty;
+    public bool CanSendChat { get; set; }
+    public DateTime? ChatBlockedUntil { get; set; }
 }

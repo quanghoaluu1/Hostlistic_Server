@@ -87,12 +87,21 @@ builder.Services.AddAuthentication(options =>
         {
             Console.WriteLine("Token valid failed: " + context.Exception.Message);
             return Task.CompletedTask;
+        },
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+            {
+                context.Token = accessToken;
+            }
+
+            return Task.CompletedTask;
         }
     };
 });
 builder.Services.AddAuthorization();
-var con = builder.Configuration.GetConnectionString("EventDbConnection");
-Console.WriteLine($"[DEBUG] ConnectionString: {con}");
 builder.Services.AddDbContext<EventServiceDbContext>(optionsAction =>
 {
     optionsAction.UseNpgsql(builder.Configuration.GetConnectionString("EventDbConnection"));
@@ -139,6 +148,7 @@ builder.Services.AddCors(options =>
 });
 builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
 builder.Services.AddApplicationServices();
+builder.Services.AddHostedService<EventService_Infrastructure.Services.EventStatusWorker>();
 
 var identityServiceUrl = builder.Configuration["ServiceUrls:IdentityService"] ?? "http://localhost:5049";
 builder.Services.AddHttpClient("IdentityService", client =>
@@ -162,13 +172,13 @@ if (app.Environment.IsDevelopment())
 }
 app.UseCors("Production");
 app.UseExceptionHandler();
-app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
 app.MapHealthChecks("/health");
+app.MapHub<EventEngagementHub>("/hubs/event-engagement");
 app.MapHub<CheckInHub>("/hubs/checkin");
 
 app.Run();

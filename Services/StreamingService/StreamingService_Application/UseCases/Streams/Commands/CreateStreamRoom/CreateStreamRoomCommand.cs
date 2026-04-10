@@ -11,11 +11,13 @@ namespace StreamingService_Application.UseCases.Streams.Commands.CreateStreamRoo
 public record CreateStreamRoomCommand : IRequest<Guid>
 {
     public Guid EventId { get; init; }
+    public Guid? TrackId { get; init; }
     public Guid? SessionId { get; init; }
     public string Title { get; init; } = null!;
     public int MaxParticipants { get; init; } = 100;
     public Guid CreatedBy { get; init; }
     public DateTime? ScheduledStartAt { get; init; }
+    public bool IsRecordEnabled { get; init; } = true;
 }
 
 public class CreateStreamRoomCommandHandler : IRequestHandler<CreateStreamRoomCommand, Guid>
@@ -45,6 +47,24 @@ public class CreateStreamRoomCommandHandler : IRequestHandler<CreateStreamRoomCo
             throw new UnauthorizedAccessException($"Mở phòng thất bại: Chỉ Organizer hoặc CoOrganizer được phép mở Stream (bạn đang có quyền {authResult.Role}).");
         }
 
+        if (request.TrackId is null || request.TrackId == Guid.Empty)
+        {
+            throw new InvalidOperationException("A track must be selected before starting the livestream.");
+        }
+
+        var existingRoom = await _dbContext.Set<StreamRoom>()
+            .Where(r =>
+                r.EventId == request.EventId &&
+                r.TrackId == request.TrackId &&
+                r.Status == StreamRoomStatus.Live)
+            .OrderByDescending(r => r.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (existingRoom != null)
+        {
+            return existingRoom.Id;
+        }
+
         var roomName = $"room-{Guid.NewGuid():N}";
         
         // 1. Ask LiveKit server to create the room
@@ -59,11 +79,13 @@ public class CreateStreamRoomCommandHandler : IRequestHandler<CreateStreamRoomCo
         {
             Id = Guid.NewGuid(),
             EventId = request.EventId,
+            TrackId = request.TrackId,
             SessionId = request.SessionId,
             LiveKitRoomName = roomName,
             LiveKitRoomSid = string.Empty, // Will be populated by webhook when room starts
             Status = StreamRoomStatus.Scheduled,
             MaxParticipants = request.MaxParticipants,
+            IsRecordEnabled = request.IsRecordEnabled,
             CreatedBy = request.CreatedBy,
             ScheduledStartAt = request.ScheduledStartAt,
             CreatedAt = DateTime.UtcNow,

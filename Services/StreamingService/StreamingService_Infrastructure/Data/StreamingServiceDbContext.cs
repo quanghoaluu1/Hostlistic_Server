@@ -23,6 +23,8 @@ public class StreamingServiceDbContext : DbContext, IStreamingServiceDbContext
         {
             entity.HasKey(e => e.Id);
 
+            entity.HasIndex(e => new { e.EventId, e.TrackId, e.Status });
+
             entity.Property(e => e.Status)
                 .HasConversion<string>()
                 .HasMaxLength(50);

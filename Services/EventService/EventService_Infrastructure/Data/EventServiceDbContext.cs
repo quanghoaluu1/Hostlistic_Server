@@ -30,6 +30,7 @@ public class EventServiceDbContext : DbContext
     public DbSet<PollResponse> PollResponses => Set<PollResponse>();
     public DbSet<QaQuestion> QaQuestions => Set<QaQuestion>();
     public DbSet<QaVote> QaVotes => Set<QaVote>();
+    public DbSet<SessionEngagementRestriction> SessionEngagementRestrictions => Set<SessionEngagementRestriction>();
     public DbSet<Feedback> Feedbacks => Set<Feedback>();
     public DbSet<EventDay> EventDays => Set<EventDay>();
 
@@ -303,10 +304,22 @@ public class EventServiceDbContext : DbContext
             entity.HasKey(e => e.Id);
             
             entity.Property(e => e.Options)
-                .HasColumnType("jsonb");
+                .HasColumnType("jsonb")
+                .HasConversion(
+                    v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                    v => string.IsNullOrWhiteSpace(v)
+                        ? new List<PollOption>()
+                        : JsonSerializer.Deserialize<List<PollOption>>(v, (JsonSerializerOptions?)null) ?? new List<PollOption>()
+                );
             
             entity.Property(e => e.CorrectAnswers)
-                .HasColumnType("jsonb");
+                .HasColumnType("jsonb")
+                .HasConversion(
+                    v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                    v => string.IsNullOrWhiteSpace(v)
+                        ? new List<int>()
+                        : JsonSerializer.Deserialize<List<int>>(v, (JsonSerializerOptions?)null) ?? new List<int>()
+                );
 
             entity.HasMany(e => e.PollResponses)
                 .WithOne(pr => pr.Poll)
@@ -335,6 +348,14 @@ public class EventServiceDbContext : DbContext
         modelBuilder.Entity<QaVote>(entity =>
         {
             entity.HasKey(e => new { e.UserId, e.QaQuestionId });
+        });
+
+        modelBuilder.Entity<SessionEngagementRestriction>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => new { e.SessionId, e.UserId, e.Scope, e.IsActive })
+                .HasDatabaseName("IX_SessionEngagementRestrictions_SessionUserScope");
+            entity.Property(e => e.Reason).HasMaxLength(500);
         });
 
         // Feedback configuration
