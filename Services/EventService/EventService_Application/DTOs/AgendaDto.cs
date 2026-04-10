@@ -5,6 +5,7 @@ namespace EventService_Application.DTOs;
 public class AgendaResponse
 {
     public Guid EventId { get; set; }
+    public AgendaMode AgendaMode { get; set; } 
     public DateTime? EventStartDate { get; set; }
     public DateTime? EventEndDate { get; set; }
     public List<AgendaTrackDto> Tracks { get; set; } = [];

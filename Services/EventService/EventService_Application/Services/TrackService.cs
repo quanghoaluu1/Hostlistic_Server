@@ -64,7 +64,7 @@ public class TrackService : ITrackService
 
         if (!IsValidHexColor(request.ColorHex))
             return ApiResponse<TrackDto>.Fail(400, "Invalid color format. Use hex like #6366F1");
-
+        eventEntity.PromoteToCustomAgenda();
         var maxSort = await _trackRepository.GetMaxSortOrderAsync(eventId);
         var track = new Track()
         {
@@ -108,6 +108,7 @@ public class TrackService : ITrackService
             if (eventEntity.EndDate.HasValue && request.EndTime.Value > eventEntity.EndDate.Value)
                 return ApiResponse<TrackDto>.Fail(400,
                     "Track end time cannot be after event end date");
+            eventEntity.PromoteToCustomAgenda();
         }
 
         if (!IsValidHexColor(request.ColorHex))
@@ -119,7 +120,7 @@ public class TrackService : ITrackService
         track.StartTime = NormalizeToUtc(request.StartTime);
         track.EndTime = NormalizeToUtc(request.EndTime);
         track.ColorHex = request.ColorHex;
-
+        
         if (request.SortOrder.HasValue)
             track.SortOrder = request.SortOrder.Value;
 

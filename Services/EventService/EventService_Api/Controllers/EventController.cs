@@ -76,6 +76,13 @@ public class EventController(IEventService eventService, IPhotoService photoServ
         if (!result.IsSuccess) return BadRequest(result);
         return Ok(result);
     }
+    [HttpPatch("{eventId:guid}/agenda-mode")]
+    public async Task<IActionResult> SetAgendaMode(
+        Guid eventId)
+    {
+        var result = await eventService.ToggleAgendaModeAsync(eventId);
+        return StatusCode(result.StatusCode, result);
+    }
 
     private Guid GetCurrentUserId()
     {

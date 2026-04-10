@@ -133,7 +133,8 @@ public class SessionService(
                 return ApiResponse<SessionDto>.Fail(409,
                     "Venue conflict: another session at this venue overlaps with the given time range");
         }
-
+ 
+        eventEntity.PromoteToCustomAgenda();
         // ── All guards passed — create entity ──
         var maxSort = await sessionRepository.GetMaxSortOrderInTrackAsync(request.TrackId);
 
@@ -206,7 +207,6 @@ public class SessionService(
         if (eventEntity.EndDate.HasValue && end > eventEntity.EndDate.Value)
             return ApiResponse<SessionDto>.Fail(400,
                 "Session cannot end after event end date");
-
         // ── Handle track change (move session to different track) ──
         var targetTrackId = request.TrackId ?? session.TrackId;
         if (request.TrackId.HasValue && request.TrackId.Value != session.TrackId)
@@ -234,7 +234,7 @@ public class SessionService(
                 return ApiResponse<SessionDto>.Fail(409,
                     "Venue conflict: another session at this venue overlaps with the given time range");
         }
-
+        eventEntity.PromoteToCustomAgenda();
         // ── Apply changes ──
         session.TrackId = targetTrackId;
         session.VenueId = request.VenueId;

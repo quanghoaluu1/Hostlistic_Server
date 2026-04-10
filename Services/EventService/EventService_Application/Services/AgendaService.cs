@@ -1,7 +1,8 @@
 using Common;
 using EventService_Application.DTOs;
 using EventService_Application.Interfaces;
-using EventService_Infrastructure.Interfaces;
+using EventService_Domain.Enums;
+using EventService_Domain.Interfaces;
 
 namespace EventService_Application.Services;
 
@@ -180,12 +181,17 @@ public class AgendaService(IAgendaRepository agendaRepository) : IAgendaService
         var response = new AgendaResponse
         {
             EventId = queryResult.EventId,
+            AgendaMode = queryResult.AgendaMode,
             EventStartDate = queryResult.EventStartDate,
             EventEndDate = queryResult.EventEndDate,
             Tracks = trackDtos,
             Days = dayDtos
         };
-
+        if (queryResult.AgendaMode != AgendaMode.Auto)
+            return ApiResponse<AgendaResponse>.Success(200, "Agenda retrieved", response);
+        response.Tracks = [];
+        response.Days = [];
         return ApiResponse<AgendaResponse>.Success(200, "Agenda retrieved", response);
+
     }
 }
