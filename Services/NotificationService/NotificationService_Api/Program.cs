@@ -162,7 +162,6 @@ if (app.Environment.IsDevelopment())
 }
 app.UseExceptionHandler();
 app.UseCors("Production");
-app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();

@@ -10,47 +10,36 @@ public partial class PromptTemplateEngine : IPromptTemplateEngine
      /// <summary>
     /// Render template: xử lý {{#if}}, {{#each}}, {{placeholder}}
     /// </summary>
-    public string Render(string template, Dictionary<string, string> parameters)
-    {
-        var result = template;
 
-        // 1. {{#if key}}...{{else}}...{{/if}}
-        result = IfElseRegex().Replace(result, match =>
+        public string Render(string template, Dictionary<string, string> parameters)
         {
-            var key = match.Groups[1].Value;
-            var ifBlock = match.Groups[2].Value;
-            var elseBlock = match.Groups[3].Value;
+            var result = template;
 
-            return HasValue(parameters, key)
-                ? Render(ifBlock, parameters)
-                : Render(elseBlock, parameters);
-        });
+            // Step 1: Handle conditional blocks {{#key}}...{{/key}}
+            var conditionalPattern = new Regex(@"\{\{#(\w+)\}\}(.*?)\{\{/\1\}\}", RegexOptions.Singleline);
+            result = conditionalPattern.Replace(result, match =>
+            {
+                var key = match.Groups[1].Value;
+                // Show block content only if key exists and is non-empty
+                if (parameters.TryGetValue(key, out var value) && !string.IsNullOrWhiteSpace(value))
+                    return match.Groups[2].Value; // keep inner content (will be further replaced)
+                return ""; // remove entire block
+            });
 
-        // 2. {{#if key}}...{{/if}} (không có else)
-        result = IfRegex().Replace(result, match =>
-        {
-            var key = match.Groups[1].Value;
-            var content = match.Groups[2].Value;
+            // Step 2: Simple key replacement {{key}}
+            foreach (var (key, value) in parameters)
+            {
+                result = result.Replace($"{{{{{key}}}}}", value ?? "");
+            }
 
-            return HasValue(parameters, key)
-                ? Render(content, parameters)
-                : string.Empty;
-        });
+            // Step 3: Clean up leftover unreplaced tags
+            result = Regex.Replace(result, @"\{\{.*?\}\}", "");
 
-        // 3. {{placeholder}} → giá trị thực
-        result = PlaceholderRegex().Replace(result, match =>
-        {
-            var key = match.Groups[1].Value;
-            return parameters.TryGetValue(key, out var value)
-                ? value
-                : string.Empty; // Không để lại [key], giữ prompt sạch
-        });
+            // Step 4: Clean up excessive blank lines
+            result = Regex.Replace(result, @"\n{3,}", "\n\n");
 
-        // 4. Clean up: xóa dòng trống thừa (>2 liên tiếp → 2)
-        result = ExcessiveNewlinesRegex().Replace(result, "\n\n");
-
-        return result.Trim();
-    }
+            return result.Trim();
+        }
 
     /// <summary>
     /// Build parameters từ EventDetailDto — reuse cho mọi content type
@@ -221,6 +210,233 @@ public partial class PromptTemplateEngine : IPromptTemplateEngine
         parameters[lengthKey] = "true";
         return parameters;
     }
+    
+    public Dictionary<string, string> BuildSpeakerIntroParameters(
+    EventDetailDto eventDetail,
+    LineupTalentDto talent,
+    List<string> talentSessionNames,
+    bool isEventWide,
+    GenerateSpeakerIntroRequest request)
+{
+    var parameters = new Dictionary<string, string>
+    {
+        ["talent_name"] = talent.Name,
+        ["talent_type"] = talent.Type,
+        ["talent_organization"] = talent.Organization ?? "Not specified",
+
+        ["event_title"] = eventDetail.Title,
+        ["event_type"] = eventDetail.EventTypeName,
+        ["event_date"] = eventDetail.StartDate?.ToString("MMMM dd, yyyy") ?? "TBD",
+
+        ["mode"] = request.Mode,
+        ["tone"] = request.Tone,
+        ["language"] = request.Language == "vi" ? "Vietnamese" : "English",
+    };
+
+    // ── Session assignments (now uses lineup data correctly) ──
+    if (isEventWide && talentSessionNames.Count == 0)
+    {
+        parameters["talent_sessions"] = "Event-wide speaker (featured across the entire event)";
+    }
+    else if (talentSessionNames.Count > 0)
+    {
+        parameters["talent_sessions"] = string.Join("; ", talentSessionNames);
+    }
+    else
+    {
+        parameters["talent_sessions"] = "To be announced";
+    }
+
+    // ── Mode-specific parameters (UNCHANGED from previous version) ──
+    if (request.Mode == "summarize")
+    {
+        parameters["source_text"] = request.SourceText!;
+        parameters["mode_instruction"] =
+            "SUMMARIZE the provided source text into a concise 2-4 sentence professional "
+          + "introduction. Preserve key facts (credentials, titles, achievements) "
+          + "but remove unnecessary detail. Do NOT add any information not present "
+          + "in the source text.";
+    }
+    else
+    {
+        parameters["talent_bio"] = talent.Bio ?? "";
+parameters["source_text"] = "";
+
+var hasAnyBio = !string.IsNullOrWhiteSpace(talent.Bio);
+var hasOrg = !string.IsNullOrWhiteSpace(talent.Organization);
+
+if (request.AllowWebKnowledge)
+{
+    parameters["mode_instruction"] = (hasAnyBio, hasOrg) switch
+    {
+        (true, true) =>
+            "This speaker may be a well-known public figure. You MAY use your training "
+          + "knowledge to ENRICH the provided biography. Keep all facts from the bio, "
+          + "and add notable achievements or context if you recognize them. "
+          + "If you are not confident about who this person is, use ONLY the provided data.",
+
+        (true, false) =>
+            "This speaker may be a well-known public figure. You MAY use your training "
+          + "knowledge to enrich the provided biography and infer their organization. "
+          + "If you are not confident, use ONLY the provided bio.",
+
+        (false, true) =>
+            "This speaker may be a well-known public figure. You MAY use your training "
+          + "knowledge to write a professional introduction based on their name and "
+          + "organization. If you are not confident about who this person is, write a "
+          + "brief factual intro using ONLY the provided name, role, and organization.",
+
+        (false, false) =>
+            "This speaker may be a well-known public figure. You MAY use your training "
+          + "knowledge to write a professional introduction. Include their notable role, "
+          + "key achievements, and relevance to the event. If you are not confident about "
+          + "who this person is, fall back to a minimal placeholder and state that "
+          + "additional details should be confirmed by the organizer."
+    };
+}
+else
+{
+    parameters["mode_instruction"] = (hasAnyBio, hasOrg) switch
+    {
+        (true, true) =>
+            "Generate a professional introduction using ONLY the provided name, role, "
+          + "organization, and biography. Do NOT invent or assume any additional details.",
+
+        (false, true) =>
+            "Generate a brief professional introduction using ONLY the provided name, "
+          + "role, and organization. The biography is not available — keep the intro "
+          + "short and factual. Do NOT fabricate credentials or achievements.",
+
+        (true, false) =>
+            "Generate a professional introduction using the provided name, role, "
+          + "and biography. Organization is not specified — do not guess it.",
+
+        (false, false) =>
+            "ONLY the speaker's name and role type are available. Generate a minimal, "
+          + "placeholder-style introduction (1-2 sentences max). Clearly indicate that "
+          + "additional details should be provided by the organizer. "
+          + "Do NOT fabricate any biographical information whatsoever."
+    };
+}
+    }
+
+    if (!string.IsNullOrWhiteSpace(request.AdditionalContext))
+        parameters["additional_context"] = request.AdditionalContext;
+
+    return parameters;
+}
+public Dictionary<string, string> BuildSessionAbstractParameters(
+    EventDetailDto eventDetail,
+    SessionDetailDto session,
+    TrackDetailDto track,
+    GenerateSessionAbstractRequest request)
+{
+    var parameters = new Dictionary<string, string>
+    {
+        // ── Session context ──
+        ["session_title"] = session.Title,
+        ["session_start_time"] = session.StartTime.ToString("hh:mm tt"),
+        ["session_end_time"] = session.EndTime.ToString("hh:mm tt"),
+        ["session_date"] = session.StartTime.ToString("MMMM dd, yyyy"),
+        ["session_duration"] = $"{(session.EndTime - session.StartTime).TotalMinutes:0} minutes",
+
+        // ── Track context ──
+        ["track_name"] = track.Name,
+        ["track_description"] = !string.IsNullOrWhiteSpace(track.Description)
+            ? track.Description : "",
+
+        // ── Event context ──
+        ["event_title"] = eventDetail.Title,
+        ["event_type"] = eventDetail.EventTypeName,
+        ["event_mode"] = eventDetail.EventMode ?? "Offline",
+
+        // ── Request context ──
+        ["mode"] = request.Mode,
+        ["tone"] = request.Tone,
+        ["language"] = request.Language == "vi" ? "Vietnamese" : "English",
+        ["target_audience"] = request.TargetAudience switch
+        {
+            "technical" => "a technical audience (developers, engineers, specialists)",
+            "executive" => "executives and decision-makers (focus on business value)",
+            _ => "a general audience (mixed backgrounds and expertise levels)"
+        },
+    };
+
+    // ── Speakers ──
+    if (session.Talents.Length > 0)
+    {
+        var speakers = session.Talents.Select(t =>
+            string.IsNullOrEmpty(t.Organization)
+                ? $"{t.Name} ({t.Type})"
+                : $"{t.Name} ({t.Type}, {t.Organization})");
+        parameters["session_speakers"] = string.Join(", ", speakers);
+    }
+    else
+    {
+        parameters["session_speakers"] = "TBA";
+    }
+
+    // ── Mode-specific parameters ──
+    if (request.Mode == "expand")
+    {
+        var sourceText = request.SourceText!.Trim();
+
+        const int softCharLimit = 2500;
+        if (sourceText.Length > softCharLimit)
+            sourceText = string.Concat(sourceText.AsSpan(0, softCharLimit), "\n[...truncated]");
+
+        parameters["source_text"] = sourceText;
+        parameters["session_description"] = "";
+        parameters["mode_instruction"] =
+            "EXPAND the provided source text into a professional session abstract. "
+          + "Keep all facts from the source. Add structure (What You'll Learn, "
+          + "Who Should Attend) but do NOT invent topics or claims not present "
+          + "in the source text. The result should be richer and more detailed "
+          + "than the input while remaining faithful to it.";
+    }
+    else // from_metadata
+    {
+        parameters["source_text"] = "";
+        parameters["session_description"] = !string.IsNullOrWhiteSpace(session.Description)
+            ? session.Description : "";
+
+        var hasDesc = !string.IsNullOrWhiteSpace(session.Description);
+        var hasSpeakers = session.Talents.Length > 0;
+
+        parameters["mode_instruction"] = (hasDesc, hasSpeakers) switch
+        {
+            (true, true) =>
+                "Generate a professional session abstract using the provided title, "
+              + "description, speaker information, and track context. "
+              + "Do NOT invent topics not implied by the existing data.",
+
+            (true, false) =>
+                "Generate a session abstract using the provided title and description. "
+              + "Speakers are TBA — do not fabricate speaker names or credentials.",
+
+            (false, true) =>
+                "Generate a session abstract based on the title and speaker expertise. "
+              + "No description was provided — infer the session scope from the title "
+              + "and track context only. Keep it concise.",
+
+            (false, false) =>
+                "ONLY the session title and track name are available. Generate a brief, "
+              + "placeholder-style abstract (2-3 sentences max). Clearly indicate that "
+              + "additional details will be announced. Do NOT fabricate specific topics "
+              + "or learning outcomes."
+        };
+    }
+
+    // ── Optional fields ──
+    if (!string.IsNullOrWhiteSpace(request.KeyTakeaways))
+        parameters["key_takeaways"] = request.KeyTakeaways;
+
+    if (!string.IsNullOrWhiteSpace(request.AdditionalContext))
+        parameters["additional_context"] = request.AdditionalContext;
+
+    return parameters;
+}
+    
     public (string subject, string htmlBody) ParseEmailResponse(string rawContent)
     {
         var sanitized = SanitizeHtml(rawContent);

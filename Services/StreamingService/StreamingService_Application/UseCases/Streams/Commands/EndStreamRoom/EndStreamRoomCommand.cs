@@ -42,6 +42,29 @@ public class EndStreamRoomCommandHandler : IRequestHandler<EndStreamRoomCommand,
         room.EndedAt = DateTime.UtcNow;
         room.UpdatedAt = DateTime.UtcNow;
         _dbContext.Set<StreamRoom>().Update(room);
+
+        if (room.IsRecordEnabled)
+        {
+            var hasPendingOrReadyRecording = await _dbContext.StreamRecordings
+                .AnyAsync(r => r.StreamRoomId == room.Id &&
+                    (r.Status == RecordingStatus.Processing || r.Status == RecordingStatus.Ready), cancellationToken);
+
+            if (!hasPendingOrReadyRecording)
+            {
+                _dbContext.StreamRecordings.Add(new StreamRecording
+                {
+                    Id = Guid.NewGuid(),
+                    StreamRoomId = room.Id,
+                    FileName = $"{room.LiveKitRoomName}.mp4",
+                    Status = RecordingStatus.Processing,
+                    FileSizeBytes = 0,
+                    Duration = TimeSpan.Zero,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                });
+            }
+        }
+
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         return true;

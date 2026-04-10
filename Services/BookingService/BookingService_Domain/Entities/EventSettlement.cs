@@ -19,6 +19,10 @@ public class EventSettlement
     
     public SettlementStatus Status { get; set; }
     public DateTime? SettledAt { get; set; }
+    
+    public string? RejectionReason { get; set; }
+    public Guid? SettledByAdminId { get; set; }
+
     public string? Notes { get; set; }
     
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

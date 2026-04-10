@@ -12,4 +12,10 @@ public interface IPayOsService
     Task<PayOsWebhookResult?> HandleWebhookAsync(string rawJson);
     Task<PayOsPaymentStatusResult?> GetPaymentStatusAsync(long orderCode);
     Task<bool> CancelPaymentLinkAsync(long orderCode, string? reason = null);
+
+    Task<PayoutResult> CreatePayoutAsync(string referenceId, long amount,
+        string description,
+        string toBin,
+        string toAccountNumber,
+        CancellationToken ct = default);
 }

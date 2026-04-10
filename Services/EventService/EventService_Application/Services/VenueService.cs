@@ -36,9 +36,9 @@ namespace EventService_Application.Services
                 if (uploadResult.Error is not null)
                     return ApiResponse<VenueResponse>.Fail(500, "Failed to upload layout image.");
 
-                venue.LayoutUrl = uploadResult.Url.AbsoluteUri;
-                venue.LayoutPublicId = uploadResult.PublicId;
-            }
+            venue.LayoutUrl = uploadResult.SecureUrl.AbsoluteUri;
+            venue.LayoutPublicId = uploadResult.PublicId;
+        }
 
             // 5. Persist
             await venueRepository.AddVenueAsync(venue);

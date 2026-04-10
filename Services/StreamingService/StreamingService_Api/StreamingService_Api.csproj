@@ -10,6 +10,8 @@
     <ItemGroup>
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.2" />
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.1"/>
+        <PackageReference Include="MassTransit" Version="8.5.8" />
+        <PackageReference Include="MassTransit.RabbitMQ" Version="8.5.8" />
         <PackageReference Include="Scalar.AspNetCore" Version="2.12.22" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.2">
             <PrivateAssets>all</PrivateAssets>

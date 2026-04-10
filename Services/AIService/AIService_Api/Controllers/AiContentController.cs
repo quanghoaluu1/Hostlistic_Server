@@ -135,4 +135,106 @@ public class AiContentController(IAiContentService aiContentService, ILogger<AiC
             });
         }
     }
+    
+    [HttpPost("generate-speaker-intro")]
+[ProducesResponseType(typeof(ApiResponse<AiContentResponse>), StatusCodes.Status200OK)]
+[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status429TooManyRequests)]
+[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+public async Task<IActionResult> GenerateSpeakerIntro(
+    [FromBody] GenerateSpeakerIntroRequest request,
+    CancellationToken ct)
+{
+    if (!ModelState.IsValid)
+        return BadRequest(ModelState);
+
+    var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+    var userId = Guid.Parse(userIdClaim ??
+                            throw new UnauthorizedAccessException("User ID not found in token"));
+
+    try
+    {
+        var result = await aiContentService.GenerateSpeakerIntroAsync(request, userId, ct);
+
+        if (!result.IsSuccess)
+            return StatusCode(result.StatusCode, result);
+
+        return Ok(result);
+    }
+    catch (HttpRequestException ex) when (ex.Message.Contains("429"))
+    {
+        logger.LogWarning("Gemini rate limit hit for speaker intro, talent {TalentId}",
+            request.TalentId);
+        return StatusCode(429, new
+        {
+            error = "AI service rate limit exceeded. Please retry in a few seconds."
+        });
+    }
+    catch (OperationCanceledException)
+    {
+        return StatusCode(499, new { error = "Request cancelled by client." });
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex,
+            "Unexpected error generating speaker intro for talent {TalentId} in event {EventId}",
+            request.TalentId, request.EventId);
+        return StatusCode(500, new
+        {
+            error = "An unexpected error occurred while generating content."
+        });
+    }
+}
+
+[HttpPost("generate-session-abstract")]
+[ProducesResponseType(typeof(ApiResponse<AiContentResponse>), StatusCodes.Status200OK)]
+[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status429TooManyRequests)]
+[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+public async Task<IActionResult> GenerateSessionAbstract(
+    [FromBody] GenerateSessionAbstractRequest request,
+    CancellationToken ct)
+{
+    if (!ModelState.IsValid)
+        return BadRequest(ModelState);
+
+    var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+    var userId = Guid.Parse(userIdClaim ??
+                            throw new UnauthorizedAccessException("User ID not found in token"));
+
+    try
+    {
+        var result = await aiContentService.GenerateSessionAbstractAsync(request, userId, ct);
+
+        if (!result.IsSuccess)
+            return StatusCode(result.StatusCode, result);
+
+        return Ok(result);
+    }
+    catch (HttpRequestException ex) when (ex.Message.Contains("429"))
+    {
+        logger.LogWarning("Gemini rate limit hit for session abstract, session {SessionId}",
+            request.SessionId);
+        return StatusCode(429, new
+        {
+            error = "AI service rate limit exceeded. Please retry in a few seconds."
+        });
+    }
+    catch (OperationCanceledException)
+    {
+        return StatusCode(499, new { error = "Request cancelled by client." });
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex,
+            "Unexpected error generating session abstract for session {SessionId} in event {EventId}",
+            request.SessionId, request.EventId);
+        return StatusCode(500, new
+        {
+            error = "An unexpected error occurred while generating content."
+        });
+    }
+}
 }

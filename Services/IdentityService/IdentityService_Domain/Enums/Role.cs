@@ -1,7 +1,7 @@
-﻿namespace IdentityService_Domain.Enum;
+﻿namespace IdentityService_Domain.Enums;
 
 public enum Role
 {
-    SystemAdmin,
+    Admin,
     Member
 }

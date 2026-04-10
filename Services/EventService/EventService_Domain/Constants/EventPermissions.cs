@@ -53,20 +53,6 @@ public static class EventPermissions
             [CanManageVenue] = false,
             [CanExportData] = false,
         },
-        EventRole.Volunteer => new Dictionary<string, bool>
-        {
-            [CanEditEvent] = false,
-            [CanManageTickets] = false,
-            [CanManageSessions] = false,
-            [CanManageTalent] = false,
-            [CanManageTeam] = false,
-            [CanCheckin] = true,
-            [CanSendNotifications] = false,
-            [CanViewAnalytics] = false,
-            [CanManageSponsors] = false,
-            [CanManageVenue] = false,
-            [CanExportData] = false,
-        },
         _ => [],
     };
 }
