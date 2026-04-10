@@ -205,6 +205,27 @@ services:
       - Jwt__Audience=hostlistic
       - ServiceUrls__EventService=http://eventservice:8080
       - ServiceUrls__IdentityService=http://identityservice:8080
+      - LiveKit__ServerUrl=${LIVEKIT_SERVER_URL}
+      - LiveKit__ApiKey=${LIVEKIT_API_KEY}
+      - LiveKit__ApiSecret=${LIVEKIT_API_SECRET}
+      - LiveKit__WebhookSecret=${LIVEKIT_WEBHOOK_SECRET}
+      - RecordingStorage__RootPath=${RECORDING_ROOT_PATH}
+      - RecordingStorage__RequestPath=/recordings
+      - RecordingStorage__PublicBaseUrl=${RECORDING_PUBLIC_BASE_URL}
+      - RecordingS3__Enabled=${RECORDING_S3_ENABLED}
+      - RecordingS3__Endpoint=${RECORDING_S3_ENDPOINT}
+      - RecordingS3__AccessKey=${RECORDING_S3_ACCESS_KEY}
+      - RecordingS3__SecretKey=${RECORDING_S3_SECRET_KEY}
+      - RecordingS3__Bucket=${RECORDING_S3_BUCKET}
+      - RecordingS3__UseSsl=${RECORDING_S3_USE_SSL}
+      - RecordingS3__ForcePathStyle=${RECORDING_S3_FORCE_PATH_STYLE}
+      - RecordingS3__PublicBaseUrl=${RECORDING_S3_PUBLIC_BASE_URL}
+      - RecordingAutomation__Enabled=${RECORDING_AUTOMATION_ENABLED}
+      - RecordingAutomation__InboxPath=incoming
+      - RecordingAutomation__ProcessedPath=processed
+      - RecordingAutomation__FailedPath=failed
+      - RecordingAutomation__PollIntervalSeconds=${RECORDING_AUTOMATION_POLL_INTERVAL_SECONDS}
+      - RecordingAutomation__FileStableSeconds=${RECORDING_AUTOMATION_FILE_STABLE_SECONDS}
     networks:
       - hostlistic_net
     restart: unless-stopped
