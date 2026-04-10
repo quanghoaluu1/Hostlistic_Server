@@ -67,6 +67,9 @@ namespace EventService_Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<int>("AgendaMode")
+                        .HasColumnType("integer");
+
                     b.Property<string>("CoverImagePublicId")
                         .HasColumnType("text");
 
@@ -104,6 +107,10 @@ namespace EventService_Infrastructure.Migrations
                     b.Property<DateTime?>("StartDate")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("TimeZoneId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
                     b.Property<string>("Title")
                         .HasColumnType("text");
 
@@ -118,6 +125,44 @@ namespace EventService_Infrastructure.Migrations
                     b.HasIndex("EventTypeId");
 
                     b.ToTable("Events");
+                });
+
+            modelBuilder.Entity("EventService_Domain.Entities.EventDay", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<int>("DayNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid>("EventId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Theme")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Title")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EventId", "Date")
+                        .IsUnique();
+
+                    b.HasIndex("EventId", "DayNumber")
+                        .IsUnique();
+
+                    b.ToTable("EventDays");
                 });
 
             modelBuilder.Entity("EventService_Domain.Entities.EventTeamMember", b =>
@@ -784,6 +829,17 @@ namespace EventService_Infrastructure.Migrations
                     b.Navigation("EventType");
                 });
 
+            modelBuilder.Entity("EventService_Domain.Entities.EventDay", b =>
+                {
+                    b.HasOne("EventService_Domain.Entities.Event", "Event")
+                        .WithMany("EventDays")
+                        .HasForeignKey("EventId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Event");
+                });
+
             modelBuilder.Entity("EventService_Domain.Entities.EventTeamMember", b =>
                 {
                     b.HasOne("EventService_Domain.Entities.Event", "Event")
@@ -1043,6 +1099,8 @@ namespace EventService_Infrastructure.Migrations
             modelBuilder.Entity("EventService_Domain.Entities.Event", b =>
                 {
                     b.Navigation("CheckIns");
+
+                    b.Navigation("EventDays");
 
                     b.Navigation("EventTeamMembers");
 

@@ -18,8 +18,8 @@ public class EventDetailDto
 
 public record VenueDetailDto(Guid Id, string Name, string Address, string Capacity);
 
-public record SessionDetailDto(Guid Id, string Title, DateTime StartTime, DateTime EndTime, TalentDetailDto[] Talents);
+public record SessionDetailDto(Guid Id, string Title, string Description, DateTime StartTime, DateTime EndTime, TalentDetailDto[] Talents);
 
 public record TrackDetailDto(Guid Id, string Name, string Description, List<SessionDetailDto> Sessions);
 
-public record TalentDetailDto(Guid Id, string Name, string Type);
+public record TalentDetailDto(Guid Id, string Name, string Type, string? Bio, string? Organization);

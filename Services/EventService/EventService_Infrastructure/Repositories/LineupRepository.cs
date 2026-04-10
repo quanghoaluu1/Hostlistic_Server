@@ -76,5 +76,16 @@ namespace EventService_Infrastructure.Repositories
                 l.TalentId == talentId
             );
         }
+
+        public async Task<List<Lineup>> GetLineupsByEventIdWithDetailsAsync(Guid eventId)
+        {
+            return await _context.Lineups
+                .AsNoTracking()
+                .Include(l => l.Talent)
+                .Include(l => l.Session)
+                    .ThenInclude(s => s.Track)
+                .Where(l => l.EventId == eventId)
+                .ToListAsync();
+        }
     }
 }

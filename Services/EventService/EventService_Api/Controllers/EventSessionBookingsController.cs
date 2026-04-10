@@ -50,6 +50,35 @@ public class EventSessionBookingsController(ISessionBookingService bookingServic
         return StatusCode(result.StatusCode, result);
     }
  
+    /// <summary>
+    /// Get all sessions for this event with the authenticated user's booking status embedded.
+    /// Returns IsBooked, AvailableSeats, and IsFull per session in a single call.
+    ///
+    /// Route: GET /api/events/{eventId}/sessions/with-booking-status
+    /// Uses ~/ route override to avoid conflict with the /{sessionId} route in EventSessionsController.
+    /// </summary>
+    [HttpGet("~/api/events/{eventId:guid}/sessions/with-booking-status")]
+    public async Task<IActionResult> GetSessionsWithBookingStatus(Guid eventId)
+    {
+        var userId = GetCurrentUserId();
+        var result = await bookingService.GetSessionsWithBookingStatusAsync(eventId, userId);
+        return StatusCode(result.StatusCode, result);
+    }
+
+    /// <summary>
+    /// Get the booking status for a single session.
+    /// Used when rendering the Book/Cancel button in session detail pages.
+    ///
+    /// Route: GET /api/events/{eventId}/sessions/{sessionId}/booking-status
+    /// </summary>
+    [HttpGet("{sessionId:guid}/booking-status")]
+    public async Task<IActionResult> GetBookingStatus(Guid eventId, Guid sessionId)
+    {
+        var userId = GetCurrentUserId();
+        var result = await bookingService.GetBookingStatusForSessionAsync(eventId, sessionId, userId);
+        return StatusCode(result.StatusCode, result);
+    }
+
     private Guid GetCurrentUserId()
     {
         var sub = User.FindFirstValue(ClaimTypes.NameIdentifier)

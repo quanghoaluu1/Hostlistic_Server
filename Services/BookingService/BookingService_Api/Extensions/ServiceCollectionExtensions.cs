@@ -25,6 +25,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IWalletRepository, WalletRepository>();
         services.AddScoped<IEventSettlementRepository, EventSettlementRepository>();
         services.AddScoped<ITransactionRepository, TransactionRepository>();
+        services.AddScoped<IWithdrawalRequestRepository, WithdrawalRequestRepository>();
 
         // Services
         services.AddScoped<ITicketPurchaseService, TicketPurchaseService>();
@@ -48,6 +49,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISettlementService, SettlementService>();
         services.AddScoped<ISubscriptionPurchaseService, SubscriptionPurchaseService>();
         services.AddScoped<ICheckInService, CheckInService>();
+        services.AddScoped<IAttendeeService, AttendeeService>();
+        services.AddScoped<IRegisteredEventService, RegisteredEventService>();
+        services.AddScoped<IWithdrawalRequestService, WithdrawalRequestService>();
 
         return services;
     }

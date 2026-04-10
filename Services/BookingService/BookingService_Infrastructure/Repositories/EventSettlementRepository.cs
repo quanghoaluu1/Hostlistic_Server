@@ -19,12 +19,24 @@ public class EventSettlementRepository : IEventSettlementRepository
     {
         return await _context.EventSettlements.FirstOrDefaultAsync(e => e.Id == id);
     }
+    public async Task<IEnumerable<EventSettlement>> GetAllAsync()
+    {
+        return await _context.EventSettlements.AsNoTracking().OrderByDescending(s => s.CreatedAt).ToListAsync();
+    }
 
+    public async Task<IEnumerable<Guid>> GetEventIds()
+    {
+        return await _context.EventSettlements.AsNoTracking().Select(e => e.EventId).ToListAsync();
+    }
     public async Task<EventSettlement?> GetByEventIdAsync(Guid eventId)
     {
         return await _context.EventSettlements.FirstOrDefaultAsync(e => e.EventId == eventId);
     }
 
+    public async Task<EventSettlement?> GetByEventIdAndStatusAsync(Guid eventId, SettlementStatus status)
+    {
+        return await _context.EventSettlements.FirstOrDefaultAsync(e => e.EventId == eventId && e.Status == status);
+    }
     public async Task<IEnumerable<EventSettlement>> GetByOrganizerIdAsync(Guid organizerId)
     {
         return await _context.EventSettlements

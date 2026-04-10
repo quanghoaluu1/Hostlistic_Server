@@ -1,3 +1,4 @@
+using System.Security.Authentication;
 using System.Text;
 using Common;
 using Mapster;
@@ -6,6 +7,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.SignalR;
+using NotificationService_Api;
 using NotificationService_Api.Extensions;
 using NotificationService_Api.Hubs;
 using NotificationService_Application.Consumers;
@@ -21,6 +23,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi(options => options.AddDocumentTransformer<BearerSecuritySchemeTransformer>());
@@ -84,12 +88,21 @@ builder.Services.AddCors(options =>
 });
 builder.Services.AddDbContext<NotificationServiceDbContext>(optionsAction =>
 {
-    optionsAction.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
+    optionsAction.UseNpgsql(builder.Configuration.GetConnectionString("NotificationDbConnection"));
 });
-var redisConnectionString = builder.Configuration.GetConnectionString("RedisConnection")
-                            ?? "localhost:6379";
-builder.Services.AddSingleton<IConnectionMultiplexer>(
-    ConnectionMultiplexer.Connect(redisConnectionString));
+builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+{
+    var connectionString = builder.Configuration.GetConnectionString("RedisConnection")!;
+    var config = ConfigurationOptions.Parse(connectionString);
+    
+    config.SslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13;
+    config.AbortOnConnectFail = false;
+    config.ConnectTimeout = 10000;
+    config.CertificateValidation += (_, _, _, _) => true;
+    
+    return ConnectionMultiplexer.Connect(config);
+});
+
 builder.Services.AddScoped<IEmailRateLimiter, EmailRateLimiter>();
 
 // Mapster configuration
@@ -105,11 +118,15 @@ builder.Services.AddMassTransit(x =>
  
     x.UsingRabbitMq((context, cfg) =>
     {
-        cfg.Host(builder.Configuration["RabbitMq:Host"] ?? "rabbitmq", "/", h =>
-        {
-            h.Username(builder.Configuration["RabbitMq:Username"] ?? "guest");
-            h.Password(builder.Configuration["RabbitMq:Password"] ?? "guest");
-        });
+        var uri = builder.Configuration.GetConnectionString("rabbitmq");
+        if (!string.IsNullOrEmpty(uri))
+            cfg.Host(new Uri(uri));
+        else
+            cfg.Host(builder.Configuration["RabbitMq:Host"] ?? "rabbitmq", "/", h =>
+            {
+                h.Username(builder.Configuration["RabbitMq:Username"] ?? "guest");
+                h.Password(builder.Configuration["RabbitMq:Password"] ?? "guest");
+            });
  
         cfg.UseMessageRetry(r => r.Intervals(
             TimeSpan.FromSeconds(1),
@@ -143,6 +160,7 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
     app.MapScalarApiReference();
 }
+app.UseExceptionHandler();
 app.UseCors("Production");
 app.UseHttpsRedirection();
 

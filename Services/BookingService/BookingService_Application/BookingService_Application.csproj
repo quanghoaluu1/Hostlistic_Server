@@ -12,6 +12,7 @@
       <PackageReference Include="MassTransit" Version="8.5.8" />
         <PackageReference Include="MassTransit.RabbitMQ" Version="8.5.8" />
         <PackageReference Include="payOS" Version="2.1.0" />
+        <ProjectReference Include="..\..\IdentityService\IdentityService_Application\IdentityService_Application.csproj" />
 <ProjectReference Include="..\BookingService_Domain\BookingService_Domain.csproj" />
       <ProjectReference Include="..\..\..\Common\Common.csproj" />
     </ItemGroup>

@@ -68,6 +68,9 @@ namespace IdentityService_Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("BankBin")
+                        .HasColumnType("text");
+
                     b.Property<string>("BankName")
                         .IsRequired()
                         .HasColumnType("text");

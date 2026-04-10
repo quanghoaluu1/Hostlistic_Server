@@ -48,6 +48,11 @@ public class TicketService : ITicketService
     public async Task<ApiResponse<TicketDto>> CreateTicketAsync(CreateTicketRequest request)
     {
         var ticket = request.Adapt<Ticket>();
+        ticket.TicketTypeName = request.TicketTypeName;
+        ticket.EventName = request.EventName;
+        ticket.HolderName = request.HolderName;
+        ticket.HolderEmail = request.HolderEmail;
+        ticket.HolderPhone = request.HolderPhone;
 
         await _ticketRepository.AddTicketAsync(ticket); // sets ticket.Id and ticket.TicketCode
         ticket.QrCodeUrl = await _qrCodeService.GenerateQrPayloadAsync(ticket.Id, request.EventId);
@@ -65,13 +70,22 @@ public class TicketService : ITicketService
 
         // Update properties
         existingTicket.IsUsed = request.IsUsed;
-        existingTicket.QrCodeUrl = request.QrCodeUrl;
 
         await _ticketRepository.UpdateTicketAsync(existingTicket);
         await _ticketRepository.SaveChangesAsync();
 
         var ticketDto = existingTicket.Adapt<TicketDto>();
         return ApiResponse<TicketDto>.Success(200, "Ticket updated successfully", ticketDto);
+    }
+
+    public async Task<ApiResponse<int>> RegenerateAllQrCodesAsync()
+    {
+        var tickets = (await _ticketRepository.GetAllWithOrderAsync()).ToList();
+        foreach (var ticket in tickets)
+            ticket.QrCodeUrl = await _qrCodeService.GenerateQrPayloadAsync(ticket.Id, ticket.Order.EventId);
+
+        await _ticketRepository.SaveChangesAsync();
+        return ApiResponse<int>.Success(200, "QR codes regenerated", tickets.Count);
     }
 
     public async Task<ApiResponse<bool>> DeleteTicketAsync(Guid ticketId)

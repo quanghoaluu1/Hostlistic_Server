@@ -1,0 +1,10 @@
+global using Xunit;
+global using NSubstitute;
+global using FluentAssertions;
+global using Common;
+global using EventService_Application.DTOs;
+global using EventService_Application.Interfaces;
+global using EventService_Application.Services;
+global using EventService_Domain.Entities;
+global using EventService_Domain.Enums;
+global using EventService_Domain.Interfaces;

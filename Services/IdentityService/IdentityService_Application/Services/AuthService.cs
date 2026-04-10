@@ -8,6 +8,7 @@ using IdentityService_Application.DTOs;
 using IdentityService_Application.Interfaces;
 using IdentityService_Domain.Entities;
 using IdentityService_Domain.Enum;
+using IdentityService_Domain.Enums;
 using IdentityService_Domain.Interfaces;
 using Mapster;
 using Microsoft.Extensions.Configuration;
@@ -144,6 +145,7 @@ public class AuthService(IUserRepository userRepository, IRefreshTokenRepository
             };
             await userRepository.AddUserAsync(user);
             await userRepository.SaveChangesAsync();
+            await bookingServiceClient.CreateWalletAsync(user.Id);
             await userPlanRepository.AddAsync(new UserPlan
             {
                 Id = Guid.NewGuid(),

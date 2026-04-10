@@ -91,10 +91,11 @@ builder.Services.AddAuthentication(options =>
     };
 });
 builder.Services.AddAuthorization();
-
+var con = builder.Configuration.GetConnectionString("EventDbConnection");
+Console.WriteLine($"[DEBUG] ConnectionString: {con}");
 builder.Services.AddDbContext<EventServiceDbContext>(optionsAction =>
 {
-    optionsAction.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
+    optionsAction.UseNpgsql(builder.Configuration.GetConnectionString("EventDbConnection"));
 });
 
 builder.Services.AddSignalR();
@@ -105,11 +106,15 @@ builder.Services.AddMassTransit(config =>
     config.AddConsumer<CheckInCompletedEventConsumer>();
     config.UsingRabbitMq((context, cfg) =>
     {
-        cfg.Host(builder.Configuration["RabbitMq:Host"] ?? "rabbitmq", "/", h =>
-        {
-            h.Username(builder.Configuration["RabbitMq:Username"] ?? "guest");
-            h.Password(builder.Configuration["RabbitMq:Password"] ?? "guest");
-        });
+        var uri = builder.Configuration.GetConnectionString("rabbitmq");
+        if (!string.IsNullOrEmpty(uri))
+            cfg.Host(new Uri(uri));
+        else
+            cfg.Host(builder.Configuration["RabbitMq:Host"] ?? "rabbitmq", "/", h =>
+            {
+                h.Username(builder.Configuration["RabbitMq:Username"] ?? "guest");
+                h.Password(builder.Configuration["RabbitMq:Password"] ?? "guest");
+            });
         cfg.UseMessageRetry(r => r.Intervals(
             TimeSpan.FromSeconds(1),
             TimeSpan.FromSeconds(5),

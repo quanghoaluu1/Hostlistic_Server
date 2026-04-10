@@ -8,8 +8,13 @@ public class Ticket
     public Guid OrderId { get; set; }
     public Guid TicketTypeId { get; set; }
     public string TicketCode { get; set; } = string.Empty;
+    public string TicketTypeName { get; set; } = string.Empty;
+    public string EventName { get; set; } = string.Empty;
     public string QrCodeUrl { get; set; } = string.Empty;
     public DateTime IssuedDate { get; set; } = DateTime.UtcNow;
+    public string? HolderName { get; set; }
+    public string? HolderEmail { get; set; }
+    public string? HolderPhone { get; set; }
     public bool IsUsed { get; set; } = false;
     
     // Navigation property to parent

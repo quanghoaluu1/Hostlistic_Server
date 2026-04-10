@@ -10,4 +10,5 @@ public enum AiRequestType
     AnalyzeReport = 5,
     GenerateEmailContent = 6,
     GenerateSocialPost = 7,
+    GenerateSessionAbstract = 8,
 }

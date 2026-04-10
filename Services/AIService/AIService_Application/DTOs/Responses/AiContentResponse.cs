@@ -15,4 +15,15 @@ public class AiMetadataDto
     public int PromptTokens { get; set; }
     public int CompletionTokens { get; set; }
     public long LatencyMs { get; set; }
+    /// <summary>
+    /// "rich" | "partial" | "minimal" — source data completeness level.
+    /// Null for non-speaker-intro endpoints.
+    /// </summary>
+    public string? DataQuality { get; init; }
+
+    /// <summary>
+    /// True when the AI output is based on minimal data and should be
+    /// reviewed/edited by the organizer before publishing.
+    /// </summary>
+    public bool NeedsReview { get; init; }
 }

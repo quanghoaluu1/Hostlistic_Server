@@ -20,7 +20,16 @@ public class Event : BaseClass
     public int? TotalCapacity { get; set; }
     public bool? IsPublic { get; set; } = false;
     public EventStatus EventStatus { get; set; } = EventStatus.Draft;
-    
+    public AgendaMode AgendaMode { get; set; } = AgendaMode.Auto;
+
+    /// <summary>
+    /// IANA timezone ID of the organizer who configured event days.
+    /// Used to convert UTC session times to local dates for day grouping.
+    /// Set automatically when EventDays are generated.
+    /// Example: "Asia/Ho_Chi_Minh", "America/New_York"
+    /// </summary>
+    public string? TimeZoneId { get; set; }
+
     // Navigation properties to parent
     [ForeignKey("EventTypeId")]
     public virtual EventType? EventType { get; set; }
@@ -36,6 +45,13 @@ public class Event : BaseClass
     public ICollection<CheckIn> CheckIns { get; set; } = new List<CheckIn>();
     public ICollection<Feedback> Feedbacks { get; set; } = new List<Feedback>();
     public ICollection<Venue> Venues { get; set; } = [];
+    public ICollection<EventDay> EventDays { get; set; } = new List<EventDay>();
+    
+    public void PromoteToCustomAgenda()
+    {
+        if (AgendaMode == AgendaMode.Auto)
+            AgendaMode = AgendaMode.Custom;
+    }
 }
 
 public class RichTextContent
@@ -43,3 +59,4 @@ public class RichTextContent
     public string Type { get; set; } // "doc"
     public JsonElement Content { get; set; } // Các node nội dung
 }
+

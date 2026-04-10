@@ -53,36 +53,31 @@ public class PayOsWebhookHandler(
             await inventoryService.ConfirmReservationAsync(reservationId.Value);
         }
 
-        // 5. Generate tickets
+        // 5. Generate tickets (TicketTypeName and EventName are persisted at creation)
+        var eventInfo = await eventServiceClient.GetEventInfoAsync(order.EventId);
+        var userInfo = await userServiceClient.GetUserInfoAsync(order.UserId);
         var orderDetails = order.OrderDetails.Select(od => new DTOs.TicketItemRequest
         {
             TicketTypeId = od.TicketTypeId,
+            TicketTypeName = od.TicketTypeName,
             Quantity = od.Quantity,
             UnitPrice = od.UnitPrice
         }).ToList();
-        var tickets = await ticketPurchaseService.GenerateTicketsWithQrCodesAsync(order.Id, orderDetails, order.EventId);
+        var tickets = await ticketPurchaseService.GenerateTicketsWithQrCodesAsync(
+            order.Id, orderDetails, order.EventId,
+            eventName: eventInfo?.Title ?? string.Empty,
+            buyerName: userInfo?.FullName,
+            buyerEmail: userInfo?.Email);
+
+        // Enrich tickets with price for SignalR/email DTOs (Price is not persisted)
         if (tickets.Count > 0)
         {
             var unitPriceByType = orderDetails
                 .GroupBy(x => x.TicketTypeId)
                 .ToDictionary(g => g.Key, g => g.First().UnitPrice);
-            var ticketTypeIds = tickets.Select(t => t.TicketTypeId).Distinct().ToList();
-            var ticketTypeInfoById = new Dictionary<Guid, TicketTypeInfoDto>();
-            foreach (var ticketTypeId in ticketTypeIds)
-            {
-                var info = await eventServiceClient.GetTicketTypeInfoAsync(ticketTypeId);
-                if (info is not null)
-                {
-                    ticketTypeInfoById[ticketTypeId] = info;
-                }
-            }
 
             foreach (var ticket in tickets)
             {
-                if (ticketTypeInfoById.TryGetValue(ticket.TicketTypeId, out var info))
-                {
-                    ticket.TicketTypeName = info.Name;
-                }
                 if (unitPriceByType.TryGetValue(ticket.TicketTypeId, out var price))
                 {
                     ticket.Price = price;
@@ -123,9 +118,6 @@ public class PayOsWebhookHandler(
 
         try
         {
-            var eventInfo = await eventServiceClient.GetEventInfoAsync(order.EventId);
-            var userInfo = await userServiceClient.GetUserInfoAsync(order.UserId);
-
             await publishEndpoint.Publish(new BookingConfirmedEvent(
                 EventId: order.EventId,
                 UserId: order.UserId,
@@ -150,22 +142,22 @@ public class PayOsWebhookHandler(
                 "Recipient will be missing from NotificationService until manual sync.",
                 order.Id);
         }
+        var capturedEventInfo = eventInfo;
+        var capturedUserInfo = userInfo;
         _ = Task.Run(async () =>
         {
             try
             {
-                var eventInfo = await eventServiceClient.GetEventInfoAsync(order.EventId);
-                var userInfo = await userServiceClient.GetUserInfoAsync(order.UserId);
                 await notificationServiceClient.SendTicketPurchaseConfirmationAsync(new PurchaseConfirmationRequest
                 {
                     UserId = order.UserId,
                     OrderId = order.Id,
                     TotalAmount = (decimal)data.Amount,
-                    EventName = eventInfo?.Title ?? "Unknown Event",
-                    EventDate = eventInfo?.StartDate ?? DateTime.Now,
-                    EventLocation = eventInfo?.Location ?? "TBD",
-                    CustomerName = userInfo?.FullName ?? "Valued Customer",
-                    CustomerEmail = userInfo?.Email ?? ""
+                    EventName = capturedEventInfo?.Title ?? "Unknown Event",
+                    EventDate = capturedEventInfo?.StartDate ?? DateTime.Now,
+                    EventLocation = capturedEventInfo?.Location ?? "TBD",
+                    CustomerName = capturedUserInfo?.FullName ?? "Valued Customer",
+                    CustomerEmail = capturedUserInfo?.Email ?? ""
                 });
             }
             catch (Exception ex)

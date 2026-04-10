@@ -9,8 +9,20 @@ public interface IPromptTemplateEngine
     Dictionary<string, string> BuildParametersFromEvent(EventDetailDto eventDetail);
     Dictionary<string, string> BuildEmailParameters(EventDetailDto eventEntity, GenerateEmailRequest request);
 
-    public Dictionary<string, string> BuildSocialPostParameters(EventDetailDto eventEntity,
+    Dictionary<string, string> BuildSocialPostParameters(EventDetailDto eventEntity,
         GenerateSocialPostRequest request);
+    Dictionary<string, string> BuildSpeakerIntroParameters(
+        EventDetailDto eventDetail,
+        LineupTalentDto talent,             
+        List<string> talentSessionNames,   
+        bool isEventWide,                   
+        GenerateSpeakerIntroRequest request);
+
+    Dictionary<string, string> BuildSessionAbstractParameters(
+        EventDetailDto eventDetail,
+        SessionDetailDto session,
+        TrackDetailDto track,
+        GenerateSessionAbstractRequest request);
     Dictionary<string, string> AddToneAndLanguage(
         Dictionary<string, string> parameters,
         string tone,
