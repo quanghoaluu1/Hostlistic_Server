@@ -1,4 +1,5 @@
-﻿using EventService_Domain.Entities;
+﻿using Common;
+using EventService_Domain.Entities;
 using EventService_Domain.Interfaces;
 using EventService_Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -25,13 +26,15 @@ namespace EventService_Infrastructure.Repositories
                 .FirstOrDefaultAsync(v => v.Id == venueId && v.EventId == eventId);
             // NO AsNoTracking → EF tracks changes
         }
-        public async Task<IReadOnlyList<Venue>> GetByEventIdAsync(Guid eventId)
+        public async Task<PagedResult<Venue>> GetByEventIdAsync(Guid eventId, BaseQueryParams request)
         {
-            return await _context.Venues
+            var query = _context.Venues
                 .AsNoTracking()
                 .Where(v => v.EventId == eventId)
                 .OrderBy(v => v.Name)
-                .ToListAsync();
+                .AsQueryable();
+            query = query.ApplySorting(request.SortBy);
+            return await query.ToPagedResultAsync(request.Page, request.PageSize);
         }
 
         public async Task<bool> ExistsByNameAsync(Guid eventId, string name, Guid? excludeVenueId = null)

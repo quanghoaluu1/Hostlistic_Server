@@ -1,4 +1,5 @@
-﻿using EventService_Application.DTOs;
+﻿using Common;
+using EventService_Application.DTOs;
 using EventService_Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -10,7 +11,7 @@ namespace EventService_Api.Controllers;
 [Authorize]
 public class EventSessionsController(ISessionService sessionService) : ControllerBase
 {
-        /// <summary>
+    /// <summary>
     /// List all sessions for an event, ordered by StartTime then SortOrder.
     /// </summary>
     [HttpGet]
@@ -20,18 +21,18 @@ public class EventSessionsController(ISessionService sessionService) : Controlle
         var result = await sessionService.GetSessionsByEventIdAsync(eventId);
         return StatusCode(result.StatusCode, result);
     }
- 
+
     /// <summary>
     /// Get sessions filtered by track.
     /// </summary>
     [HttpGet("by-track/{trackId:guid}")]
     [AllowAnonymous]
-    public async Task<IActionResult> GetSessionsByTrack(Guid eventId, Guid trackId)
+    public async Task<IActionResult> GetSessionsByTrack(Guid eventId, Guid trackId, [FromQuery] BaseQueryParams request)
     {
-        var result = await sessionService.GetSessionsByTrackIdAsync(eventId, trackId);
+        var result = await sessionService.GetSessionsByTrackIdAsync(eventId, trackId, request);
         return StatusCode(result.StatusCode, result);
     }
- 
+
     /// <summary>
     /// Get a single session with full details (speakers, venue, booking count).
     /// </summary>
@@ -42,7 +43,7 @@ public class EventSessionsController(ISessionService sessionService) : Controlle
         var result = await sessionService.GetSessionByIdAsync(eventId, sessionId);
         return StatusCode(result.StatusCode, result);
     }
- 
+
     /// <summary>
     /// Create a new session within the event.
     /// Runs 5-step validation: time → track exists → event bounds → track overlap → venue overlap.
@@ -54,7 +55,7 @@ public class EventSessionsController(ISessionService sessionService) : Controlle
         var result = await sessionService.CreateSessionAsync(eventId, request);
         return StatusCode(result.StatusCode, result);
     }
- 
+
     /// <summary>
     /// Update session content (title, description, time, track, venue, capacity).
     /// Re-validates overlap rules if time or track/venue changed.
@@ -66,7 +67,7 @@ public class EventSessionsController(ISessionService sessionService) : Controlle
         var result = await sessionService.UpdateSessionAsync(eventId, sessionId, request);
         return StatusCode(result.StatusCode, result);
     }
- 
+
     /// <summary>
     /// Transition session status.
     /// Separated from content update because:
@@ -85,7 +86,7 @@ public class EventSessionsController(ISessionService sessionService) : Controlle
         var result = await sessionService.UpdateSessionStatusAsync(eventId, sessionId, request);
         return StatusCode(result.StatusCode, result);
     }
- 
+
     /// <summary>
     /// Delete a session. Fails with 409 if session has active bookings.
     /// </summary>

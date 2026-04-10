@@ -98,11 +98,12 @@ public class EventService(
         var responseDto = eventEntity.Adapt<EventResponseDto>();
         return ApiResponse<EventResponseDto>.Success(201, "Event created successfully", responseDto);
     }
-    public async Task<ApiResponse<IReadOnlyCollection<EventResponseDto>>> GetAllEventsAsync()
+    public async Task<ApiResponse<PagedResult<EventResponseDto>>> GetAllEventsAsync(BaseQueryParams request)
     {
-        var events = await eventRepository.GetAllEventsAsync();
-        var responseDtos = events.Adapt<IReadOnlyCollection<EventResponseDto>>();
-        return ApiResponse<IReadOnlyCollection<EventResponseDto>>.Success(200, "Events retrieved successfully", responseDtos);
+        var events = await eventRepository.GetAllEventsAsync(request);
+        var responseDtos = events.Adapt<List<EventResponseDto>>();
+        var result = new PagedResult<EventResponseDto>(responseDtos, events.TotalItems, events.CurrentPage, events.PageSize);
+        return ApiResponse<PagedResult<EventResponseDto>>.Success(200, "Events retrieved successfully", result);
     }
     public async Task<ApiResponse<EventResponseDto>> GetEventByIdAsync(Guid eventId)
     {

@@ -1,3 +1,4 @@
+using Common;
 using EventService_Domain.Entities;
 using EventService_Domain.Enums;
 using EventService_Domain.Interfaces;
@@ -8,14 +9,16 @@ namespace EventService_Infrastructure.Repositories;
 
 public class EventRepository(EventServiceDbContext dbContext) : IEventRepository
 {
-    public async Task<IReadOnlyList<Event>> GetAllEventsAsync()
+    public async Task<PagedResult<Event>> GetAllEventsAsync(BaseQueryParams request)
     {
-        return await dbContext.Events.Include(e => e.Tracks)
+        var query = dbContext.Events.Include(e => e.Tracks)
             .ThenInclude(t => t.Sessions)
             .ThenInclude(s => s.Lineups)
             .ThenInclude(l => l.Talent)
             .Include(e => e.EventType)
-            .ToListAsync();
+            .AsQueryable();
+        query = query.ApplySorting(request.SortBy);
+        return await query.ToPagedResultAsync(request.Page, request.PageSize);
     }
 
     public async Task<Event?> GetEventByIdAsync(Guid eventId)

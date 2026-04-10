@@ -50,7 +50,7 @@ public class TransactionRepository : ITransactionRepository
         await _context.Transactions.AddAsync(transaction);
         return transaction;
     }
-    
+
     public Task<Transaction> UpdateAsync(Transaction transaction)
     {
         _context.Transactions.Update(transaction);
@@ -61,37 +61,29 @@ public class TransactionRepository : ITransactionRepository
         await _context.SaveChangesAsync();
     }
 
-    public async Task<List<dynamic>> GetWeeklyTransactionsRawAsync(
-    DateTime start,
-    DateTime end,
-    Guid? walletId = null,          // null = admin
-    bool useNetAmount = false)       // organizer = true
+    public async Task<List<Transaction>> GetTransactionsAsync(
+    DateTime? start = null,
+    DateTime? end = null,
+    Guid? walletId = null)
     {
         var query = _context.Transactions
-            .Where(t =>
-                t.Status == TransactionStatus.Completed &&
-                t.CreatedAt >= start &&
-                t.CreatedAt < end);
+            .Where(t => t.Status == TransactionStatus.Completed);
+
+        if (start.HasValue)
+        {
+            query = query.Where(t => t.CreatedAt >= start.Value);
+        }
+
+        if (end.HasValue)
+        {
+            query = query.Where(t => t.CreatedAt < end.Value);
+        }
 
         if (walletId.HasValue)
         {
             query = query.Where(t => t.WalletId == walletId.Value);
         }
 
-        return await query
-            .GroupBy(t => t.CreatedAt.Date)
-            .Select(g => new
-            {
-                Date = g.Key,
-
-                MoneyIn = g
-                    .Where(x => x.Type == TransactionType.PaymentReceived)
-                    .Sum(x => useNetAmount ? x.NetAmount : x.Amount),
-
-                MoneyOut = g
-                    .Where(x => x.Type == TransactionType.Payout)
-                    .Sum(x => x.Amount)
-            })
-            .ToListAsync<dynamic>();
+        return await query.ToListAsync();
     }
 }

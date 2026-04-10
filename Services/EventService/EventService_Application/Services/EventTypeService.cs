@@ -26,11 +26,12 @@ public class EventTypeService(IEventTypeRepository eventTypeRepository) : IEvent
         return ApiResponse<EventTypeResponse>.Success(201, "Event type created successfully", result.Adapt<EventTypeResponse>());
     }
 
-    public async Task<ApiResponse<IReadOnlyList<EventTypeResponse>>> GetAllEventTypesAsync()
+    public async Task<ApiResponse<PagedResult<EventTypeResponse>>> GetAllEventTypesAsync(BaseQueryParams request)
     {
-        var eventTypes =  await eventTypeRepository.GetAllEventTypesAsync();
-        var result = eventTypes.Adapt<IReadOnlyList<EventTypeResponse>>();
-        return ApiResponse<IReadOnlyList<EventTypeResponse>>.Success(200, "Event types retrieved successfully", result);
+        var eventTypes = await eventTypeRepository.GetAllEventTypesAsync(request);
+        var result = eventTypes.Adapt<List<EventTypeResponse>>();
+        var pagedResult = new PagedResult<EventTypeResponse>(result, eventTypes.TotalItems, eventTypes.CurrentPage, eventTypes.PageSize);
+        return ApiResponse<PagedResult<EventTypeResponse>>.Success(200, "Event types retrieved successfully", pagedResult);
     }
 
     public async Task<ApiResponse<EventTypeResponse>> GetEventTypeByIdAsync(Guid eventTypeId)
@@ -39,14 +40,14 @@ public class EventTypeService(IEventTypeRepository eventTypeRepository) : IEvent
         var result = eventType.Adapt<EventTypeResponse>();
         return result == null ? ApiResponse<EventTypeResponse>.Fail(404, "Event type not found") : ApiResponse<EventTypeResponse>.Success(200, "Event type retrieved successfully", result);
     }
-    
+
     public async Task<ApiResponse<EventTypeResponse>> UpdateEventTypeAsync(Guid eventTypeId,
         UpdateEventTypeDto eventTypeToUpdate)
     {
         var existedEventType = await eventTypeRepository.GetEventTypeByIdAsync(eventTypeId);
         if (existedEventType == null)
             return ApiResponse<EventTypeResponse>.Fail(404, "Event type not found");
-        existedEventType.Name = eventTypeToUpdate.Name ?? existedEventType.Name;       
+        existedEventType.Name = eventTypeToUpdate.Name ?? existedEventType.Name;
         existedEventType.IsActive = eventTypeToUpdate.IsActive ?? existedEventType.IsActive;
         eventTypeRepository.UpdateEventTypeAsync(existedEventType);
         await eventTypeRepository.SaveChangesAsync();

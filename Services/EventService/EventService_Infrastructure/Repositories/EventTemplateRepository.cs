@@ -1,3 +1,4 @@
+using Common;
 using EventService_Domain.Entities;
 using EventService_Domain.Interfaces;
 using EventService_Infrastructure.Data;
@@ -7,11 +8,13 @@ namespace EventService_Infrastructure.Repositories;
 
 public class EventTemplateRepository(EventServiceDbContext dbContext) : IEventTemplateRepository
 {
-    public async Task<IReadOnlyList<EventTemplate>> GetByCreatorAsync(Guid createdBy)
+    public async Task<PagedResult<EventTemplate>> GetByCreatorAsync(Guid createdBy, BaseQueryParams request)
     {
-        return await dbContext.EventTemplates
+        var query = dbContext.EventTemplates
             .Where(x => x.CreatedBy == createdBy)
-            .ToListAsync();
+            .AsQueryable();
+        query = query.ApplySorting(request.SortBy);
+        return await query.ToPagedResultAsync(request.Page, request.PageSize);
     }
 
     public async Task<EventTemplate?> GetByIdAsync(Guid id)

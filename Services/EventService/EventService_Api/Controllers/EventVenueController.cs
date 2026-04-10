@@ -1,8 +1,9 @@
-﻿using System.Security.Claims;
+﻿using Common;
 using EventService_Application.DTOs;
 using EventService_Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace EventService_Api.Controllers;
 
@@ -17,9 +18,9 @@ public class EventVenueController(IVenueService venueService) : ControllerBase
     /// </summary>
     [HttpGet]
     [AllowAnonymous]
-    public async Task<IActionResult> GetVenues(Guid eventId)
+    public async Task<IActionResult> GetVenues(Guid eventId, [FromQuery] BaseQueryParams request)
     {
-        var result = await venueService.GetByEventIdAsync(eventId);
+        var result = await venueService.GetByEventIdAsync(eventId, request);
         return StatusCode(result.StatusCode, result);
     }
 

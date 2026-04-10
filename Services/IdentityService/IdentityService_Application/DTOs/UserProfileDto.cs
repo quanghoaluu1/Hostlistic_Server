@@ -22,35 +22,10 @@ public class UserDashboardDto
 {
     public int TotalUsers { get; set; }
     public List<UserTrendDto> UserTrend { get; set; } = new();
-    public List<EventTrendDto> EventTrend { get; set; } = new();
 }
 public class UserTrendDto
 {
     public DateTime Week { get; set; }
     public int Users { get; set; }
-}
-
-public class EventTrendDto
-{
-    public int Month { get; set; }
-    public int Events { get; set; }
-}
-
-public class EventDashboardDto
-{
-    public int Total { get; set; }
-    public List<EventByStatusDto> ByStatus { get; set; } = new();
-    public List<EventByDateDto> ByDate { get; set; } = new();
-}
-
-public class EventByStatusDto
-{
-    public string Status { get; set; } = string.Empty;
-    public int Count { get; set; }
-}
-
-public class EventByDateDto
-{
-    public DateTime Date { get; set; }
-    public int Count { get; set; }
+    public string WeekLabel { get; set; } = string.Empty;
 }

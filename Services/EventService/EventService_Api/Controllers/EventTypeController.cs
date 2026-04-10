@@ -1,6 +1,6 @@
+using Common;
 using EventService_Application.DTOs;
 using EventService_Application.Interfaces;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EventService_Api.Controllers;
@@ -11,8 +11,8 @@ namespace EventService_Api.Controllers;
 public class EventTypeController(IEventTypeService eventTypeService) : ControllerBase
 {
     [HttpGet]
-    public async Task<IActionResult> GetEventTypes() => Ok(await eventTypeService.GetAllEventTypesAsync());
-    
+    public async Task<IActionResult> GetEventTypes([FromQuery] BaseQueryParams request) => Ok(await eventTypeService.GetAllEventTypesAsync(request));
+
     [HttpGet("{eventTypeId:guid}")]
     public async Task<IActionResult> GetEventType(Guid eventTypeId) => Ok(await eventTypeService.GetEventTypeByIdAsync(eventTypeId));
 
@@ -22,7 +22,7 @@ public class EventTypeController(IEventTypeService eventTypeService) : Controlle
         try
         {
             var result = await eventTypeService.CreateEventTypeAsync(dto);
-            return Ok(result);  
+            return Ok(result);
         }
         catch (Exception e)
         {
@@ -42,7 +42,7 @@ public class EventTypeController(IEventTypeService eventTypeService) : Controlle
         {
             return BadRequest(e.Message);
         }
-        
+
     }
-    
+
 }
