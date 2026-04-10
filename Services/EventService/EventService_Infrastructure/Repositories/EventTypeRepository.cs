@@ -1,3 +1,4 @@
+using Common;
 using EventService_Domain;
 using EventService_Domain.Interfaces;
 using EventService_Infrastructure.Data;
@@ -7,10 +8,12 @@ namespace EventService_Infrastructure.Repositories;
 
 public class EventTypeRepository(EventServiceDbContext dbContext) : IEventTypeRepository
 {
-    
-    public async Task<IReadOnlyList<EventType>> GetAllEventTypesAsync()
+
+    public async Task<PagedResult<EventType>> GetAllEventTypesAsync(BaseQueryParams request)
     {
-        return await dbContext.EventTypes.ToListAsync();
+        var query = dbContext.EventTypes.AsQueryable();
+        query = query.ApplySorting(request.SortBy);
+        return await query.ToPagedResultAsync(request.Page, request.PageSize);
     }
 
     public async Task<EventType?> GetEventTypeByIdAsync(Guid eventTypeId)
@@ -20,7 +23,7 @@ public class EventTypeRepository(EventServiceDbContext dbContext) : IEventTypeRe
 
     public EventType AddEventTypeAsync(EventType eventType)
     {
-        var newEventType =  dbContext.EventTypes.Add(eventType);
+        var newEventType = dbContext.EventTypes.Add(eventType);
         return newEventType.Entity;
     }
 
@@ -31,7 +34,7 @@ public class EventTypeRepository(EventServiceDbContext dbContext) : IEventTypeRe
 
     public EventType UpdateEventTypeAsync(EventType eventType)
     {
-        var updatedEventType =  dbContext.EventTypes.Update(eventType);
+        var updatedEventType = dbContext.EventTypes.Update(eventType);
         return updatedEventType.Entity;
     }
 

@@ -6,6 +6,7 @@ namespace StreamingService_Domain.Entities;
 public class StreamRoom : BaseClass
 {
     public Guid EventId { get; set; }
+    public Guid? TrackId { get; set; }
     public Guid? SessionId { get; set; }
     
     public string LiveKitRoomName { get; set; } = null!;

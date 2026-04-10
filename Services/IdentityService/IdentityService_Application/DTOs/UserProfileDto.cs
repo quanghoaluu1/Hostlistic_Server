@@ -18,3 +18,14 @@ public class UserProfileDto : UserDto
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }
+public class UserDashboardDto
+{
+    public int TotalUsers { get; set; }
+    public List<UserTrendDto> UserTrend { get; set; } = new();
+}
+public class UserTrendDto
+{
+    public DateTime Week { get; set; }
+    public int Users { get; set; }
+    public string WeekLabel { get; set; } = string.Empty;
+}

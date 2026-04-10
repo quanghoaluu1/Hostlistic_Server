@@ -12,4 +12,8 @@ public interface ITransactionRepository
     Task<Transaction> AddAsync(Transaction transaction);
     Task<Transaction> UpdateAsync(Transaction transaction);
     Task SaveChangesAsync();
+    Task<List<Transaction>> GetTransactionsAsync(
+    DateTime? start = null,
+    DateTime? end = null,
+    Guid? walletId = null);
 }

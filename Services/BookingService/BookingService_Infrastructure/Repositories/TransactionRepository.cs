@@ -50,7 +50,7 @@ public class TransactionRepository : ITransactionRepository
         await _context.Transactions.AddAsync(transaction);
         return transaction;
     }
-    
+
     public Task<Transaction> UpdateAsync(Transaction transaction)
     {
         _context.Transactions.Update(transaction);
@@ -59,5 +59,31 @@ public class TransactionRepository : ITransactionRepository
     public async Task SaveChangesAsync()
     {
         await _context.SaveChangesAsync();
+    }
+
+    public async Task<List<Transaction>> GetTransactionsAsync(
+    DateTime? start = null,
+    DateTime? end = null,
+    Guid? walletId = null)
+    {
+        var query = _context.Transactions
+            .Where(t => t.Status == TransactionStatus.Completed);
+
+        if (start.HasValue)
+        {
+            query = query.Where(t => t.CreatedAt >= start.Value);
+        }
+
+        if (end.HasValue)
+        {
+            query = query.Where(t => t.CreatedAt < end.Value);
+        }
+
+        if (walletId.HasValue)
+        {
+            query = query.Where(t => t.WalletId == walletId.Value);
+        }
+
+        return await query.ToListAsync();
     }
 }

@@ -1,4 +1,5 @@
-﻿using EventService_Domain.Entities;
+﻿using Common;
+using EventService_Domain.Entities;
 using EventService_Domain.Interfaces;
 using EventService_Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -25,13 +26,15 @@ namespace EventService_Infrastructure.Repositories
                 .FirstOrDefaultAsync(v => v.Id == venueId && v.EventId == eventId);
             // NO AsNoTracking → EF tracks changes
         }
-        public async Task<IReadOnlyList<Venue>> GetByEventIdAsync(Guid eventId)
+        public async Task<PagedResult<Venue>> GetByEventIdAsync(Guid eventId, BaseQueryParams request)
         {
-            return await _context.Venues
+            var query = _context.Venues
                 .AsNoTracking()
                 .Where(v => v.EventId == eventId)
                 .OrderBy(v => v.Name)
-                .ToListAsync();
+                .AsQueryable();
+            query = query.ApplySorting(request.SortBy);
+            return await query.ToPagedResultAsync(request.Page, request.PageSize);
         }
 
         public async Task<bool> ExistsByNameAsync(Guid eventId, string name, Guid? excludeVenueId = null)
@@ -76,6 +79,55 @@ namespace EventService_Infrastructure.Repositories
                 return true;
             }
             return false;
+        }
+
+        public async Task<object> GetVenueDashboardAsync(Guid? eventId = null)
+        {
+            IQueryable<Venue> query = _context.Venues.AsNoTracking();
+
+            // filter theo event nếu có
+            if (eventId.HasValue)
+            {
+                query = query.Where(v => v.EventId == eventId.Value);
+            }
+
+            // ✅ total
+            var total = await query.CountAsync();
+
+            // ✅ tổng capacity
+            var totalCapacity = await query.SumAsync(v => v.Capacity);
+
+            // ✅ group theo event
+            var byEvent = await _context.Venues
+                .GroupBy(v => v.EventId)
+                .Select(g => new
+                {
+                    eventId = g.Key,
+                    count = g.Count()
+                })
+                .ToListAsync();
+
+            // ✅ phân loại capacity
+            var byCapacity = await query
+                .GroupBy(v =>
+                    v.Capacity <= 100 ? "0-100" :
+                    v.Capacity <= 500 ? "100-500" :
+                    "500+"
+                )
+                .Select(g => new
+                {
+                    range = g.Key,
+                    count = g.Count()
+                })
+                .ToListAsync();
+
+            return new
+            {
+                total,
+                totalCapacity,
+                byEvent,
+                byCapacity
+            };
         }
     }
 }

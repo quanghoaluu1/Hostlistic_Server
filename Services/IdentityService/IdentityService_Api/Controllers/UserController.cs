@@ -1,3 +1,4 @@
+using Common;
 using IdentityService_Application.DTOs;
 using IdentityService_Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -57,19 +58,19 @@ public class UserController : ControllerBase
         var userId = GetCurrentUserId();
         var userProfile = await _userService.GetUserProfileAsync(userId);
         if (userProfile.Data == null) return NotFound(userProfile);
-        
+
         var result = await _photoService.UploadPhotoAsync(file);
         if (result.Error != null) return BadRequest(result.Error);
-        
+
         var imageUrl = result.SecureUrl.AbsoluteUri;
-        
+
         var updateRequest = new UpdateUserProfileRequest
         {
             FullName = userProfile.Data.FullName,
             PhoneNumber = userProfile.Data.PhoneNumber,
             AvatarUrl = imageUrl
         };
-        
+
         var updateResult = await _userService.UpdateUserProfileWithAvatarAsync(userId, updateRequest, null);
         return Ok(updateResult);
     }
@@ -86,12 +87,12 @@ public class UserController : ControllerBase
     {
         var userId = GetCurrentUserId();
         var result = await _userTicketService.GetUserOrdersAsync(userId);
-        
+
         if (!result.IsSuccess)
         {
             return StatusCode(result.StatusCode, result);
         }
-        
+
         return Ok(result);
     }
 
@@ -100,12 +101,12 @@ public class UserController : ControllerBase
     {
         var userId = GetCurrentUserId();
         var result = await _userTicketService.GetUserTicketsAsync(userId);
-        
+
         if (!result.IsSuccess)
         {
             return StatusCode(result.StatusCode, result);
         }
-        
+
         return Ok(result);
     }
 
@@ -114,12 +115,27 @@ public class UserController : ControllerBase
     {
         var userId = GetCurrentUserId();
         var result = await _userTicketService.GetUserTicketsWithEventDetailsAsync(userId);
-        
+
         if (!result.IsSuccess)
         {
             return StatusCode(result.StatusCode, result);
         }
-        
+
+        return Ok(result);
+    }
+
+    [HttpGet("dashboard")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetUserDashboard()
+    {
+        //var userId = GetCurrentUserId();
+        var result = await _userService.GetUserDashboardAsync();
+
+        if (!result.IsSuccess)
+        {
+            return StatusCode(result.StatusCode, result);
+        }
+
         return Ok(result);
     }
 
@@ -127,6 +143,14 @@ public class UserController : ControllerBase
     {
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
         return Guid.Parse(userIdClaim ?? throw new UnauthorizedAccessException("User ID not found in token"));
+    }
+
+    [HttpGet("user-list")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetUserList([FromQuery] BaseQueryParams queryParams)
+    {
+        var result = await _userService.GetUserList(queryParams);
+        return StatusCode(result.StatusCode, result);
     }
 }
 

@@ -1,8 +1,9 @@
-using System.Security.Claims;
+using Common;
 using EventService_Application.DTOs;
 using EventService_Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace EventService_Api.Controllers;
 
@@ -20,12 +21,12 @@ public class EventController(IEventService eventService, IPhotoService photoServ
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAllEventsAsync()
+    public async Task<IActionResult> GetAllEventsAsync([FromQuery] BaseQueryParams request)
     {
-        var result = await eventService.GetAllEventsAsync();
+        var result = await eventService.GetAllEventsAsync(request);
         return Ok(result);
     }
-    
+
     [HttpGet("paged")]
     public async Task<IActionResult> GetPublicEventsAsync([FromQuery] PublicEventQueryParams queryParams)
     {
@@ -96,4 +97,18 @@ public class EventController(IEventService eventService, IPhotoService photoServ
         return Ok(result);
     }
 
+    [HttpGet("dashboard")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetDashboard([FromQuery] int? year, [FromQuery] int? month)
+    {
+        var result = await eventService.GetEventDashboardAsync(year, month);
+        return Ok(result);
+    }
+
+    [HttpPut("status/{eventId:guid}")]
+    public async Task<IActionResult> UpdateEventStatus(Guid eventId)
+    {
+        var result = await eventService.UpdateEventStatus(eventId);
+        return Ok(result);
+    }
 }

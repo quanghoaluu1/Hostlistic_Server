@@ -47,7 +47,7 @@ public class EventTeamMember
         string? userEmail = null)
     {
         if (role is EventRole.Organizer or EventRole.Attendee)
-            throw new DomainException($"Cannot invite with role '{role}'. Valid roles: CoOrganizer, Staff, Volunteer.");
+            throw new DomainException($"Cannot invite with role '{role}'. Valid roles: CoOrganizer, Staff.");
 
         var permissions = EventPermissions.GetPreset(role);
 

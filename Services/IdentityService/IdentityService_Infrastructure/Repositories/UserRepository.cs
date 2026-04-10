@@ -1,3 +1,4 @@
+using Common;
 using IdentityService_Domain.Entities;
 using IdentityService_Domain.Interfaces;
 using IdentityService_Infrastructure.Data;
@@ -56,5 +57,25 @@ public class UserRepository : IUserRepository
             .OrderBy(u => u.Email)
             .Take(maxResults)
             .ToListAsync();
+    }
+
+    public async Task<PagedResult<User>> GetUsersAsync(BaseQueryParams request)
+    {
+        var query = _dbContext.Users
+            .Where(u => u.IsActive).AsQueryable();
+        query = query.ApplySorting(request.SortBy);
+        return await query.ToPagedResultAsync(request.Page, request.PageSize);
+    }
+
+    public async Task<(int totalUsers, List<DateTime> userData)> GetUserDashboardRawAsync(DateTime start)
+    {
+        var totalUsers = await _dbContext.Users
+            .CountAsync(u => u.IsActive);
+
+        var users = await _dbContext.Users
+            .Where(u => u.CreatedAt >= start)
+            .Select(u => u.CreatedAt)
+            .ToListAsync();
+        return (totalUsers, users);
     }
 }

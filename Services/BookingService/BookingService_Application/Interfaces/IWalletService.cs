@@ -10,4 +10,6 @@ public interface IWalletService
     Task<ApiResponse<WalletDto>> CreateWalletAsync(CreateWalletRequest request);
     Task<ApiResponse<WalletDto>> UpdateWalletBalanceAsync(Guid walletId, UpdateWalletBalanceRequest request);
     Task<ApiResponse<bool>> DeleteWalletAsync(Guid walletId);
+    Task<object> GetAdminWeeklyCashflowAsync();
+    Task<object> GetOrganizerWeeklyCashflowAsync(Guid walletId);
 }
