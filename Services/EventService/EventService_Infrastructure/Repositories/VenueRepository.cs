@@ -77,5 +77,54 @@ namespace EventService_Infrastructure.Repositories
             }
             return false;
         }
+
+        public async Task<object> GetVenueDashboardAsync(Guid? eventId = null)
+        {
+            IQueryable<Venue> query = _context.Venues.AsNoTracking();
+
+            // filter theo event nếu có
+            if (eventId.HasValue)
+            {
+                query = query.Where(v => v.EventId == eventId.Value);
+            }
+
+            // ✅ total
+            var total = await query.CountAsync();
+
+            // ✅ tổng capacity
+            var totalCapacity = await query.SumAsync(v => v.Capacity);
+
+            // ✅ group theo event
+            var byEvent = await _context.Venues
+                .GroupBy(v => v.EventId)
+                .Select(g => new
+                {
+                    eventId = g.Key,
+                    count = g.Count()
+                })
+                .ToListAsync();
+
+            // ✅ phân loại capacity
+            var byCapacity = await query
+                .GroupBy(v =>
+                    v.Capacity <= 100 ? "0-100" :
+                    v.Capacity <= 500 ? "100-500" :
+                    "500+"
+                )
+                .Select(g => new
+                {
+                    range = g.Key,
+                    count = g.Count()
+                })
+                .ToListAsync();
+
+            return new
+            {
+                total,
+                totalCapacity,
+                byEvent,
+                byCapacity
+            };
+        }
     }
 }
