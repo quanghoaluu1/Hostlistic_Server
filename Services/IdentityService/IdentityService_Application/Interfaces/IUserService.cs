@@ -12,4 +12,5 @@ public interface IUserService
     Task<ApiResponse<List<UserSearchResultDto>>> SearchByEmailAsync(string email);
     Task<ApiResponse<UserDashboardDto>> GetUserDashboardAsync();
     Task<ApiResponse<PagedResult<UserProfileDto>>> GetUserList(BaseQueryParams request);
+    Task<ApiResponse<bool>> UpdateUserStatus(Guid userId);
 }

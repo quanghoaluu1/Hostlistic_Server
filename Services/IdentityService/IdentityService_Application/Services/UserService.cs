@@ -143,6 +143,16 @@ public class UserService : IUserService
         return ApiResponse<PagedResult<UserProfileDto>>.Success(200, "User list retrieved successfully", result);
     }
 
+    public async Task<ApiResponse<bool>> UpdateUserStatus(Guid userId)
+    {
+        var user = await _userRepository.GetUserByIdAsync(userId);
+        if (user == null)
+            return ApiResponse<bool>.Fail(404, "User not found");
+        await _userRepository.UpdateUserStatus(user);
+        await _userRepository.SaveChangesAsync();
+        return ApiResponse<bool>.Success(200, "User status updated successfully", true);
+    }
+
     public async Task<ApiResponse<UserDashboardDto>> GetUserDashboardAsync()
     {
         var today = DateTime.UtcNow.Date;

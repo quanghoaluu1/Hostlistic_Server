@@ -15,4 +15,5 @@ public interface IUserRepository
     Task<List<User>> SearchByEmailAsync(string email, int maxResults = 5);
     Task<(int totalUsers, List<DateTime> userData)> GetUserDashboardRawAsync(DateTime start);
     Task<PagedResult<User>> GetUsersAsync(BaseQueryParams request);
+    Task<bool> UpdateUserStatus(User @user);
 }
