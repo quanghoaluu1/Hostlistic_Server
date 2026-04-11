@@ -62,7 +62,7 @@ namespace EventService_Application.Services
             // Thesis rationale: "Pagination adds query overhead without meaningful benefit
             // when cardinality is bounded by physical/virtual room constraints."
             var venues = await venueRepository.GetByEventIdAsync(eventId, queryParams);
-            var response = venues.Adapt<PagedResult<VenueResponse>>();
+            var response = venues.Items.Adapt<PagedResult<VenueResponse>>();
             return ApiResponse<PagedResult<VenueResponse>>.Success(200, "Retrieved venues.", response);
         }
 

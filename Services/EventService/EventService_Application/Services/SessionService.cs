@@ -47,7 +47,7 @@ public class SessionService(
             return ApiResponse<PagedResult<SessionDto>>.Fail(404, "Track not found in this event");
 
         var sessions = await sessionRepository.GetSessionsByTrackIdAsync(trackId, request);
-        var sessionDtos = sessions.Adapt<List<SessionDto>>();
+        var sessionDtos = sessions.Items.Adapt<List<SessionDto>>();
         var result = new PagedResult<SessionDto>
             (
                 sessionDtos,
