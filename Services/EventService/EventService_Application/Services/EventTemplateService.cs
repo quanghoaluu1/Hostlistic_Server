@@ -42,7 +42,7 @@ public class EventTemplateService(IEventTemplateRepository repository) : IEventT
     public async Task<ApiResponse<PagedResult<EventTemplateDto>>> GetByCreatorAsync(Guid createdBy, BaseQueryParams request)
     {
         var list = await repository.GetByCreatorAsync(createdBy, request);
-        var dtos = list.Adapt<List<EventTemplateDto>>();
+        var dtos = list.Items.Adapt<List<EventTemplateDto>>();
         var result = new PagedResult<EventTemplateDto>(dtos, list.TotalItems, list.CurrentPage, list.PageSize);
         return ApiResponse<PagedResult<EventTemplateDto>>.Success(200, "OK", result);
     }

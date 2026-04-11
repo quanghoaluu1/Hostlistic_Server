@@ -101,7 +101,7 @@ public class EventService(
     public async Task<ApiResponse<PagedResult<EventResponseDto>>> GetAllEventsAsync(BaseQueryParams request)
     {
         var events = await eventRepository.GetAllEventsAsync(request);
-        var responseDtos = events.Adapt<List<EventResponseDto>>();
+        var responseDtos = events.Items.Adapt<List<EventResponseDto>>();
         var result = new PagedResult<EventResponseDto>(responseDtos, events.TotalItems, events.CurrentPage, events.PageSize);
         return ApiResponse<PagedResult<EventResponseDto>>.Success(200, "Events retrieved successfully", result);
     }

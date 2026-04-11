@@ -34,7 +34,7 @@ public class TrackService : ITrackService
             return ApiResponse<PagedResult<TrackDto>>.Fail(404, "Event not found");
 
         var tracks = await _trackRepository.GetTracksByEventIdAsync(eventId, request);
-        var trackDtos = tracks.Adapt<List<TrackDto>>();
+        var trackDtos = tracks.Items.Adapt<List<TrackDto>>();
         var pagedResult = new PagedResult<TrackDto>(trackDtos, tracks.TotalItems, tracks.CurrentPage, tracks.PageSize);
         return ApiResponse<PagedResult<TrackDto>>.Success(200, "Tracks retrieved successfully", pagedResult);
     }
