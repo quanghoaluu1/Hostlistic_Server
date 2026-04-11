@@ -57,7 +57,9 @@ builder.Services.AddAuthentication(options =>
 
         ValidateLifetime = true,
 
-        ClockSkew = TimeSpan.Zero
+        ClockSkew = TimeSpan.Zero,
+        RoleClaimType = "Role"
+
     };
     options.Events = new JwtBearerEvents
     {
