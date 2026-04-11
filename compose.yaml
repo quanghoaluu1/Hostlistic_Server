@@ -199,6 +199,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_HTTP_PORTS=8080
+      - Kestrel__Endpoints__Http__Url=http://+:8080
       - ConnectionStrings__StreamingDbConnection=${STREAM_DB_CONNECTION}
       - Jwt__Key=${JWT_SECRET_KEY}
       - Jwt__Issuer=hostlistic
