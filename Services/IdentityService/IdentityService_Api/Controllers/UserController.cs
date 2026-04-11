@@ -125,7 +125,7 @@ public class UserController : ControllerBase
     }
 
     [HttpGet("dashboard")]
-    [AllowAnonymous]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GetUserDashboard()
     {
         //var userId = GetCurrentUserId();
@@ -146,10 +146,18 @@ public class UserController : ControllerBase
     }
 
     [HttpGet("user-list")]
-    [AllowAnonymous]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GetUserList([FromQuery] BaseQueryParams queryParams)
     {
         var result = await _userService.GetUserList(queryParams);
+        return StatusCode(result.StatusCode, result);
+    }
+
+    [HttpPut("{userId:guid}/status")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> UpdateUserStatus(Guid userId)
+    {
+        var result = await _userService.UpdateUserStatus(userId);
         return StatusCode(result.StatusCode, result);
     }
 }

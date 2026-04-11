@@ -48,7 +48,7 @@ public class EventService(
         eventEntity.OrganizerId = organizerId;
         eventEntity.TimeZoneId = request.TimeZoneId;
         eventEntity.AgendaMode = AgendaMode.Auto;
-        
+
         var defaultTrack = new Track
         {
             Id = Guid.NewGuid(),
@@ -101,7 +101,7 @@ public class EventService(
     public async Task<ApiResponse<PagedResult<EventResponseDto>>> GetAllEventsAsync(BaseQueryParams request)
     {
         var events = await eventRepository.GetAllEventsAsync(request);
-        var responseDtos = events.Adapt<List<EventResponseDto>>();
+        var responseDtos = events.Items.Adapt<List<EventResponseDto>>();
         var result = new PagedResult<EventResponseDto>(responseDtos, events.TotalItems, events.CurrentPage, events.PageSize);
         return ApiResponse<PagedResult<EventResponseDto>>.Success(200, "Events retrieved successfully", result);
     }
@@ -316,7 +316,7 @@ public class EventService(
         eventRepository.UpdateEventAsync(eventEntity);
         await eventRepository.SaveChangesAsync();
         return ApiResponse<bool>.Success(200, "Agenda mode toggled successfully", eventEntity.AgendaMode == AgendaMode.Auto);
-        
+
     }
 
     private void ApplyEventUpdate(Event eventEntity, EventRequestDto request)
@@ -433,13 +433,12 @@ public class EventService(
         );
     }
 
-    public async Task<ApiResponse<EventResponseDto>> UpdateEventStatus(Guid eventId)
+    public async Task<ApiResponse<bool>> UpdateEventStatus(Guid eventId)
     {
         var eventEntity = await eventRepository.GetEventByIdAsync(eventId);
         if (eventEntity == null)
-            return ApiResponse<EventResponseDto>.Fail(404, "Event not found");
+            return ApiResponse<bool>.Fail(404, "Event not found");
         await eventRepository.UpdateEventStatus(eventEntity);
-        var responseDto = eventEntity.Adapt<EventResponseDto>();
-        return ApiResponse<EventResponseDto>.Success(200, "Event status updated successfully", responseDto);
+        return ApiResponse<bool>.Success(200, "Event status updated successfully", true);
     }
 }
