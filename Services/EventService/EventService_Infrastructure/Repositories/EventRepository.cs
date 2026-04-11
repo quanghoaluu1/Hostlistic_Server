@@ -117,7 +117,8 @@ public class EventRepository(EventServiceDbContext dbContext) : IEventRepository
     {
         if (@event.EventStatus == EventStatus.Unpublished)
             @event.EventStatus = EventStatus.Published;
-        @event.EventStatus = EventStatus.Unpublished;
+        else if (@event.EventStatus == EventStatus.Published)
+            @event.EventStatus = EventStatus.Unpublished;
         @event.UpdatedAt = DateTime.UtcNow;
         dbContext.Events.Update(@event);
         await SaveChangesAsync();
