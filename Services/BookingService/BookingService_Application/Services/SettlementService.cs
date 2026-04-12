@@ -104,9 +104,10 @@ public class SettlementService(
         var platformFeeAmount = Math.Round(grossRevenue * feePercent / 100, 0); // VND không lẻ
         var netRevenue = grossRevenue - platformFeeAmount;
 
+        var eventTitle = eventServiceClient.GetEventSettlementInfoAsync(eventId).Result.Title;
         var preview = new SettlementPreviewDto(
             EventId: eventId,
-            EventTitle: "",
+            EventTitle: eventTitle,
             OrganizerId: organizerId,
             GrossRevenue: grossRevenue,
             PlatformFeePercent: feePercent,
@@ -205,10 +206,12 @@ public class SettlementService(
                 Description = $"Revenue from event. {totalTicketsSold} tickets, {confirmedOrders.Count()} orders. " +
                               $"Gross: {grossRevenue:N0} VND, Fee: {platformFeeAmount:N0} VND ({feePercent}%)"
             };
+            var evenTitle = eventServiceClient.GetEventSettlementInfoAsync(eventId).Result.Title;
             var settlement = new EventSettlement
             {
                 Id = Guid.CreateVersion7(),
                 EventId = eventId,
+                EventName = evenTitle,
                 OrganizerId = organizerId,
                 WalletId = wallet.Id,
                 GrossRevenue = grossRevenue,
