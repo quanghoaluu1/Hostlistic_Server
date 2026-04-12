@@ -20,4 +20,6 @@ public class Ticket
     // Navigation property to parent
     [ForeignKey("OrderId")]
     public virtual Order Order { get; set; } = null!;
+    
+    public ICollection<CheckIn> CheckIns { get; set; } = new List<CheckIn>();
 }
