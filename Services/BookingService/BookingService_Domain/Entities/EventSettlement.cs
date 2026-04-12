@@ -6,6 +6,7 @@ public class EventSettlement
 {
     public Guid Id { get; set; }
     public Guid EventId { get; set; }
+    public string EventName { get; set; } = string.Empty;
     public Guid OrganizerId { get; set; }
     public Guid WalletId { get; set; }
     
