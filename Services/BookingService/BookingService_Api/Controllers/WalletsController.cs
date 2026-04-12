@@ -58,7 +58,7 @@ public class WalletsController : ControllerBase
         return Ok(result);
     }
     [HttpGet("dashboard/admin/cashflow")]
-    [AllowAnonymous]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GetAdminWeeklyCashflow()
     {
         var result = await _walletService.GetAdminWeeklyCashflowAsync();

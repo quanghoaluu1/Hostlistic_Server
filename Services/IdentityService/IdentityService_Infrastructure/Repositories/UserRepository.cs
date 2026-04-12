@@ -62,9 +62,19 @@ public class UserRepository : IUserRepository
     public async Task<PagedResult<User>> GetUsersAsync(BaseQueryParams request)
     {
         var query = _dbContext.Users
-            .Where(u => u.IsActive).AsQueryable();
+            .AsQueryable();
         query = query.ApplySorting(request.SortBy);
         return await query.ToPagedResultAsync(request.Page, request.PageSize);
+    }
+
+    public async Task<bool> UpdateUserStatus(User @user)
+    {
+        if (user.IsActive == true)
+            user.IsActive = false;
+        else user.IsActive = true;
+        await UpdateUserAsync(user);
+        await SaveChangesAsync();
+        return true;
     }
 
     public async Task<(int totalUsers, List<DateTime> userData)> GetUserDashboardRawAsync(DateTime start)
