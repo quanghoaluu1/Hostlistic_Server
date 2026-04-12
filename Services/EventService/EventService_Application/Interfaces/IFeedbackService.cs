@@ -10,7 +10,6 @@ namespace EventService_Application.Interfaces
         Task<ApiResponse<List<FeedbackDto>>> GetAllFeedbacksAsync();
         Task<ApiResponse<List<FeedbackDto>>> GetFeedbacksByEventIdAsync(Guid eventId);
         Task<ApiResponse<List<FeedbackDto>>> GetFeedbacksBySessionIdAsync(Guid sessionId);
-        Task<ApiResponse<List<FeedbackDto>>> GetAllFeedback();
         Task<ApiResponse<FeedbackDto>> UpdateFeedbackAsync(Guid id, UpdateFeedbackDto request);
         Task<ApiResponse<bool>> DeleteFeedbackAsync(Guid id);
     }
