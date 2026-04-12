@@ -14,5 +14,5 @@ public interface IEventService
     Task<ApiResponse<bool>> ToggleAgendaModeAsync(Guid eventId);
     Task<ApiResponse<StreamAuthResponseDto>> VerifyStreamAccessAsync(Guid eventId, Guid userId);
     Task<ApiResponse<object>> GetEventDashboardAsync(int? year, int? month);
-    Task<ApiResponse<EventResponseDto>> UpdateEventStatus(Guid eventId);
+    Task<ApiResponse<bool>> UpdateEventStatus(Guid eventId);
 }

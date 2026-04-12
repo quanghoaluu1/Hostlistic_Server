@@ -1,6 +1,7 @@
 using Common;
 using EventService_Application.DTOs;
 using EventService_Application.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EventService_Api.Controllers;
@@ -11,6 +12,7 @@ namespace EventService_Api.Controllers;
 public class EventTypeController(IEventTypeService eventTypeService) : ControllerBase
 {
     [HttpGet]
+    [AllowAnonymous]
     public async Task<IActionResult> GetEventTypes([FromQuery] BaseQueryParams request) => Ok(await eventTypeService.GetAllEventTypesAsync(request));
 
     [HttpGet("{eventTypeId:guid}")]

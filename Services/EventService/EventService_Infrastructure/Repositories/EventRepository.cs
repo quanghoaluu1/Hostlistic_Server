@@ -113,12 +113,16 @@ public class EventRepository(EventServiceDbContext dbContext) : IEventRepository
         };
     }
 
-    public async Task<Event> UpdateEventStatus(Event @event)
+    public async Task<bool> UpdateEventStatus(Event @event)
     {
-        @event.EventStatus = EventStatus.Unpublished;
+        if (@event.EventStatus == EventStatus.Unpublished)
+            @event.EventStatus = EventStatus.Published;
+        else if (@event.EventStatus == EventStatus.Published)
+            @event.EventStatus = EventStatus.Unpublished;
+        @event.UpdatedAt = DateTime.UtcNow;
         dbContext.Events.Update(@event);
         await SaveChangesAsync();
-        return @event;
+        return true;
     }
 
 }
