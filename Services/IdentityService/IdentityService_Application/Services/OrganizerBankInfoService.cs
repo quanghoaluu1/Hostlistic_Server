@@ -13,7 +13,8 @@ public class OrganizerBankInfoService(IOrganizerBankInfoRepository repository) :
     {
         if (string.IsNullOrWhiteSpace(dto.BankName) ||
             string.IsNullOrWhiteSpace(dto.AccountNumber) ||
-            string.IsNullOrWhiteSpace(dto.AccountName))
+            string.IsNullOrWhiteSpace(dto.AccountName) ||
+            string.IsNullOrWhiteSpace(dto.BankBin) )
         {
             return ApiResponse<OrganizerBankInfoDto>.Fail(400, "Thiếu thông tin ngân hàng");
         }
