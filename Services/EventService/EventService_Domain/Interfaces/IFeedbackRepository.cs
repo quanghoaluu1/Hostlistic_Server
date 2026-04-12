@@ -4,7 +4,7 @@ namespace EventService_Domain.Interfaces
 {
     public interface IFeedbackRepository
     {
-        Task<Feedback> AddFeddbackAsync(Feedback feedback);
+        Task<Feedback> AddFeedbackAsync(Feedback feedback);
         Task<Feedback?> GetFeedbackByIdAsync(Guid id);
         Task<IEnumerable<Feedback>> GetAllFeedbacksAsync();
         Task<IEnumerable<Feedback>> GetFeedbacksByEventIdAsync(Guid eventId);

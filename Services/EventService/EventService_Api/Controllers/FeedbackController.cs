@@ -18,63 +18,49 @@ namespace EventService_Api.Controllers
         public async Task<IActionResult> AddFeedbackAsync([FromBody] FeedbackDto request)
         {
             var result = await _feedbackService.AddFeedbackAsync(request);
-            if (!result.IsSuccess)
-                return StatusCode(result.StatusCode, result);
-            return Ok(result);
+            return StatusCode(result.StatusCode, result);
         }
 
         [HttpGet("{id:guid}")]
         public async Task<IActionResult> GetFeedbackByIdAsync(Guid id)
         {
             var result = await _feedbackService.GetFeedbackByIdAsync(id);
-            if (!result.IsSuccess)
-                return StatusCode(result.StatusCode, result);
-            return Ok(result);
+            return StatusCode(result.StatusCode, result);
         }
 
         [HttpGet("event/{eventId:guid}")]
         public async Task<IActionResult> GetFeedbacksByEventIdAsync(Guid eventId)
         {
             var result = await _feedbackService.GetFeedbacksByEventIdAsync(eventId);
-            if (!result.IsSuccess)
-                return StatusCode(result.StatusCode, result);
-            return Ok(result);
+            return StatusCode(result.StatusCode, result);
         }
 
         [HttpGet("session/{sessionId:guid}")]
         public async Task<IActionResult> GetFeedbacksBySessionIdAsync(Guid sessionId)
         {
             var result = await _feedbackService.GetFeedbacksBySessionIdAsync(sessionId);
-            if (!result.IsSuccess)
-                return StatusCode(result.StatusCode, result);
-            return Ok(result);
+            return StatusCode(result.StatusCode, result);
         }
 
         [HttpGet]
         public async Task<IActionResult> GetAllFeedbacksAsync()
         {
             var result = await _feedbackService.GetAllFeedbacksAsync();
-            if (!result.IsSuccess)
-                return StatusCode(result.StatusCode, result);
-            return Ok(result);
+            return StatusCode(result.StatusCode, result);
         }
 
         [HttpPut("{id:guid}")]
         public async Task<IActionResult> UpdateFeedbackAsync(Guid id, [FromBody] UpdateFeedbackDto request)
         {
             var result = await _feedbackService.UpdateFeedbackAsync(id, request);
-            if (!result.IsSuccess)
-                return StatusCode(result.StatusCode, result);
-            return Ok(result);
+            return StatusCode(result.StatusCode, result);
         }
 
         [HttpDelete("{id:guid}")]
-        public IActionResult DeleteFeedbackAsync(Guid id)
+        public async Task<IActionResult> DeleteFeedbackAsync(Guid id)
         {
-            var result = _feedbackService.DeleteFeedbackAsync(id).Result;
-            if (!result.IsSuccess)
-                return StatusCode(result.StatusCode, result);
-            return Ok(result);
+            var result = await _feedbackService.DeleteFeedbackAsync(id);
+            return StatusCode(result.StatusCode, result);
         }
     }
 }
