@@ -1,6 +1,5 @@
 using BookingService_Application.DTOs.PayOs;
 using BookingService_Application.Interfaces;
-using Google.Apis.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using PayOS;
