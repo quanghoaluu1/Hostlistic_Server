@@ -730,5 +730,5 @@ public class EventSettlementInfoDto
     public Guid EventId { get; set; }
     public Guid OrganizerId { get; set; }
     public string Title { get; set; } = string.Empty;
-    public int EventStatus { get; set; }
+    public string EventStatus { get; set; }
 }

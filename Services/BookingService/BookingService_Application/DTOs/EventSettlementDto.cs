@@ -6,7 +6,7 @@ public record EventSettlementDto(
     Guid Id,
     Guid EventId,
     Guid OrganizerId,
-    decimal GrossVenue,
+    decimal GrossRevenue,
     decimal PlatformFeePercent,
     decimal PlatformFeeAmount,
     decimal NetRevenue,
@@ -37,6 +37,8 @@ public record RejectSettlementRequest(string Reason);
 public class UnsettledEventDto
 {
     public Guid EventId { get; set; }
+    public Guid OrganizerId { get; set; }
+    public string EventTitle { get; set; } = string.Empty;
     public decimal GrossRevenue { get; set; }
     public int TotalOrders { get; set; }
     public int TotalTicketsSold { get; set; }
