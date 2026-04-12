@@ -57,7 +57,9 @@ builder.Services.AddCors(options =>
                 "http://localhost:3000", "https://hostlistic.tech")
             .AllowAnyHeader()
             .AllowAnyMethod()
-            .AllowCredentials();
+            .AllowCredentials()
+            .WithExposedHeaders("Content-Disposition");
+        
     });
 });
 
