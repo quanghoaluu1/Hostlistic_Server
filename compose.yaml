@@ -122,6 +122,9 @@ services:
       - PayOs__ClientId=${PAYOS_CLIENT_ID}
       - PayOs__ApiKey=${PAYOS_API_KEY}
       - PayOs__ChecksumKey=${PAYOS_CHECKSUM_KEY}
+      - PayOs__Payout__ClientId=${PAYOS_PAYOUT_CLIENT_ID}
+      - PayOs__Payout__ApiKey=${PAYOS_PAYOUT_API_KEY}
+      - PayOs__Payout__ChecksumKey=${PAYOS_PAYOUT_CHECKSUM_KEY}
       - ServiceUrls__EventService=http://eventservice:8080
       - ServiceUrls__NotificationService=http://notificationservice:8080
       - ServiceUrls__IdentityService=http://identityservice:8080
