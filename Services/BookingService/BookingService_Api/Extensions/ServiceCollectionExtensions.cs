@@ -52,6 +52,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAttendeeService, AttendeeService>();
         services.AddScoped<IRegisteredEventService, RegisteredEventService>();
         services.AddScoped<IWithdrawalRequestService, WithdrawalRequestService>();
+        services.AddScoped<IPayOsPayoutService, PayOsPayoutService>();
 
         return services;
     }

@@ -14,7 +14,7 @@ public class WithdrawalRequestService(
     ITransactionRepository transactionRepository,
     IWalletRepository walletRepository,
     IUserServiceClient userServiceClient,
-    IPayOsService payOsService,
+    IPayOsPayoutService payoutService,
     ILogger<WithdrawalRequestService> logger
     ) : IWithdrawalRequestService
 {
@@ -133,18 +133,18 @@ public class WithdrawalRequestService(
             withdrawal.Status = WithdrawalStatus.Processing;
             await withdrawalRequestRepository.SaveChangesAsync();
 
-            // var payoutResult = await payOsService.CreatePayoutAsync(
-            //     referenceId: referenceId,
-            //     amount: (long)withdrawal.Amount,
-            //     description: $"Hostlistic payout {withdrawal.Id:N}"[..25],
-            //     toBin: withdrawal.BankBin,
-            //     toAccountNumber: withdrawal.AccountNumber,
-            //     ct: ct
-            // );
-            // if (payoutResult.IsSuccess)
-            // {
+            var payoutResult = await payoutService.CreatePayoutAsync(
+                referenceId: referenceId,
+                amount: (long)withdrawal.Amount,
+                description: $"Hostlistic payout {withdrawal.Id:N}"[..25],
+                toBin: withdrawal.BankBin,
+                toAccountNumber: withdrawal.AccountNumber,
+                ct: ct
+            );
+            if (payoutResult.IsSuccess)
+            {
                 withdrawal.Status = WithdrawalStatus.Completed;
-                // withdrawal.PayosPayoutId = payoutResult.PayoutId;
+                withdrawal.PayosPayoutId = payoutResult.PayoutId;
                 withdrawal.CompletedAt = DateTime.UtcNow;
                 
                 withdrawal.Wallet.PendingBalance -= withdrawal.Amount;
@@ -155,27 +155,27 @@ public class WithdrawalRequestService(
                 {
                     transaction.Status = TransactionStatus.Completed;
                 }
-                // logger.LogInformation(
-                //     "Payout completed for withdrawal {Id}: PayOS ref={Ref}",
-                //     withdrawalId, payoutResult.PayoutId);
+                logger.LogInformation(
+                    "Payout completed for withdrawal {Id}: PayOS ref={Ref}",
+                    withdrawalId, payoutResult.PayoutId);
                 logger.LogInformation("Payout completed for withdrawal {Id}", withdrawalId);
-            //}
-            // else
-            // {
-            //     withdrawal.Status = WithdrawalStatus.Failed;
-            //     withdrawal.Wallet.Balance += withdrawal.Amount;
-            //     withdrawal.Wallet.PendingBalance -= withdrawal.Amount;
-            //     withdrawal.Wallet.UpdatedAt = DateTime.UtcNow;
-            //     var transaction = await transactionRepository.GetByReferenceAsync(withdrawalId, nameof(WithdrawalRequest));
-            //     if (transaction is not null)
-            //     {
-            //         transaction.Status = TransactionStatus.Failed;
-            //         transaction.BalanceAfter = withdrawal.Wallet.Balance;
-            //     }
-            //     logger.LogWarning(
-            //         "PayOS payout failed for withdrawal {Id}: {Error}",
-            //         withdrawalId, payoutResult.ErrorMessage);
-            // }
+            }
+            else
+            {
+                 withdrawal.Status = WithdrawalStatus.Failed;
+                 withdrawal.Wallet.Balance += withdrawal.Amount;
+                 withdrawal.Wallet.PendingBalance -= withdrawal.Amount;
+                 withdrawal.Wallet.UpdatedAt = DateTime.UtcNow;
+                 var transaction = await transactionRepository.GetByReferenceAsync(withdrawalId, nameof(WithdrawalRequest));
+                 if (transaction is not null)
+                 {
+                     transaction.Status = TransactionStatus.Failed;
+                     transaction.BalanceAfter = withdrawal.Wallet.Balance;
+                 }
+                 logger.LogWarning(
+                     "PayOS payout failed for withdrawal {Id}: {Error}",
+                     withdrawalId, payoutResult.ErrorMessage);
+            }
 
             await withdrawalRequestRepository.SaveChangesAsync();
             return ApiResponse<WithdrawalDto>.Success(200, "Approve Success", withdrawal.Adapt<WithdrawalDto>());
