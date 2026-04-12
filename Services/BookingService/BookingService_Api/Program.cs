@@ -137,6 +137,18 @@ builder.Services.AddSingleton(sp =>
         MaxRetries = 2
     });
 });
+builder.Services.AddKeyedSingleton<PayOSClient>("Payout", (sp, _) =>
+{
+    var config = sp.GetRequiredService<IConfiguration>();
+    return new PayOSClient(new PayOSOptions
+    {
+        ClientId = config["PayOS:Payout:ClientId"]!,
+        ApiKey = config["PayOS:Payout:ApiKey"]!,
+        ChecksumKey = config["PayOS:Payout:ChecksumKey"]!,
+        TimeoutMs = 30000,
+        MaxRetries = 2
+    });
+});
 builder.Services.AddHealthChecks();
 
 var app = builder.Build();
