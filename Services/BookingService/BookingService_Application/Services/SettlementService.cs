@@ -211,7 +211,7 @@ public class SettlementService(
             {
                 Id = Guid.CreateVersion7(),
                 EventId = eventId,
-                EventName = evenTitle,
+                EventTitle = evenTitle,
                 OrganizerId = organizerId,
                 WalletId = wallet.Id,
                 GrossRevenue = grossRevenue,
