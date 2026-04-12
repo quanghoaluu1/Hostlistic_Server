@@ -5,7 +5,7 @@ namespace BookingService_Application.DTOs;
 public record EventSettlementDto(
     Guid Id,
     Guid EventId,
-    Guid EventTitle,
+    string EventTitle,
     Guid OrganizerId,
     decimal GrossRevenue,
     decimal PlatformFeePercent,
