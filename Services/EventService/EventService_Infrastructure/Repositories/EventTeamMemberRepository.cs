@@ -1,3 +1,4 @@
+using EventService_Domain.Constants;
 using EventService_Domain.Entities;
 using EventService_Domain.Enums;
 using EventService_Domain.Interfaces;
@@ -20,6 +21,19 @@ public class EventTeamMemberRepository(EventServiceDbContext dbContext) : IEvent
     {
         return await dbContext.EventTeamMembers
             .FirstOrDefaultAsync(m => m.Id == memberId);
+    }
+
+    public async Task<Dictionary<string,bool>?> GetPermissionsByMemberIdAsync(Guid eventId, Guid memberId)
+    {
+        return await dbContext.EventTeamMembers.Where(m =>
+                m.EventId == eventId && m.UserId == memberId && m.Status == EventMemberStatus.Active)
+            .Select(m => m.Permissions)
+            .FirstOrDefaultAsync();
+    }
+
+    public IQueryable<EventTeamMember> GetQueryable()
+    {
+        return dbContext.EventTeamMembers;
     }
 
     public async Task<EventTeamMember?> GetMemberByUserAndEventAsync(Guid userId, Guid eventId)

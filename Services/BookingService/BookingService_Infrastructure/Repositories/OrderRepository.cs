@@ -33,10 +33,12 @@ public class OrderRepository : IOrderRepository
     public async Task<IEnumerable<Order>> GetOrdersByEventIdAsync(Guid eventId)
     {
         return await _context.Orders
+            .AsNoTracking()
+            .Where(o => o.EventId == eventId)
             .Include(o => o.OrderDetails)
             .Include(o => o.Tickets)
-            .Include(o => o.Payments)
-            .Where(o => o.EventId == eventId)
+            .Include(o => o.Payments).ThenInclude(p => p.PaymentMethod)
+            .OrderByDescending(o => o.OrderDate)
             .ToListAsync();
     }
 
@@ -57,6 +59,7 @@ public class OrderRepository : IOrderRepository
             .Include(o => o.Payments)
             .Where(o => o.EventId == eventId)
             .Where(o => o.Status == OrderStatus.Confirmed)
+            .OrderByDescending(o => o.OrderDate)
             .ToListAsync();
     }
 

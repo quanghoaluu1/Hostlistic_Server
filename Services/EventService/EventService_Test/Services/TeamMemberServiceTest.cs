@@ -68,7 +68,7 @@ public class TeamMemberServiceTest
         var currentUserId = Guid.NewGuid();
         var ev = EventBuilder.CreateEvent(id: eventId, organizerId: organizerId);
         var currentMember = TeamMemberBuilder.CreateActiveMember(userId: currentUserId, eventId: eventId, role: EventRole.Staff);
-        currentMember.Permissions[EventPermissions.CanManageTeam] = true;
+        currentMember.Permissions[EventPermissions.ManageTeam] = true;
 
         _eventRepository.GetEventByIdAsync(eventId).Returns(ev);
         _memberRepository.GetMemberByUserAndEventAsync(currentUserId, eventId).Returns(currentMember);

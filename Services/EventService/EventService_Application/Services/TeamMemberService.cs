@@ -38,7 +38,7 @@ public class TeamMemberService(
         {
             currentMember = await memberRepository.GetMemberByUserAndEventAsync(currentUserId, eventId);
             bool canManageTeam = currentMember is { Status: EventMemberStatus.Active } &&
-                                 currentMember.Permissions.TryGetValue(EventPermissions.CanManageTeam, out var v) && v;
+                                 currentMember.Permissions.TryGetValue(EventPermissions.ManageTeam, out var v) && v;
 
             if (!canManageTeam)
                 return ApiResponse<TeamMemberDto>.Fail(403, "You do not have permission to invite team members.");
@@ -218,7 +218,7 @@ public class TeamMemberService(
         {
             var currentMember = await memberRepository.GetMemberByUserAndEventAsync(currentUserId, eventId);
             bool canManageTeam = currentMember is { Status: EventMemberStatus.Active } &&
-                                 currentMember.Permissions.TryGetValue(EventPermissions.CanManageTeam, out var v) && v;
+                                 currentMember.Permissions.TryGetValue(EventPermissions.ManageTeam, out var v) && v;
 
             if (!canManageTeam)
                 return ApiResponse<string>.Fail(403, "You do not have permission to remove team members.");
@@ -256,7 +256,7 @@ public class TeamMemberService(
         {
             var currentMember = await memberRepository.GetMemberByUserAndEventAsync(currentUserId, eventId);
             bool canManageTeam = currentMember is { Status: EventMemberStatus.Active } &&
-                                 currentMember.Permissions.TryGetValue(EventPermissions.CanManageTeam, out var v) && v;
+                                 currentMember.Permissions.TryGetValue(EventPermissions.ManageTeam, out var v) && v;
 
             if (!canManageTeam)
                 return ApiResponse<TeamMemberDto>.Fail(403, "You do not have permission to update permissions.");

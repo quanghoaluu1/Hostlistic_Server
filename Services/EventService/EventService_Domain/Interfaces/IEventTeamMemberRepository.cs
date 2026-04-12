@@ -8,6 +8,8 @@ public interface IEventTeamMemberRepository
     Task<IReadOnlyList<EventTeamMember>> GetMembersByEventIdAsync(Guid eventId);
     Task<EventTeamMember?> GetMemberByIdAsync(Guid memberId);
     Task<EventTeamMember?> GetMemberByUserAndEventAsync(Guid userId, Guid eventId);
+    Task<Dictionary<string, bool>?> GetPermissionsByMemberIdAsync(Guid eventId, Guid memberId);
+    IQueryable<EventTeamMember> GetQueryable();
     EventTeamMember AddMember(EventTeamMember member);
     EventTeamMember UpdateMember(EventTeamMember member);
     Task<bool> DeleteMemberAsync(Guid memberId);

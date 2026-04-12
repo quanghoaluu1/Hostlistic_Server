@@ -32,6 +32,10 @@ public class EventRepository(EventServiceDbContext dbContext) : IEventRepository
             .FirstOrDefaultAsync(e => e.Id == eventId);
     }
 
+    public async Task<bool> IsOwnerAsync(Guid eventId, Guid userId)
+    {
+        return await dbContext.Events.AnyAsync(e => e.Id == eventId && e.OrganizerId == userId);
+    }
     public Event AddEventAsync(Event @event)
     {
         return dbContext.Events.Add(@event).Entity;
