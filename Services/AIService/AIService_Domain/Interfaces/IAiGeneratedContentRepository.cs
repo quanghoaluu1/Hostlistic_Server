@@ -9,4 +9,5 @@ public interface IAiGeneratedContentRepository
     AiGeneratedContent Add(AiGeneratedContent content);
     AiGeneratedContent Update(AiGeneratedContent content);
     Task SaveChangesAsync(CancellationToken ct = default);
+    Task<List<AiGeneratedContent>> GetAiTokenChart();
 }

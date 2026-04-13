@@ -1,15 +1,14 @@
-using System.Diagnostics;
-using System.Text.RegularExpressions;
 using AIService_Application.DTOs.Requests;
 using AIService_Application.DTOs.Responses;
 using AIService_Application.Interface;
-using AIService_Application.Prompts;
 using AIService_Domain.Entities;
 using AIService_Domain.Enum;
 using AIService_Domain.Interfaces;
 using Common;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using System.Diagnostics;
+using System.Text.RegularExpressions;
 
 namespace AIService_Application.Services;
 
@@ -344,334 +343,353 @@ public partial class AiContentService(
     GenerateSpeakerIntroRequest request,
     Guid organizerId,
     CancellationToken ct = default)
-{
-    // ── Validate mode-specific requirement ──
-    if (request.Mode == "summarize" && string.IsNullOrWhiteSpace(request.SourceText))
-        return ApiResponse<AiContentResponse>.Fail(400,
-            "SourceText is required when mode is 'summarize'");
-
-    // ── Step 1: Fetch event (for event context in prompt) ──
-    var eventEntity = await eventServiceClient.GetEventByIdAsync(request.EventId, ct);
-    if (eventEntity is null)
-        return ApiResponse<AiContentResponse>.Fail(404, "Event not found");
-
-    // ── Step 2: Fetch lineup (replaces old Tracks traversal) ──
-    var lineup = await eventServiceClient.GetEventLineupAsync(request.EventId, ct);
-    if (lineup is null)
-        return ApiResponse<AiContentResponse>.Fail(404, "Event lineup not found");
-
-    // ── Step 3: Find the talent — search BOTH event-wide and session-specific ──
-    var talent = lineup.EventWideTalents
-        .FirstOrDefault(t => t.TalentId == request.TalentId);
-
-    if (talent is null)
     {
-        talent = lineup.SessionTalents
-            .SelectMany(s => s.Talents)
+        // ── Validate mode-specific requirement ──
+        if (request.Mode == "summarize" && string.IsNullOrWhiteSpace(request.SourceText))
+            return ApiResponse<AiContentResponse>.Fail(400,
+                "SourceText is required when mode is 'summarize'");
+
+        // ── Step 1: Fetch event (for event context in prompt) ──
+        var eventEntity = await eventServiceClient.GetEventByIdAsync(request.EventId, ct);
+        if (eventEntity is null)
+            return ApiResponse<AiContentResponse>.Fail(404, "Event not found");
+
+        // ── Step 2: Fetch lineup (replaces old Tracks traversal) ──
+        var lineup = await eventServiceClient.GetEventLineupAsync(request.EventId, ct);
+        if (lineup is null)
+            return ApiResponse<AiContentResponse>.Fail(404, "Event lineup not found");
+
+        // ── Step 3: Find the talent — search BOTH event-wide and session-specific ──
+        var talent = lineup.EventWideTalents
             .FirstOrDefault(t => t.TalentId == request.TalentId);
-    }
 
-    if (talent is null)
-        return ApiResponse<AiContentResponse>.Fail(404,
-            $"Talent {request.TalentId} not found in event lineup");
+        if (talent is null)
+        {
+            talent = lineup.SessionTalents
+                .SelectMany(s => s.Talents)
+                .FirstOrDefault(t => t.TalentId == request.TalentId);
+        }
 
-    // ── Step 4: Find all sessions this talent appears in ──
-    var talentSessionNames = lineup.SessionTalents
-        .Where(s => s.Talents.Any(t => t.TalentId == request.TalentId))
-        .Select(s => s.SessionTitle)
-        .ToList();
+        if (talent is null)
+            return ApiResponse<AiContentResponse>.Fail(404,
+                $"Talent {request.TalentId} not found in event lineup");
 
-    // Check if talent is event-wide (appears in eventWideTalents)
-    var isEventWide = lineup.EventWideTalents
-        .Any(t => t.TalentId == request.TalentId);
+        // ── Step 4: Find all sessions this talent appears in ──
+        var talentSessionNames = lineup.SessionTalents
+            .Where(s => s.Talents.Any(t => t.TalentId == request.TalentId))
+            .Select(s => s.SessionTitle)
+            .ToList();
 
-    // ── Step 5: Load prompt template ──
-    var template = await promptTemplateRepository.GetByKeyAsync(
-        PromptTemplateKey.SpeakerIntroduction, ct);
-    if (template is null)
-        return ApiResponse<AiContentResponse>.Fail(404,
-            "Speaker introduction prompt template not found");
+        // Check if talent is event-wide (appears in eventWideTalents)
+        var isEventWide = lineup.EventWideTalents
+            .Any(t => t.TalentId == request.TalentId);
 
-    // ── Step 6: Build parameters (mode-aware) ──
-    var parameters = promptTemplateEngine.BuildSpeakerIntroParameters(
-        eventEntity, talent, talentSessionNames, isEventWide, request);
-    logger.LogInformation("Parameters : {Param}", parameters);
-    var renderedUserPrompt = promptTemplateEngine.Render(
-        template.UserPromptTemplate, parameters);
+        // ── Step 5: Load prompt template ──
+        var template = await promptTemplateRepository.GetByKeyAsync(
+            PromptTemplateKey.SpeakerIntroduction, ct);
+        if (template is null)
+            return ApiResponse<AiContentResponse>.Fail(404,
+                "Speaker introduction prompt template not found");
 
-    // ── Step 7: Assess data quality ──
-    var dataQuality = request.Mode == "summarize"
-        ? "rich"
-        : (!string.IsNullOrWhiteSpace(talent.Bio) && !string.IsNullOrWhiteSpace(talent.Organization))
+        // ── Step 6: Build parameters (mode-aware) ──
+        var parameters = promptTemplateEngine.BuildSpeakerIntroParameters(
+            eventEntity, talent, talentSessionNames, isEventWide, request);
+        logger.LogInformation("Parameters : {Param}", parameters);
+        var renderedUserPrompt = promptTemplateEngine.Render(
+            template.UserPromptTemplate, parameters);
+
+        // ── Step 7: Assess data quality ──
+        var dataQuality = request.Mode == "summarize"
             ? "rich"
-            : !string.IsNullOrWhiteSpace(talent.Bio) || !string.IsNullOrWhiteSpace(talent.Organization)
-                ? "partial"
-                : "minimal";
+            : (!string.IsNullOrWhiteSpace(talent.Bio) && !string.IsNullOrWhiteSpace(talent.Organization))
+                ? "rich"
+                : !string.IsNullOrWhiteSpace(talent.Bio) || !string.IsNullOrWhiteSpace(talent.Organization)
+                    ? "partial"
+                    : "minimal";
 
-    var needsReview = request.Mode == "from_name" && dataQuality != "rich";
+        var needsReview = request.Mode == "from_name" && dataQuality != "rich";
 
-    // ── Steps 8-12: Create AiRequest, call AI, persist, return ──
-    // (UNCHANGED from previous version — keep as-is)
-    var aiRequest = new AiRequest
-    {
-        Id = Guid.NewGuid(),
-        EventId = request.EventId,
-        CreatedBy = organizerId,
-        RequestType = AiRequestType.GenerateTalentBio,
-        Tone = request.Tone,
-        Language = request.Language,
-        TargetAudience = request.Mode,
-        AdditionalContext = request.Mode == "summarize"
-            ? $"[SUMMARIZE] {request.SourceText?[..Math.Min(request.SourceText.Length, 200)]}..."
-            : request.AdditionalContext,
-        Status = AiRequestStatus.Pending,
-        CreatedAt = DateTime.UtcNow
-    };
-    aiRequestRepository.Add(aiRequest);
-    await aiRequestRepository.SaveChangesAsync(ct);
-
-    var sw = Stopwatch.StartNew();
-    try
-    {
-        logger.LogInformation(
-            "Generating speaker intro for talent {TalentId}, mode={Mode}, event {EventId}",
-            request.TalentId, request.Mode, request.EventId);
-
-        logger.LogInformation("System prompt: {Prompt}", template.SystemPrompt);
-        logger.LogInformation("User prompt: {Prompt}", renderedUserPrompt);
-        var aiResult = await aiProvider.GenerateContentAsync(
-            template.SystemPrompt,
-            renderedUserPrompt,
-            new AiRequestOptions
-            {
-                Temperature = template.DefaultTemperature,
-                MaxTokens = template.DefaultMaxTokens,
-            }, ct);
-        sw.Stop();
-
-        var htmlContent = promptTemplateEngine.SanitizeHtml(aiResult.Content);
-        var plainContent = StripHtmlTags(aiResult.Content);
-
-        var generatedContent = new AiGeneratedContent
+        // ── Steps 8-12: Create AiRequest, call AI, persist, return ──
+        // (UNCHANGED from previous version — keep as-is)
+        var aiRequest = new AiRequest
         {
             Id = Guid.NewGuid(),
-            RequestId = aiRequest.Id,
-            HtmlContent = htmlContent,
-            PlainContent = plainContent,
-            Model = aiResult.Model,
-            PromptTokens = aiResult.PromptTokens,
-            CompletionTokens = aiResult.CompletionTokens,
-            LatencyMs = sw.ElapsedMilliseconds,
+            EventId = request.EventId,
+            CreatedBy = organizerId,
+            RequestType = AiRequestType.GenerateTalentBio,
+            Tone = request.Tone,
+            Language = request.Language,
+            TargetAudience = request.Mode,
+            AdditionalContext = request.Mode == "summarize"
+                ? $"[SUMMARIZE] {request.SourceText?[..Math.Min(request.SourceText.Length, 200)]}..."
+                : request.AdditionalContext,
+            Status = AiRequestStatus.Pending,
             CreatedAt = DateTime.UtcNow
         };
-        aiGeneratedContentRepository.Add(generatedContent);
-
-        aiRequest.Status = AiRequestStatus.Completed;
-        aiRequest.CompletedAt = DateTime.UtcNow;
-        aiRequestRepository.Update(aiRequest);
+        aiRequestRepository.Add(aiRequest);
         await aiRequestRepository.SaveChangesAsync(ct);
 
-        var response = new AiContentResponse
+        var sw = Stopwatch.StartNew();
+        try
         {
-            RequestId = aiRequest.Id,
-            ContentId = generatedContent.Id,
-            HtmlContent = htmlContent,
-            PlainContent = plainContent,
-            IsAiGenerated = true,
-            Metadata = new AiMetadataDto
+            logger.LogInformation(
+                "Generating speaker intro for talent {TalentId}, mode={Mode}, event {EventId}",
+                request.TalentId, request.Mode, request.EventId);
+
+            logger.LogInformation("System prompt: {Prompt}", template.SystemPrompt);
+            logger.LogInformation("User prompt: {Prompt}", renderedUserPrompt);
+            var aiResult = await aiProvider.GenerateContentAsync(
+                template.SystemPrompt,
+                renderedUserPrompt,
+                new AiRequestOptions
+                {
+                    Temperature = template.DefaultTemperature,
+                    MaxTokens = template.DefaultMaxTokens,
+                }, ct);
+            sw.Stop();
+
+            var htmlContent = promptTemplateEngine.SanitizeHtml(aiResult.Content);
+            var plainContent = StripHtmlTags(aiResult.Content);
+
+            var generatedContent = new AiGeneratedContent
             {
+                Id = Guid.NewGuid(),
+                RequestId = aiRequest.Id,
+                HtmlContent = htmlContent,
+                PlainContent = plainContent,
                 Model = aiResult.Model,
                 PromptTokens = aiResult.PromptTokens,
                 CompletionTokens = aiResult.CompletionTokens,
                 LatencyMs = sw.ElapsedMilliseconds,
-                DataQuality = dataQuality,
-                NeedsReview = needsReview
-            }
-        };
+                CreatedAt = DateTime.UtcNow
+            };
+            aiGeneratedContentRepository.Add(generatedContent);
 
-        return ApiResponse<AiContentResponse>.Success(
-            200, "Speaker introduction generated successfully", response);
+            aiRequest.Status = AiRequestStatus.Completed;
+            aiRequest.CompletedAt = DateTime.UtcNow;
+            aiRequestRepository.Update(aiRequest);
+            await aiRequestRepository.SaveChangesAsync(ct);
+
+            var response = new AiContentResponse
+            {
+                RequestId = aiRequest.Id,
+                ContentId = generatedContent.Id,
+                HtmlContent = htmlContent,
+                PlainContent = plainContent,
+                IsAiGenerated = true,
+                Metadata = new AiMetadataDto
+                {
+                    Model = aiResult.Model,
+                    PromptTokens = aiResult.PromptTokens,
+                    CompletionTokens = aiResult.CompletionTokens,
+                    LatencyMs = sw.ElapsedMilliseconds,
+                    DataQuality = dataQuality,
+                    NeedsReview = needsReview
+                }
+            };
+
+            return ApiResponse<AiContentResponse>.Success(
+                200, "Speaker introduction generated successfully", response);
+        }
+        catch (Exception ex)
+        {
+            sw.Stop();
+            aiRequest.Status = AiRequestStatus.Failed;
+            aiRequest.ErrorMessage = ex.Message;
+            aiRequest.CompletedAt = DateTime.UtcNow;
+            aiRequestRepository.Update(aiRequest);
+            await aiRequestRepository.SaveChangesAsync(CancellationToken.None);
+
+            logger.LogError(ex,
+                "Failed to generate speaker intro for talent {TalentId} in event {EventId}",
+                request.TalentId, request.EventId);
+
+            return ApiResponse<AiContentResponse>.Fail(500,
+                "Failed to generate speaker introduction");
+        }
     }
-    catch (Exception ex)
-    {
-        sw.Stop();
-        aiRequest.Status = AiRequestStatus.Failed;
-        aiRequest.ErrorMessage = ex.Message;
-        aiRequest.CompletedAt = DateTime.UtcNow;
-        aiRequestRepository.Update(aiRequest);
-        await aiRequestRepository.SaveChangesAsync(CancellationToken.None);
-
-        logger.LogError(ex,
-            "Failed to generate speaker intro for talent {TalentId} in event {EventId}",
-            request.TalentId, request.EventId);
-
-        return ApiResponse<AiContentResponse>.Fail(500,
-            "Failed to generate speaker introduction");
-    }
-}
 
     public async Task<ApiResponse<AiContentResponse>> GenerateSessionAbstractAsync(
     GenerateSessionAbstractRequest request,
     Guid organizerId,
     CancellationToken ct = default)
-{
-    // ── Validate mode-specific requirement ──
-    if (request.Mode == "expand" && string.IsNullOrWhiteSpace(request.SourceText))
-        return ApiResponse<AiContentResponse>.Fail(400,
-            "SourceText is required when mode is 'expand'");
-
-    if (request.Mode == "expand" && request.SourceText!.Trim().Length < 20)
-        return ApiResponse<AiContentResponse>.Fail(400,
-            "SourceText is too short for expansion (minimum 20 characters). "
-          + "Use mode 'from_metadata' instead.");
-
-    // ── Step 1: Fetch event ──
-    var eventEntity = await eventServiceClient.GetEventByIdAsync(request.EventId, ct);
-    if (eventEntity is null)
-        return ApiResponse<AiContentResponse>.Fail(404, "Event not found");
-
-    // ── Step 2: Find session and parent track ──
-    TrackDetailDto? parentTrack = null;
-    SessionDetailDto? targetSession = null;
-
-    foreach (var track in eventEntity.Tracks)
     {
-        var session = track.Sessions.FirstOrDefault(s => s.Id == request.SessionId);
-        if (session is not null)
+        // ── Validate mode-specific requirement ──
+        if (request.Mode == "expand" && string.IsNullOrWhiteSpace(request.SourceText))
+            return ApiResponse<AiContentResponse>.Fail(400,
+                "SourceText is required when mode is 'expand'");
+
+        if (request.Mode == "expand" && request.SourceText!.Trim().Length < 20)
+            return ApiResponse<AiContentResponse>.Fail(400,
+                "SourceText is too short for expansion (minimum 20 characters). "
+              + "Use mode 'from_metadata' instead.");
+
+        // ── Step 1: Fetch event ──
+        var eventEntity = await eventServiceClient.GetEventByIdAsync(request.EventId, ct);
+        if (eventEntity is null)
+            return ApiResponse<AiContentResponse>.Fail(404, "Event not found");
+
+        // ── Step 2: Find session and parent track ──
+        TrackDetailDto? parentTrack = null;
+        SessionDetailDto? targetSession = null;
+
+        foreach (var track in eventEntity.Tracks)
         {
-            parentTrack = track;
-            targetSession = session;
-            break;
-        }
-    }
-
-    if (targetSession is null || parentTrack is null)
-        return ApiResponse<AiContentResponse>.Fail(404,
-            $"Session {request.SessionId} not found in event {request.EventId}");
-
-    // ── Step 3: Load prompt template ──
-    var template = await promptTemplateRepository.GetByKeyAsync(
-        PromptTemplateKey.SessionAbstract, ct);
-    if (template is null)
-        return ApiResponse<AiContentResponse>.Fail(404,
-            "Session abstract prompt template not found");
-
-    // ── Step 4: Build parameters (mode-aware) ──
-    var parameters = promptTemplateEngine.BuildSessionAbstractParameters(
-        eventEntity, targetSession, parentTrack, request);
-    var renderedUserPrompt = promptTemplateEngine.Render(
-        template.UserPromptTemplate, parameters);
-
-    // ── Step 5: Assess data quality ──
-    var hasDescription = !string.IsNullOrWhiteSpace(targetSession.Description);
-    var hasSpeakers = targetSession.Talents.Length > 0;
-
-    var dataQuality = request.Mode == "expand"
-        ? "rich"
-        : (hasDescription && hasSpeakers)
-            ? "rich"
-            : (hasDescription || hasSpeakers)
-                ? "partial"
-                : "minimal";
-
-    var needsReview = request.Mode == "from_metadata" && dataQuality != "rich";
-
-    // ── Step 6: Create AiRequest record ──
-    var aiRequest = new AiRequest
-    {
-        Id = Guid.NewGuid(),
-        EventId = request.EventId,
-        CreatedBy = organizerId,
-        RequestType = AiRequestType.GenerateSessionAbstract,
-        Tone = request.Tone,
-        Language = request.Language,
-        TargetAudience = request.TargetAudience,
-        AdditionalContext = request.Mode == "expand"
-            ? $"[EXPAND] {request.SourceText?[..Math.Min(request.SourceText.Length, 200)]}..."
-            : request.AdditionalContext,
-        Status = AiRequestStatus.Pending,
-        CreatedAt = DateTime.UtcNow
-    };
-    aiRequestRepository.Add(aiRequest);
-    await aiRequestRepository.SaveChangesAsync(ct);
-
-    var sw = Stopwatch.StartNew();
-    try
-    {
-        logger.LogInformation(
-            "Generating session abstract for session {SessionId}, mode={Mode}, event {EventId}",
-            request.SessionId, request.Mode, request.EventId);
-
-        var aiResult = await aiProvider.GenerateContentAsync(
-            template.SystemPrompt,
-            renderedUserPrompt,
-            new AiRequestOptions
+            var session = track.Sessions.FirstOrDefault(s => s.Id == request.SessionId);
+            if (session is not null)
             {
-                Temperature = template.DefaultTemperature,
-                MaxTokens = template.DefaultMaxTokens,
-            }, ct);
-        sw.Stop();
+                parentTrack = track;
+                targetSession = session;
+                break;
+            }
+        }
 
-        var htmlContent = promptTemplateEngine.SanitizeHtml(aiResult.Content);
-        var plainContent = StripHtmlTags(aiResult.Content);
+        if (targetSession is null || parentTrack is null)
+            return ApiResponse<AiContentResponse>.Fail(404,
+                $"Session {request.SessionId} not found in event {request.EventId}");
 
-        var generatedContent = new AiGeneratedContent
+        // ── Step 3: Load prompt template ──
+        var template = await promptTemplateRepository.GetByKeyAsync(
+            PromptTemplateKey.SessionAbstract, ct);
+        if (template is null)
+            return ApiResponse<AiContentResponse>.Fail(404,
+                "Session abstract prompt template not found");
+
+        // ── Step 4: Build parameters (mode-aware) ──
+        var parameters = promptTemplateEngine.BuildSessionAbstractParameters(
+            eventEntity, targetSession, parentTrack, request);
+        var renderedUserPrompt = promptTemplateEngine.Render(
+            template.UserPromptTemplate, parameters);
+
+        // ── Step 5: Assess data quality ──
+        var hasDescription = !string.IsNullOrWhiteSpace(targetSession.Description);
+        var hasSpeakers = targetSession.Talents.Length > 0;
+
+        var dataQuality = request.Mode == "expand"
+            ? "rich"
+            : (hasDescription && hasSpeakers)
+                ? "rich"
+                : (hasDescription || hasSpeakers)
+                    ? "partial"
+                    : "minimal";
+
+        var needsReview = request.Mode == "from_metadata" && dataQuality != "rich";
+
+        // ── Step 6: Create AiRequest record ──
+        var aiRequest = new AiRequest
         {
             Id = Guid.NewGuid(),
-            RequestId = aiRequest.Id,
-            HtmlContent = htmlContent,
-            PlainContent = plainContent,
-            Model = aiResult.Model,
-            PromptTokens = aiResult.PromptTokens,
-            CompletionTokens = aiResult.CompletionTokens,
-            LatencyMs = sw.ElapsedMilliseconds,
+            EventId = request.EventId,
+            CreatedBy = organizerId,
+            RequestType = AiRequestType.GenerateSessionAbstract,
+            Tone = request.Tone,
+            Language = request.Language,
+            TargetAudience = request.TargetAudience,
+            AdditionalContext = request.Mode == "expand"
+                ? $"[EXPAND] {request.SourceText?[..Math.Min(request.SourceText.Length, 200)]}..."
+                : request.AdditionalContext,
+            Status = AiRequestStatus.Pending,
             CreatedAt = DateTime.UtcNow
         };
-        aiGeneratedContentRepository.Add(generatedContent);
-
-        aiRequest.Status = AiRequestStatus.Completed;
-        aiRequest.CompletedAt = DateTime.UtcNow;
-        aiRequestRepository.Update(aiRequest);
+        aiRequestRepository.Add(aiRequest);
         await aiRequestRepository.SaveChangesAsync(ct);
 
-        var response = new AiContentResponse
+        var sw = Stopwatch.StartNew();
+        try
         {
-            RequestId = aiRequest.Id,
-            ContentId = generatedContent.Id,
-            HtmlContent = htmlContent,
-            PlainContent = plainContent,
-            IsAiGenerated = true,
-            Metadata = new AiMetadataDto
+            logger.LogInformation(
+                "Generating session abstract for session {SessionId}, mode={Mode}, event {EventId}",
+                request.SessionId, request.Mode, request.EventId);
+
+            var aiResult = await aiProvider.GenerateContentAsync(
+                template.SystemPrompt,
+                renderedUserPrompt,
+                new AiRequestOptions
+                {
+                    Temperature = template.DefaultTemperature,
+                    MaxTokens = template.DefaultMaxTokens,
+                }, ct);
+            sw.Stop();
+
+            var htmlContent = promptTemplateEngine.SanitizeHtml(aiResult.Content);
+            var plainContent = StripHtmlTags(aiResult.Content);
+
+            var generatedContent = new AiGeneratedContent
             {
+                Id = Guid.NewGuid(),
+                RequestId = aiRequest.Id,
+                HtmlContent = htmlContent,
+                PlainContent = plainContent,
                 Model = aiResult.Model,
                 PromptTokens = aiResult.PromptTokens,
                 CompletionTokens = aiResult.CompletionTokens,
                 LatencyMs = sw.ElapsedMilliseconds,
-                DataQuality = dataQuality,
-                NeedsReview = needsReview
-            }
-        };
+                CreatedAt = DateTime.UtcNow
+            };
+            aiGeneratedContentRepository.Add(generatedContent);
 
-        return ApiResponse<AiContentResponse>.Success(
-            200, "Session abstract generated successfully", response);
+            aiRequest.Status = AiRequestStatus.Completed;
+            aiRequest.CompletedAt = DateTime.UtcNow;
+            aiRequestRepository.Update(aiRequest);
+            await aiRequestRepository.SaveChangesAsync(ct);
+
+            var response = new AiContentResponse
+            {
+                RequestId = aiRequest.Id,
+                ContentId = generatedContent.Id,
+                HtmlContent = htmlContent,
+                PlainContent = plainContent,
+                IsAiGenerated = true,
+                Metadata = new AiMetadataDto
+                {
+                    Model = aiResult.Model,
+                    PromptTokens = aiResult.PromptTokens,
+                    CompletionTokens = aiResult.CompletionTokens,
+                    LatencyMs = sw.ElapsedMilliseconds,
+                    DataQuality = dataQuality,
+                    NeedsReview = needsReview
+                }
+            };
+
+            return ApiResponse<AiContentResponse>.Success(
+                200, "Session abstract generated successfully", response);
+        }
+        catch (Exception ex)
+        {
+            sw.Stop();
+            aiRequest.Status = AiRequestStatus.Failed;
+            aiRequest.ErrorMessage = ex.Message;
+            aiRequest.CompletedAt = DateTime.UtcNow;
+            aiRequestRepository.Update(aiRequest);
+            await aiRequestRepository.SaveChangesAsync(CancellationToken.None);
+
+            logger.LogError(ex,
+                "Failed to generate session abstract for session {SessionId} in event {EventId}",
+                request.SessionId, request.EventId);
+
+            return ApiResponse<AiContentResponse>.Fail(500,
+                "Failed to generate session abstract");
+        }
     }
-    catch (Exception ex)
+
+    public async Task<ApiResponse<List<TokenChartDto>>> GetAIToken()
     {
-        sw.Stop();
-        aiRequest.Status = AiRequestStatus.Failed;
-        aiRequest.ErrorMessage = ex.Message;
-        aiRequest.CompletedAt = DateTime.UtcNow;
-        aiRequestRepository.Update(aiRequest);
-        await aiRequestRepository.SaveChangesAsync(CancellationToken.None);
+        var data = await aiGeneratedContentRepository.GetAiTokenChart();
 
-        logger.LogError(ex,
-            "Failed to generate session abstract for session {SessionId} in event {EventId}",
-            request.SessionId, request.EventId);
+        var chart = data
+            .GroupBy(x => x.CreatedAt.Date)
+            .Select(g => new TokenChartDto
+            {
+                Date = g.Key.ToString("yyyy-MM-dd"),
+                PromptTokens = g.Sum(x => x.PromptTokens),
+                CompletionTokens = g.Sum(x => x.CompletionTokens),
+                TotalTokens = g.Sum(x => x.PromptTokens + x.CompletionTokens)
+            })
+            .OrderBy(x => x.Date)
+            .ToList();
 
-        return ApiResponse<AiContentResponse>.Fail(500,
-            "Failed to generate session abstract");
+        return ApiResponse<List<TokenChartDto>>.Success(200, "AI token usage data retrieved successfully", chart);
     }
-}
 
     private static string StripHtmlTags(string html)
     {
