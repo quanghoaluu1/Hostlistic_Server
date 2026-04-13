@@ -4,55 +4,68 @@ namespace EventService_Domain.Constants;
 
 public static class EventPermissions
 {
-    public const string CanEditEvent = "can_edit_event";
-    public const string CanManageTickets = "can_manage_tickets";
-    public const string CanManageSessions = "can_manage_sessions";
-    public const string CanManageTalent = "can_manage_talent";
-    public const string CanManageTeam = "can_manage_team";
-    public const string CanCheckin = "can_checkin";
-    public const string CanSendNotifications = "can_send_notifications";
-    public const string CanViewAnalytics = "can_view_analytics";
-    public const string CanManageSponsors = "can_manage_sponsors";
-    public const string CanManageVenue = "can_manage_venue";
-    public const string CanExportData = "can_export_data";
+    public const string EditEvent = "can_edit_event";
+    public const string ManageTickets = "can_manage_tickets";
+    public const string ManageSessions = "can_manage_sessions";
+    public const string ManageTalent = "can_manage_talent";
+    public const string ManageTeam = "can_manage_team";
+    public const string CheckIn = "can_checkin";
+    public const string SendNotifications = "can_send_notifications";
+    public const string ViewAnalytics = "can_view_analytics";
+    public const string ManageSponsors = "can_manage_sponsors";
+    public const string ManageVenue = "can_manage_venue";
+    public const string ExportData = "can_export_data";
 
+    
     /// <summary>Roles that only the organizer (event owner) can assign.</summary>
     public static readonly HashSet<EventRole> OrganizerOnlyInviteRoles = [EventRole.CoOrganizer];
 
     /// <summary>Permission keys that only the organizer can grant.</summary>
-    public static readonly HashSet<string> OrganizerOnlyPermissions = [CanManageTeam];
+    public static readonly HashSet<string> OrganizerOnlyPermissions = [ManageTeam];
+    /// <summary>
+    /// All valid permission keys. Used for validation when setting permissions.
+    /// </summary>
+    public static readonly IReadOnlySet<string> AllKeys = new HashSet<string>
+    {
+        EditEvent, ManageTickets, ManageSessions, ManageTalent,
+        ManageTeam, CheckIn, SendNotifications, ViewAnalytics,
+        ManageSponsors, ManageVenue, ExportData
+    };
 
-    /// <summary>Returns the default permission preset for the given role.</summary>
+    /// <summary>
+    /// Default permission presets by role. Applied when inviting a new team member.
+    /// Matches frontend ROLE_PRESETS in team-member.ts.
+    /// </summary>
     public static Dictionary<string, bool> GetPreset(EventRole role) => role switch
     {
-        EventRole.CoOrganizer => new Dictionary<string, bool>
+        EventRole.CoOrganizer => new()
         {
-            [CanEditEvent] = true,
-            [CanManageTickets] = true,
-            [CanManageSessions] = true,
-            [CanManageTalent] = true,
-            [CanManageTeam] = false,
-            [CanCheckin] = true,
-            [CanSendNotifications] = true,
-            [CanViewAnalytics] = true,
-            [CanManageSponsors] = true,
-            [CanManageVenue] = true,
-            [CanExportData] = true,
+            [EditEvent] = true,
+            [ManageTickets] = true,
+            [ManageSessions] = true,
+            [ManageTalent] = true,
+            [ManageTeam] = false,  // Only Organizer can manage team
+            [CheckIn] = true,
+            [SendNotifications] = true,
+            [ViewAnalytics] = true,
+            [ManageSponsors] = true,
+            [ManageVenue] = true,
+            [ExportData] = true,
         },
-        EventRole.Staff => new Dictionary<string, bool>
+        EventRole.Staff => new()
         {
-            [CanEditEvent] = false,
-            [CanManageTickets] = false,
-            [CanManageSessions] = false,
-            [CanManageTalent] = false,
-            [CanManageTeam] = false,
-            [CanCheckin] = true,
-            [CanSendNotifications] = false,
-            [CanViewAnalytics] = false,
-            [CanManageSponsors] = false,
-            [CanManageVenue] = false,
-            [CanExportData] = false,
+            [EditEvent] = false,
+            [ManageTickets] = false,
+            [ManageSessions] = false,
+            [ManageTalent] = false,
+            [ManageTeam] = false,
+            [CheckIn] = true,
+            [SendNotifications] = false,
+            [ViewAnalytics] = false,
+            [ManageSponsors] = false,
+            [ManageVenue] = false,
+            [ExportData] = false,
         },
-        _ => [],
+        _ => new() // Unknown role: no permissions
     };
 }

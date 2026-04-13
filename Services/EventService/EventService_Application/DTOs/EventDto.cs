@@ -23,6 +23,7 @@ public record EventRequestDto(
 public record EventResponseDto(
     Guid Id, 
     string Title, 
+    Guid OrganizerId,
     RichTextContent Description, 
     EventMode EventMode, 
     string EventTypeName,

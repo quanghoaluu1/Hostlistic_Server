@@ -13,7 +13,7 @@ namespace EventService_Infrastructure.Repositories
             _context = context;
         }
 
-        public async Task<Feedback> AddFeddbackAsync(Feedback feedback)
+        public async Task<Feedback> AddFeedbackAsync(Feedback feedback)
         {
             _context.Feedbacks.Add(feedback);
             await _context.SaveChangesAsync();

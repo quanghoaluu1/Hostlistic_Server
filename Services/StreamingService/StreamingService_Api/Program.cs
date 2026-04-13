@@ -69,7 +69,9 @@ if (!string.IsNullOrWhiteSpace(secretKey))
             ValidateAudience = true,
             ValidAudience = audience,
             ValidateLifetime = true,
-            ClockSkew = TimeSpan.Zero
+            ClockSkew = TimeSpan.Zero,
+            RoleClaimType = "Role"
+
         };
         options.Events = new JwtBearerEvents
         {

@@ -19,6 +19,7 @@ public class SettlementService(
     ITransactionRepository transactionRepository,
     IConfiguration configuration,
     IUserPlanServiceClient userPlanServiceClient,
+    IEventServiceClient eventServiceClient,
     ILogger<SettlementService> logger
     ) : ISettlementService
 {
@@ -32,6 +33,8 @@ public class SettlementService(
             .Select(g => new UnsettledEventDto
             {
                 EventId = g.Key.EventId,
+                OrganizerId = eventServiceClient.GetEventSettlementInfoAsync(g.Key.EventId).Result.OrganizerId,
+                EventTitle = eventServiceClient.GetEventSettlementInfoAsync(g.Key.EventId).Result.Title,
                 GrossRevenue = g.SelectMany(o => o.OrderDetails).Sum(od => od.UnitPrice * od.Quantity),
                 TotalOrders = g.Count(),
                 TotalTicketsSold = g.SelectMany(o => o.OrderDetails).Sum(od => od.Quantity),
@@ -101,9 +104,10 @@ public class SettlementService(
         var platformFeeAmount = Math.Round(grossRevenue * feePercent / 100, 0); // VND không lẻ
         var netRevenue = grossRevenue - platformFeeAmount;
 
+        var eventTitle = eventServiceClient.GetEventSettlementInfoAsync(eventId).Result.Title;
         var preview = new SettlementPreviewDto(
             EventId: eventId,
-            EventTitle: "",
+            EventTitle: eventTitle,
             OrganizerId: organizerId,
             GrossRevenue: grossRevenue,
             PlatformFeePercent: feePercent,
@@ -202,10 +206,12 @@ public class SettlementService(
                 Description = $"Revenue from event. {totalTicketsSold} tickets, {confirmedOrders.Count()} orders. " +
                               $"Gross: {grossRevenue:N0} VND, Fee: {platformFeeAmount:N0} VND ({feePercent}%)"
             };
+            var evenTitle = eventServiceClient.GetEventSettlementInfoAsync(eventId).Result.Title;
             var settlement = new EventSettlement
             {
                 Id = Guid.CreateVersion7(),
                 EventId = eventId,
+                EventTitle = evenTitle,
                 OrganizerId = organizerId,
                 WalletId = wallet.Id,
                 GrossRevenue = grossRevenue,

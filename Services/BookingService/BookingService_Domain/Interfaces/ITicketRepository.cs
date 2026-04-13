@@ -5,6 +5,7 @@ namespace BookingService_Domain.Interfaces;
 public interface ITicketRepository
 {
     Task<Ticket?> GetTicketByIdAsync(Guid ticketId);
+    Task<List<Guid>> GetTicketIdsByEventIdAsync(Guid eventId);
     Task<Ticket?> GetTicketByCodeAsync(string ticketCode);
     Task<IEnumerable<Ticket>> GetTicketsByOrderIdAsync(Guid orderId);
     Task<Ticket> AddTicketAsync(Ticket ticket);

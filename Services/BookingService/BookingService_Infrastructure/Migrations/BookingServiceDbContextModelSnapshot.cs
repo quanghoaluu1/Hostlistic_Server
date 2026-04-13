@@ -89,6 +89,10 @@ namespace BookingService_Infrastructure.Migrations
                     b.Property<Guid>("EventId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("EventTitle")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<decimal>("GrossRevenue")
                         .HasColumnType("numeric");
 

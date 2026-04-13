@@ -165,10 +165,15 @@ namespace StreamingService_Infrastructure.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<Guid?>("TrackId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("EventId", "TrackId", "Status");
 
                     b.ToTable("StreamRooms");
                 });

@@ -3,10 +3,11 @@ using NotificationService_Application.Interfaces;
 using Resend;
 using System.Text;
 using Microsoft.Extensions.Configuration;
+using NotificationService_Application.Emails;
 
 namespace NotificationService_Application.Services;
 
-public class EmailService(IResend resend, IConfiguration configuration) : IEmailService
+public class EmailService(IResend resend, IConfiguration configuration, HolderTicketEmailRenderer renderer) : IEmailService
 {
     public async Task SendOtpEmailAsync(EmailOtpRequest request)
     {
@@ -190,6 +191,36 @@ public class EmailService(IResend resend, IConfiguration configuration) : IEmail
             From = "Hostlistic <noreply@hostlistic.tech>",
             To = toEmail,
             Subject = subject,
+            HtmlBody = htmlBody
+        };
+        await resend.EmailSendAsync(message);
+    }
+
+    public async Task SendEmailForHoldersAsync(HolderTicketEmailModel request)
+    {
+        var htmlBody = await renderer.RenderAsync(new HolderTicketEmailModel()
+        {
+            HolderEmail = request.HolderEmail,
+            HolderName = request.HolderName,
+            BuyerName = request.BuyerName,
+            EventName = request.EventName,
+            EventDate = request.EventDate,
+            EventLocation = request.EventLocation,
+            PortalUrl = "https://hostlistic.tech",
+            Tickets = request.Tickets.Select(t => new TicketEmailInfo()
+            {
+                TicketTypeName = t.TicketTypeName,
+                TicketCode = t.TicketCode,
+                QrCodeUrl = t.QrCodeUrl,
+                Price = t.Price
+            }).ToList()
+        });
+
+        var message = new EmailMessage()
+        {
+            From = "Hostlistic <noreply@hostlistic.tech>",
+            To = request.HolderEmail,
+            Subject = $"[Hostlistic] You are invited to {request.EventName}",
             HtmlBody = htmlBody
         };
         await resend.EmailSendAsync(message);

@@ -21,6 +21,13 @@ public class TicketRepository : ITicketRepository
             .FirstOrDefaultAsync(t => t.Id == ticketId);
     }
 
+    public async Task<List<Guid>> GetTicketIdsByEventIdAsync(Guid eventId)
+    {
+        return await _context.Tickets.AsNoTracking()
+            .Where(t => t.Order!.EventId == eventId)
+            .Select(t => t.Id)
+            .ToListAsync();
+    }
     public async Task<Ticket?> GetTicketByCodeAsync(string ticketCode)
     {
         return await _context.Tickets

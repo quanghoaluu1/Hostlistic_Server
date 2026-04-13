@@ -255,7 +255,9 @@ public class TicketPurchaseService : ITicketPurchaseService
                             TicketCode: t.TicketCode,
                             TicketTypeName: t.TicketTypeName,
                             QrCodeUrl: t.QrCodeUrl,
-                            Price: t.Price
+                            Price: t.Price,
+                            HolderName: t.HolderName,
+                            HolderEmail: t.HolderEmail
                         )).ToList(),
                         CompletedAt: DateTime.UtcNow
                     ));
@@ -730,5 +732,5 @@ public class EventSettlementInfoDto
     public Guid EventId { get; set; }
     public Guid OrganizerId { get; set; }
     public string Title { get; set; } = string.Empty;
-    public int EventStatus { get; set; }
+    public string EventStatus { get; set; }
 }

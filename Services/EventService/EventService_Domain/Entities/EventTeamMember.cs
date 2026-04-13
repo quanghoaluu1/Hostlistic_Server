@@ -77,7 +77,8 @@ public class EventTeamMember
             UserEmail = userEmail,
         };
     }
-
+    public bool HasPermission(string permissionKey) =>
+        Permissions.TryGetValue(permissionKey, out var granted) && granted;
     public void AcceptInvitation()
     {
         if (Status != EventMemberStatus.Invited)

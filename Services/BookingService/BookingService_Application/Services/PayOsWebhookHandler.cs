@@ -148,17 +148,39 @@ public class PayOsWebhookHandler(
         {
             try
             {
-                await notificationServiceClient.SendTicketPurchaseConfirmationAsync(new PurchaseConfirmationRequest
-                {
-                    UserId = order.UserId,
-                    OrderId = order.Id,
-                    TotalAmount = (decimal)data.Amount,
-                    EventName = capturedEventInfo?.Title ?? "Unknown Event",
-                    EventDate = capturedEventInfo?.StartDate ?? DateTime.Now,
-                    EventLocation = capturedEventInfo?.Location ?? "TBD",
-                    CustomerName = capturedUserInfo?.FullName ?? "Valued Customer",
-                    CustomerEmail = capturedUserInfo?.Email ?? ""
-                });
+                // await notificationServiceClient.SendTicketPurchaseConfirmationAsync(new PurchaseConfirmationRequest
+                // {
+                //     UserId = order.UserId,
+                //     OrderId = order.Id,
+                //     TotalAmount = (decimal)data.Amount,
+                //     EventName = capturedEventInfo?.Title ?? "Unknown Event",
+                //     EventDate = capturedEventInfo?.StartDate ?? DateTime.Now,
+                //     EventLocation = capturedEventInfo?.Location ?? "TBD",
+                //     CustomerName = capturedUserInfo?.FullName ?? "Valued Customer",
+                //     CustomerEmail = capturedUserInfo?.Email ?? ""
+                // });
+                await publishEndpoint.Publish(new WalletPurchaseCompletedEvent(
+                    OrderId: order.Id,
+                    EventId: order.EventId,
+                    UserId: order.UserId,
+                    TotalAmount: data.Amount,
+                    EventName: capturedEventInfo?.Title ?? "Unknown Event",
+                    EventLocation: capturedEventInfo?.Location ?? "TBD",
+                    EventDate: capturedEventInfo?.StartDate ?? DateTime.UtcNow,
+                    CustomerName: capturedUserInfo?.FullName ?? "Valued Customer",
+                    CustomerEmail: capturedUserInfo?.Email ?? string.Empty,
+                    Tickets: tickets.Select(t => new WalletTicketSummary(
+                        Id: t.Id,
+                        TicketTypeId: t.TicketTypeId,
+                        TicketCode: t.TicketCode,
+                        TicketTypeName: t.TicketTypeName,
+                        QrCodeUrl: t.QrCodeUrl,
+                        Price: t.Price,
+                        HolderName: t.HolderName,
+                        HolderEmail: t.HolderEmail
+                    )).ToList(),
+                    CompletedAt: DateTime.UtcNow
+                ));
             }
             catch (Exception ex)
             {

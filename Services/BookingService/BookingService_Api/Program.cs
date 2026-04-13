@@ -57,7 +57,9 @@ builder.Services.AddCors(options =>
                 "http://localhost:3000", "https://hostlistic.tech")
             .AllowAnyHeader()
             .AllowAnyMethod()
-            .AllowCredentials();
+            .AllowCredentials()
+            .WithExposedHeaders("Content-Disposition");
+        
     });
 });
 
@@ -133,6 +135,18 @@ builder.Services.AddSingleton(sp =>
         ClientId = config["PayOS:ClientId"]!,
         ApiKey = config["PayOS:ApiKey"]!,
         ChecksumKey = config["PayOS:ChecksumKey"]!,
+        TimeoutMs = 30000,
+        MaxRetries = 2
+    });
+});
+builder.Services.AddKeyedSingleton<PayOSClient>("Payout", (sp, _) =>
+{
+    var config = sp.GetRequiredService<IConfiguration>();
+    return new PayOSClient(new PayOSOptions
+    {
+        ClientId = config["PayOS:Payout:ClientId"]!,
+        ApiKey = config["PayOS:Payout:ApiKey"]!,
+        ChecksumKey = config["PayOS:Payout:ChecksumKey"]!,
         TimeoutMs = 30000,
         MaxRetries = 2
     });

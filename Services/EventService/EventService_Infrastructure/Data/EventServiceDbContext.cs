@@ -33,6 +33,8 @@ public class EventServiceDbContext : DbContext
     public DbSet<SessionEngagementRestriction> SessionEngagementRestrictions => Set<SessionEngagementRestriction>();
     public DbSet<Feedback> Feedbacks => Set<Feedback>();
     public DbSet<EventDay> EventDays => Set<EventDay>();
+    public DbSet<SurveyForm> SurveyForms => Set<SurveyForm>();
+    public DbSet<SurveyResponse> SurveyResponses => Set<SurveyResponse>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -373,6 +375,55 @@ public class EventServiceDbContext : DbContext
             entity.Property(e => e.Description).HasMaxLength(1000);
             entity.HasIndex(e => new { e.EventId, e.DayNumber }).IsUnique();
             entity.HasIndex(e => new { e.EventId, e.Date }).IsUnique();
+        });
+        
+        modelBuilder.Entity<SurveyForm>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.Title)
+                .IsRequired()
+                .HasMaxLength(200);
+
+            entity.Property(e => e.Description)
+                .HasMaxLength(1000);
+
+            entity.Property(e => e.Questions)
+                .HasColumnType("jsonb")
+                .HasConversion(
+                    v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null!),
+                    v => JsonSerializer.Deserialize<List<SurveyQuestion>>(v, (JsonSerializerOptions)null!)!
+                );
+
+            entity.Property(e => e.Status)
+                .HasConversion<string>()
+                .HasMaxLength(20);
+
+            entity.HasOne(e => e.Event)
+                .WithMany(ev => ev.SurveyForms)
+                .HasForeignKey(e => e.EventId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasMany(e => e.Responses)
+                .WithOne(r => r.SurveyForm)
+                .HasForeignKey(r => r.SurveyFormId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<SurveyResponse>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.Answers)
+                .HasColumnType("jsonb")
+                .HasConversion(
+                    v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null!),
+                    v => JsonSerializer.Deserialize<List<SurveyAnswer>>(v, (JsonSerializerOptions)null!)!
+                );
+
+            // One response per user per survey
+            entity.HasIndex(e => new { e.SurveyFormId, e.UserId })
+                .IsUnique();
         });
     }
 }

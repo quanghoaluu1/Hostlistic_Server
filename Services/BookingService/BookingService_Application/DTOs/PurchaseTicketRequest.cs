@@ -60,6 +60,20 @@ namespace BookingService_Application.DTOs
         public string CustomerEmail { get; set; } = string.Empty;
     }
 
+    public class HolderTicketDeliveryRequest
+    {
+        public required string HolderName { get; init; }
+        public required string HolderEmail { get; init; }
+        public required string BuyerName { get; init; }
+        public required string EventName { get; init; }
+        public required DateTime EventDate { get; init; }
+        public required string EventLocation { get; init; }
+        public required string PortalUrl { get; init; }
+        public string? LogoUrl { get; init; }
+        public required IReadOnlyList<TicketEmailInfo> Tickets { get; init; }
+
+    }
+
     public class InventoryCheckRequest
     {
         public List<TicketItemRequest> TicketItems { get; set; } = new();

@@ -96,13 +96,61 @@ public class WalletBookingConfirmConsumer(
                         TicketCode = t.TicketCode,
                         TicketTypeName = t.TicketTypeName,
                         QrCodeUrl = t.QrCodeUrl,
-                        Price = t.Price
+                        Price = t.Price,
+                        HolderName = t.HolderName,
+                        HolderEmail = t.HolderEmail
                     }).ToList()
                 });
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Failed to send confirmation email for wallet order {OrderId}", msg.OrderId);
+            }
+            
+            var holderGroups = msg.Tickets
+                .Where(t =>
+                    !string.IsNullOrWhiteSpace(t.HolderEmail) &&
+                    !t.HolderEmail.Equals(msg.CustomerEmail, StringComparison.OrdinalIgnoreCase))
+                .GroupBy(t => t.HolderEmail!, StringComparer.OrdinalIgnoreCase);
+            
+            foreach (var group in holderGroups)
+            {
+                try
+                {
+                    var holderTickets = group.ToList();
+                    await notificationServiceClient.SendHolderTicketDeliveryAsync(
+                        new HolderTicketDeliveryRequest
+                        {
+                            HolderEmail = group.Key,
+                            HolderName = holderTickets.First()
+                                             .HolderName ??
+                                         group.Key,
+                            EventName = msg.EventName,
+                            EventDate = msg.EventDate,
+                            EventLocation = msg.EventLocation,
+                            Tickets = holderTickets.Select(t => new TicketEmailInfo()
+                                {
+                                    TicketCode = t.TicketCode,
+                                    TicketTypeName = t.TicketTypeName,
+                                    QrCodeUrl = t.QrCodeUrl,
+                                    Price = t.Price,
+                                })
+                                .ToList(),
+                            BuyerName = msg.CustomerName,
+                            PortalUrl = "https://res.cloudinary.com/dvsiqkepf/image/upload/v1776073786/logo-removebg-preview_1_rnncqy.png"
+                        });
+
+                    logger.LogInformation(
+                        "Sent holder ticket delivery email to {HolderEmail} for order {OrderId}",
+                        group.Key, msg.OrderId);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex,
+                        "Failed to send holder ticket delivery email to {HolderEmail} for order {OrderId}",
+                        group.Key, msg.OrderId);
+                    // Không throw — buyer email đã thành công, lỗi holder không nên làm fail cả consumer
+                }
             }
         });
     }

@@ -11,6 +11,7 @@ public interface IEventRepository
     Event UpdateEventAsync(Event @event);
     Task<bool> DeleteEventAsync(Guid eventId);
     Task<bool> EventExistsAsync(Guid eventId);
+    Task<bool> IsOwnerAsync(Guid eventId, Guid userId);
 
     IQueryable<Event> GetQueryable();
     Task SaveChangesAsync();

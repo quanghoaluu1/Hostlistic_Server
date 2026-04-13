@@ -35,4 +35,18 @@ public class EmailController(IEmailService emailService) : ControllerBase
             return BadRequest(e.Message);
         }
     }
+    
+    [HttpPost("send-holder-ticket-delivery")]
+    public async Task<IActionResult> SendHolderTicket([FromBody] HolderTicketEmailModel request)
+    {
+        try
+        {
+            await emailService.SendEmailForHoldersAsync(request);
+            return Ok("Ticket confirmation email sent successfully");
+        }
+        catch (Exception e)
+        {
+            return BadRequest(e.Message);
+        }
+    }
 }

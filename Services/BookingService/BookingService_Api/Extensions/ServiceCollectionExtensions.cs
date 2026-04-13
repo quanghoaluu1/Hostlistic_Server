@@ -26,6 +26,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IEventSettlementRepository, EventSettlementRepository>();
         services.AddScoped<ITransactionRepository, TransactionRepository>();
         services.AddScoped<IWithdrawalRequestRepository, WithdrawalRequestRepository>();
+        services.AddScoped<ICheckinRepository, CheckinRepository>();
 
         // Services
         services.AddScoped<ITicketPurchaseService, TicketPurchaseService>();
@@ -52,6 +53,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IAttendeeService, AttendeeService>();
         services.AddScoped<IRegisteredEventService, RegisteredEventService>();
         services.AddScoped<IWithdrawalRequestService, WithdrawalRequestService>();
+        services.AddScoped<IPayOsPayoutService, PayOsPayoutService>();
+        services.AddScoped<IEventPermissionClient, EventPermissionClient>();
+        services.AddScoped<IExportService, ExportService>();
+        services.AddScoped<IExcelGenerator, ExcelGenerator>();
 
         return services;
     }

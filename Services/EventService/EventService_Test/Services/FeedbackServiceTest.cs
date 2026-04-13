@@ -39,6 +39,26 @@ public class FeedbackServiceTest
     }
 
     [Fact]
+    public async Task AddFeedbackAsync_WhenSessionNotInEvent_ReturnsFail400()
+    {
+        // Arrange
+        var eventId = Guid.NewGuid();
+        var otherEventId = Guid.NewGuid();
+        var sessionId = Guid.NewGuid();
+        _eventRepository.GetEventByIdAsync(eventId).Returns(EventBuilder.CreateEvent(id: eventId));
+        _sessionRepository.GetSessionByIdAsync(sessionId).Returns(SessionBuilder.CreateEntity(id: sessionId, eventId: otherEventId));
+        var dto = FeedbackBuilder.CreateDto(eventId: eventId, sessionId: sessionId);
+
+        // Act
+        var result = await _sut.AddFeedbackAsync(dto);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.StatusCode.Should().Be(400);
+        result.Message.Should().Contain("does not belong");
+    }
+
+    [Fact]
     public async Task AddFeedbackAsync_WhenSessionNotFound_ReturnsFail404()
     {
         // Arrange
@@ -136,7 +156,7 @@ public class FeedbackServiceTest
         // Assert
         result.IsSuccess.Should().BeTrue();
         result.StatusCode.Should().Be(201);
-        await _feedbackRepository.Received(1).AddFeddbackAsync(Arg.Any<Feedback>());
+        await _feedbackRepository.Received(1).AddFeedbackAsync(Arg.Any<Feedback>());
     }
 
     // ── GetFeedbackByIdAsync ───────────────────────────────────────────────
@@ -219,6 +239,23 @@ public class FeedbackServiceTest
         result.IsSuccess.Should().BeTrue();
         result.StatusCode.Should().Be(200);
         await _feedbackRepository.Received(1).UpdateFeedbackAsync(Arg.Any<Feedback>());
+    }
+
+    [Fact]
+    public async Task UpdateFeedbackAsync_UpdatesRating()
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        var feedback = FeedbackBuilder.CreateEntity(id: id, rating: 2);
+        _feedbackRepository.GetFeedbackByIdAsync(id).Returns(feedback);
+
+        // Act
+        var result = await _sut.UpdateFeedbackAsync(id, FeedbackBuilder.UpdateRequest(rating: 5, comment: "x"));
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Data!.Rating.Should().Be(5);
+        await _feedbackRepository.Received(1).UpdateFeedbackAsync(Arg.Is<Feedback>(f => f.Rating == 5));
     }
 
     // ── DeleteFeedbackAsync ────────────────────────────────────────────────

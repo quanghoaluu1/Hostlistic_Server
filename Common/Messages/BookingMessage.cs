@@ -36,7 +36,9 @@ public record WalletTicketSummary(
     string TicketCode,
     string TicketTypeName,
     string QrCodeUrl,
-    decimal Price
+    decimal Price,
+    string? HolderName,
+    string? HolderEmail
 );
 
 public record FreePurchaseCompletedEvent(

@@ -67,5 +67,51 @@ public class NotificationServiceClient : INotificationServiceClient
             return false;
         }
     }
+    
+    public async Task<bool> SendHolderTicketDeliveryAsync(HolderTicketDeliveryRequest request)
+    {
+        try
+        {
+            var httpClient = _httpClientFactory.CreateClient("NotificationService");
+            const string url = "/api/Email/send-holder-ticket-delivery";
+
+            var payload = new
+            {
+                HolderEmail = request.HolderEmail,
+                HolderName = request.HolderName,
+                BuyerName = request.BuyerName,
+                EventName = request.EventName,
+                EventDate = request.EventDate,
+                EventLocation = request.EventLocation,
+                PortalUrl = request.PortalUrl,
+                LogoUrl = request.LogoUrl,
+                Tickets = request.Tickets.Select(t => new
+                {
+                    TicketCode = t.TicketCode,
+                    QrCodeUrl = t.QrCodeUrl,
+                    TicketTypeName = t.TicketTypeName,
+                    Price = t.Price
+                }).ToList()
+            };
+
+            var response = await httpClient.PostAsJsonAsync(url, payload);
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                _logger.LogError(
+                    "NotificationService send-holder-ticket-delivery failed: {Status} - {Error}",
+                    response.StatusCode, error);
+                return false;
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Error calling NotificationService for holder ticket delivery email");
+            return false;
+        }
+    }
 }
 

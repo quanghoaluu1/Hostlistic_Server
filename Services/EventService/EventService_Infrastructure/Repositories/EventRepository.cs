@@ -32,6 +32,10 @@ public class EventRepository(EventServiceDbContext dbContext) : IEventRepository
             .FirstOrDefaultAsync(e => e.Id == eventId);
     }
 
+    public async Task<bool> IsOwnerAsync(Guid eventId, Guid userId)
+    {
+        return await dbContext.Events.AnyAsync(e => e.Id == eventId && e.OrganizerId == userId);
+    }
     public Event AddEventAsync(Event @event)
     {
         return dbContext.Events.Add(@event).Entity;
@@ -117,7 +121,8 @@ public class EventRepository(EventServiceDbContext dbContext) : IEventRepository
     {
         if (@event.EventStatus == EventStatus.Unpublished)
             @event.EventStatus = EventStatus.Published;
-        @event.EventStatus = EventStatus.Unpublished;
+        else if (@event.EventStatus == EventStatus.Published)
+            @event.EventStatus = EventStatus.Unpublished;
         @event.UpdatedAt = DateTime.UtcNow;
         dbContext.Events.Update(@event);
         await SaveChangesAsync();

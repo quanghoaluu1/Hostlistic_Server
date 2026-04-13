@@ -69,6 +69,29 @@ public class EventServiceClient : IEventServiceClient
         }
     }
     
+    public async Task<List<TicketTypeDto>?> GetTicketTypesByEventIdAsync(Guid eventId)
+    {
+        try
+        {
+            var httpClient = _httpClientFactory.CreateClient("EventService");
+            var response = await httpClient.GetAsync($"/api/TicketTypes/event/{eventId}");
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("EventService GetTicketTypesByEventId failed: {Status} - {Error}", response.StatusCode, error);
+                return null;
+            }
+
+            var apiResponse = await response.Content.ReadFromJsonAsync<ApiResponse<List<TicketTypeDto>>>();
+            return apiResponse?.Data;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error calling EventService for ticket types of event {EventId}", eventId);
+            return null;
+        }
+    }
+
     public async Task<EventSettlementInfoDto?> GetEventSettlementInfoAsync(Guid eventId)
     {
         try
@@ -88,5 +111,7 @@ public class EventServiceClient : IEventServiceClient
             return null;
         }
     }
+    
+    
 }
 

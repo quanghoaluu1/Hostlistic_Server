@@ -7,6 +7,7 @@ public interface IEventServiceClient
 {
     Task<EventInfoDto?> GetEventInfoAsync(Guid eventId);
     Task<TicketTypeInfoDto?> GetTicketTypeInfoAsync(Guid ticketTypeId);
+    Task<List<TicketTypeDto>?> GetTicketTypesByEventIdAsync(Guid eventId);
     Task<EventSettlementInfoDto?> GetEventSettlementInfoAsync(Guid eventId);
 }
 

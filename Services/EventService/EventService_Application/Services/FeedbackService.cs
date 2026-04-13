@@ -11,7 +11,7 @@ namespace EventService_Application.Services
     {
         private readonly IFeedbackRepository _feedbackRepository;
         private readonly IEventRepository _eventRepository;
-        private ISessionRepository _sessionRepository;
+        private readonly ISessionRepository _sessionRepository;
         public FeedbackService(IFeedbackRepository feedbackRepository, IEventRepository eventRepository, ISessionRepository sessionRepository)
         {
             _feedbackRepository = feedbackRepository;
@@ -27,6 +27,8 @@ namespace EventService_Application.Services
             var existingSession = await _sessionRepository.GetSessionByIdAsync(request.SessionId);
             if (existingSession == null)
                 return ApiResponse<FeedbackDto>.Fail(404, "Session not found.");
+            if (existingSession.EventId != request.EventId)
+                return ApiResponse<FeedbackDto>.Fail(400, "Session does not belong to the specified event.");
             if (request.Rating < 1 || request.Rating > 5)
                 return ApiResponse<FeedbackDto>.Fail(400, "Rating must be between 1 and 5.");
             if (request.Comment != null && request.Comment.Length > 1000)
@@ -37,7 +39,7 @@ namespace EventService_Application.Services
                 return ApiResponse<FeedbackDto>.Fail(400, "Comment is required.");
             var newFeedback = new Feedback
             {
-                Id = new Guid(),
+                Id = Guid.NewGuid(),
                 EventId = request.EventId,
                 SessionId = request.SessionId,
                 Rating = request.Rating,
@@ -46,7 +48,7 @@ namespace EventService_Application.Services
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
-            await _feedbackRepository.AddFeddbackAsync(newFeedback);
+            await _feedbackRepository.AddFeedbackAsync(newFeedback);
             var feedbackDto = newFeedback.Adapt<FeedbackDto>();
             return ApiResponse<FeedbackDto>.Success(201, "Feedback added successfully.", feedbackDto);
         }
@@ -60,9 +62,11 @@ namespace EventService_Application.Services
             return ApiResponse<FeedbackDto>.Success(200, "Retrieved feedback successfully.", feedbackDto);
         }
 
-        public Task<ApiResponse<List<FeedbackDto>>> GetAllFeedbacksAsync()
+        public async Task<ApiResponse<List<FeedbackDto>>> GetAllFeedbacksAsync()
         {
-            throw new NotImplementedException();
+            var feedbacks = await _feedbackRepository.GetAllFeedbacksAsync();
+            var feedbackDtos = feedbacks.Adapt<List<FeedbackDto>>();
+            return ApiResponse<List<FeedbackDto>>.Success(200, "Retrieved all feedbacks successfully.", feedbackDtos);
         }
 
         public async Task<ApiResponse<List<FeedbackDto>>> GetFeedbacksByEventIdAsync(Guid eventId)
@@ -79,13 +83,6 @@ namespace EventService_Application.Services
             return ApiResponse<List<FeedbackDto>>.Success(200, "Retrieved feedbacks successfully.", feedbackDtos);
         }
 
-        public async Task<ApiResponse<List<FeedbackDto>>> GetAllFeedback()
-        {
-            var feedbacks = await _feedbackRepository.GetAllFeedbacksAsync();
-            var feedbackDtos = feedbacks.Adapt<List<FeedbackDto>>();
-            return ApiResponse<List<FeedbackDto>>.Success(200, "Retrieved all feedbacks successfully.", feedbackDtos);
-        }
-
         public async Task<ApiResponse<FeedbackDto>> UpdateFeedbackAsync(Guid id, UpdateFeedbackDto request)
         {
             var existingFeedback = await _feedbackRepository.GetFeedbackByIdAsync(id);
@@ -97,8 +94,7 @@ namespace EventService_Application.Services
                 return ApiResponse<FeedbackDto>.Fail(400, "Comment cannot exceed 1000 characters.");
             if (!string.IsNullOrEmpty(request.Comment))
                 existingFeedback.Comment = request.Comment;
-            if (request.Rating != request.Rating)
-                existingFeedback.Rating = request.Rating;
+            existingFeedback.Rating = request.Rating;
             existingFeedback.UpdatedAt = DateTime.UtcNow;
             await _feedbackRepository.UpdateFeedbackAsync(existingFeedback);
             var feedbackDto = existingFeedback.Adapt<FeedbackDto>();
