@@ -255,7 +255,9 @@ public class TicketPurchaseService : ITicketPurchaseService
                             TicketCode: t.TicketCode,
                             TicketTypeName: t.TicketTypeName,
                             QrCodeUrl: t.QrCodeUrl,
-                            Price: t.Price
+                            Price: t.Price,
+                            HolderName: t.HolderName,
+                            HolderEmail: t.HolderEmail
                         )).ToList(),
                         CompletedAt: DateTime.UtcNow
                     ));

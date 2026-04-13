@@ -1,0 +1,125 @@
+﻿<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="x-apple-disable-message-reformatting">
+    <title>Your ticket for {{EventName}}</title>
+    <!--[if mso]>
+    <noscript>
+        <xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml>
+    </noscript>
+    <![endif]-->
+    <style>
+        * { box-sizing: border-box; }
+        body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+        table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+        img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+        body { margin: 0 !important; padding: 0 !important; }
+        a[x-apple-data-detectors] { color: inherit !important; text-decoration: none !important; }
+        @media only screen and (max-width: 620px) {
+            .email-container { width: 100% !important; }
+            .content-pad { padding: 24px 20px !important; }
+            .hero-pad { padding: 20px !important; }
+            .ticket-card td { display: block !important; width: 100% !important; }
+            .ticket-qr-cell { border-left: none !important; border-top: 1px dashed #CBD5E1 !important; text-align: center !important; }
+            .header-pad { padding: 32px 20px 24px !important; }
+        }
+    </style>
+</head>
+<body style="margin:0;padding:0;background-color:#E8E5DF;">
+
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background-color:#E8E5DF;">
+    <tr>
+        <td align="center" style="padding:32px 16px;">
+            <table class="email-container" role="presentation" cellpadding="0" cellspacing="0" width="600" style="background-color:#ffffff;border-radius:4px;overflow:hidden;">
+
+                <!-- HEADER -->
+                <tr>
+                    <td class="header-pad" style="background-color:#0F172A;padding:40px 48px 32px;text-align:center;">
+                        <p style="margin:0 0 24px;font-family:Helvetica Neue,Helvetica,Arial,sans-serif;font-size:11px;letter-spacing:3px;color:#94A3B8;text-transform:uppercase;">Hostlistic</p>
+                        <table role="presentation" cellpadding="0" cellspacing="0" align="center" style="margin-bottom:20px;">
+                            <tr>
+                                <td style="background-color:#1E293B;border:1.5px solid #334155;border-radius:50%;width:52px;height:52px;text-align:center;vertical-align:middle;">
+                                    <img src="{{LogoUrl}}" alt="Hostlistic" width="28" height="28" style="display:inline-block;" onerror="this.style.display='none'">
+                                </td>
+                            </tr>
+                        </table>
+                        <h1 style="margin:0 0 8px;font-family:Georgia,'Times New Roman',serif;font-size:26px;font-weight:400;color:#F8FAFC;letter-spacing:-0.3px;">Your ticket is here</h1>
+                        <p style="margin:0;font-family:Helvetica Neue,Helvetica,Arial,sans-serif;font-size:14px;color:#64748B;">Someone got you covered &mdash; enjoy the event</p>
+                    </td>
+                </tr>
+
+                <!-- EVENT HERO BANNER -->
+                <tr>
+                    <td class="hero-pad" style="background-color:#1E3A5F;padding:28px 48px;border-bottom:1px solid #1E293B;">
+                        <p style="margin:0 0 6px;font-family:Helvetica Neue,Helvetica,Arial,sans-serif;font-size:11px;letter-spacing:2px;color:#60A5FA;text-transform:uppercase;">Event</p>
+                        <p style="margin:0 0 16px;font-family:Georgia,'Times New Roman',serif;font-size:22px;font-weight:400;color:#F8FAFC;">{{EventName}}</p>
+                        <table role="presentation" cellpadding="0" cellspacing="0">
+                            <tr>
+                                <td style="padding-right:24px;font-family:Helvetica Neue,Helvetica,Arial,sans-serif;font-size:13px;color:#94A3B8;">
+                                    &#128197;&nbsp; {{EventDate}}
+                                </td>
+                                <td style="font-family:Helvetica Neue,Helvetica,Arial,sans-serif;font-size:13px;color:#94A3B8;">
+                                    &#128205;&nbsp; {{EventLocation}}
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+
+                <!-- MAIN CONTENT -->
+                <tr>
+                    <td class="content-pad" style="padding:36px 48px;">
+
+                        <!-- GREETING -->
+                        <p style="margin:0 0 12px;font-family:Georgia,'Times New Roman',serif;font-size:17px;color:#1E293B;">Hi {{HolderName}},</p>
+                        <p style="margin:0 0 28px;font-family:Helvetica Neue,Helvetica,Arial,sans-serif;font-size:14px;color:#475569;line-height:1.7;">
+                            Great news &mdash; <strong>{{BuyerName}}</strong> has purchased a ticket for you to attend this event.
+                            Your ticket details are below. Please present this email or scan your QR code at the venue entrance.
+                        </p>
+
+                        <!-- TICKETS SECTION LABEL -->
+                        <p style="margin:0 0 16px;font-family:Helvetica Neue,Helvetica,Arial,sans-serif;font-size:11px;letter-spacing:2px;color:#94A3B8;text-transform:uppercase;">Your ticket(s)</p>
+
+                        <!-- TICKET LOOP: repeat the block below for each ticket -->
+                        {{TicketsHtml}}
+                        <!-- END TICKET LOOP -->
+
+                        <!-- CTA -->
+                        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin-top:28px;background-color:#F8FAFC;border:1px solid #E2E8F0;border-radius:6px;">
+                            <tr>
+                                <td style="padding:24px;text-align:center;">
+                                    <p style="margin:0 0 14px;font-family:Helvetica Neue,Helvetica,Arial,sans-serif;font-size:13px;color:#475569;">
+                                        View your full ticket details and add the event to your calendar.
+                                    </p>
+                                    <a href="{{PortalUrl}}" style="display:inline-block;background-color:#0F172A;color:#F8FAFC;font-family:Helvetica Neue,Helvetica,Arial,sans-serif;font-size:13px;letter-spacing:0.3px;text-decoration:none;padding:11px 28px;border-radius:4px;">
+                                        View my tickets
+                                    </a>
+                                </td>
+                            </tr>
+                        </table>
+
+                    </td>
+                </tr>
+
+                <!-- FOOTER -->
+                <tr>
+                    <td style="padding:28px 48px;border-top:1px solid #F1F5F9;text-align:center;">
+                        <p style="margin:0 0 8px;font-family:Helvetica Neue,Helvetica,Arial,sans-serif;font-size:13px;color:#64748B;letter-spacing:1px;">HOSTLISTIC</p>
+                        <p style="margin:0;font-family:Helvetica Neue,Helvetica,Arial,sans-serif;font-size:12px;color:#94A3B8;line-height:1.7;">
+                            This ticket was purchased on your behalf by {{BuyerName}}.<br>
+                            If you have questions, please contact the event organizer directly.<br>
+                            <span style="color:#CBD5E1;">&copy; {{Year}} Hostlistic. All rights reserved.</span>
+                        </p>
+                    </td>
+                </tr>
+
+            </table>
+        </td>
+    </tr>
+</table>
+
+</body>
+</html>

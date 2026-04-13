@@ -1,4 +1,5 @@
 using NotificationService_Api.Services;
+using NotificationService_Application.Emails;
 using NotificationService_Application.Interfaces;
 using NotificationService_Application.Services;
 using NotificationService_Domain.Interfaces;
@@ -28,7 +29,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IEmailLogService, EmailLogService>();
         services.AddScoped<IRecipientResolutionService, RecipientResolutionService>();
         services.AddScoped<ICampaignSendService, CampaignSendService>();
-
+        services.AddScoped<IEmailRateLimiter, EmailRateLimiter>();
+        services.AddScoped<HolderTicketEmailRenderer>();
         return services;
     }
 }

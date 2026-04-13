@@ -22,5 +22,9 @@
         <ProjectReference Include="..\NotificationService_Application\NotificationService_Application.csproj" />
         <ProjectReference Include="..\NotificationService_Infrastructure\NotificationService_Infrastructure.csproj" />
     </ItemGroup>
-
+    <ItemGroup>
+        <Content Include="Templates\Emails\**\*.html">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Content>
+    </ItemGroup>
 </Project>
