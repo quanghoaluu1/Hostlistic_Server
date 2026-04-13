@@ -1,22 +1,24 @@
-using System.Security.Claims;
+using AIService_Api.Filters;
 using AIService_Application.DTOs.Requests;
 using AIService_Application.DTOs.Responses;
 using AIService_Application.Interface;
-using AIService_Api.Filters;
 using Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace AIService_Api.Controllers;
 
 [ApiController]
 [Route("api/ai")]
 [Produces("application/json")]
-[Authorize]
-[ServiceFilter(typeof(RequireAiSubscriptionFilter))]
+//[Authorize]
+//[ServiceFilter(typeof(RequireAiSubscriptionFilter))]
 public class AiContentController(IAiContentService aiContentService, ILogger<AiContentController> logger) : ControllerBase
 {
     [HttpPost("generate-description")]
+    [Authorize]
+    [ServiceFilter(typeof(RequireAiSubscriptionFilter))]
     [ProducesResponseType(typeof(AiContentResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
@@ -27,7 +29,7 @@ public class AiContentController(IAiContentService aiContentService, ILogger<AiC
     {
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
-        
+
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
         var userId = Guid.Parse(userIdClaim ?? throw new UnauthorizedAccessException("User ID not found in token"));
 
@@ -67,7 +69,7 @@ public class AiContentController(IAiContentService aiContentService, ILogger<AiC
             });
         }
     }
-    
+
     [HttpPost("generate-email")]
     [ProducesResponseType(typeof(EmailContentResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
@@ -84,8 +86,10 @@ public class AiContentController(IAiContentService aiContentService, ILogger<AiC
 
         return Ok(result);
     }
-    
+
     [HttpPost("generate-social-post")]
+    [Authorize]
+    [ServiceFilter(typeof(RequireAiSubscriptionFilter))]
     [ProducesResponseType(typeof(ApiResponse<SocialPostResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
@@ -135,106 +139,118 @@ public class AiContentController(IAiContentService aiContentService, ILogger<AiC
             });
         }
     }
-    
+
     [HttpPost("generate-speaker-intro")]
-[ProducesResponseType(typeof(ApiResponse<AiContentResponse>), StatusCodes.Status200OK)]
-[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status429TooManyRequests)]
-[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
-public async Task<IActionResult> GenerateSpeakerIntro(
+    [Authorize]
+    [ServiceFilter(typeof(RequireAiSubscriptionFilter))]
+    [ProducesResponseType(typeof(ApiResponse<AiContentResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status429TooManyRequests)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GenerateSpeakerIntro(
     [FromBody] GenerateSpeakerIntroRequest request,
     CancellationToken ct)
-{
-    if (!ModelState.IsValid)
-        return BadRequest(ModelState);
-
-    var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-    var userId = Guid.Parse(userIdClaim ??
-                            throw new UnauthorizedAccessException("User ID not found in token"));
-
-    try
     {
-        var result = await aiContentService.GenerateSpeakerIntroAsync(request, userId, ct);
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
 
-        if (!result.IsSuccess)
-            return StatusCode(result.StatusCode, result);
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userId = Guid.Parse(userIdClaim ??
+                                throw new UnauthorizedAccessException("User ID not found in token"));
 
+        try
+        {
+            var result = await aiContentService.GenerateSpeakerIntroAsync(request, userId, ct);
+
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, result);
+
+            return Ok(result);
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("429"))
+        {
+            logger.LogWarning("Gemini rate limit hit for speaker intro, talent {TalentId}",
+                request.TalentId);
+            return StatusCode(429, new
+            {
+                error = "AI service rate limit exceeded. Please retry in a few seconds."
+            });
+        }
+        catch (OperationCanceledException)
+        {
+            return StatusCode(499, new { error = "Request cancelled by client." });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex,
+                "Unexpected error generating speaker intro for talent {TalentId} in event {EventId}",
+                request.TalentId, request.EventId);
+            return StatusCode(500, new
+            {
+                error = "An unexpected error occurred while generating content."
+            });
+        }
+    }
+
+    [HttpPost("generate-session-abstract")]
+    [Authorize]
+    [ServiceFilter(typeof(RequireAiSubscriptionFilter))]
+    [ProducesResponseType(typeof(ApiResponse<AiContentResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status429TooManyRequests)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GenerateSessionAbstract(
+        [FromBody] GenerateSessionAbstractRequest request,
+        CancellationToken ct)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userId = Guid.Parse(userIdClaim ??
+                                throw new UnauthorizedAccessException("User ID not found in token"));
+
+        try
+        {
+            var result = await aiContentService.GenerateSessionAbstractAsync(request, userId, ct);
+
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, result);
+
+            return Ok(result);
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("429"))
+        {
+            logger.LogWarning("Gemini rate limit hit for session abstract, session {SessionId}",
+                request.SessionId);
+            return StatusCode(429, new
+            {
+                error = "AI service rate limit exceeded. Please retry in a few seconds."
+            });
+        }
+        catch (OperationCanceledException)
+        {
+            return StatusCode(499, new { error = "Request cancelled by client." });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex,
+                "Unexpected error generating session abstract for session {SessionId} in event {EventId}",
+                request.SessionId, request.EventId);
+            return StatusCode(500, new
+            {
+                error = "An unexpected error occurred while generating content."
+            });
+        }
+    }
+
+    [HttpGet("chart")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> GetAiChart()
+    {
+        var result = await aiContentService.GetAIToken();
         return Ok(result);
     }
-    catch (HttpRequestException ex) when (ex.Message.Contains("429"))
-    {
-        logger.LogWarning("Gemini rate limit hit for speaker intro, talent {TalentId}",
-            request.TalentId);
-        return StatusCode(429, new
-        {
-            error = "AI service rate limit exceeded. Please retry in a few seconds."
-        });
-    }
-    catch (OperationCanceledException)
-    {
-        return StatusCode(499, new { error = "Request cancelled by client." });
-    }
-    catch (Exception ex)
-    {
-        logger.LogError(ex,
-            "Unexpected error generating speaker intro for talent {TalentId} in event {EventId}",
-            request.TalentId, request.EventId);
-        return StatusCode(500, new
-        {
-            error = "An unexpected error occurred while generating content."
-        });
-    }
-}
-
-[HttpPost("generate-session-abstract")]
-[ProducesResponseType(typeof(ApiResponse<AiContentResponse>), StatusCodes.Status200OK)]
-[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status429TooManyRequests)]
-[ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
-public async Task<IActionResult> GenerateSessionAbstract(
-    [FromBody] GenerateSessionAbstractRequest request,
-    CancellationToken ct)
-{
-    if (!ModelState.IsValid)
-        return BadRequest(ModelState);
-
-    var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-    var userId = Guid.Parse(userIdClaim ??
-                            throw new UnauthorizedAccessException("User ID not found in token"));
-
-    try
-    {
-        var result = await aiContentService.GenerateSessionAbstractAsync(request, userId, ct);
-
-        if (!result.IsSuccess)
-            return StatusCode(result.StatusCode, result);
-
-        return Ok(result);
-    }
-    catch (HttpRequestException ex) when (ex.Message.Contains("429"))
-    {
-        logger.LogWarning("Gemini rate limit hit for session abstract, session {SessionId}",
-            request.SessionId);
-        return StatusCode(429, new
-        {
-            error = "AI service rate limit exceeded. Please retry in a few seconds."
-        });
-    }
-    catch (OperationCanceledException)
-    {
-        return StatusCode(499, new { error = "Request cancelled by client." });
-    }
-    catch (Exception ex)
-    {
-        logger.LogError(ex,
-            "Unexpected error generating session abstract for session {SessionId} in event {EventId}",
-            request.SessionId, request.EventId);
-        return StatusCode(500, new
-        {
-            error = "An unexpected error occurred while generating content."
-        });
-    }
-}
 }

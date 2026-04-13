@@ -36,4 +36,9 @@ public class AiGeneratedContentRepository(AIServiceDbContext dbContext) : IAiGen
     {
         await dbContext.SaveChangesAsync(ct);
     }
+
+    public async Task<List<AiGeneratedContent>> GetAiTokenChart()
+    {
+        return await dbContext.AiGeneratedContents.ToListAsync();
+    }
 }
