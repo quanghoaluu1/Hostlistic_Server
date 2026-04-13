@@ -8,4 +8,5 @@ public interface IEmailService
     Task SendTicketPurchaseConfirmationAsync(TicketPurchaseEmailRequest request);
     Task SendTeamMemberInviteEmailAsync(InviteMemberEmailRequest request);
     Task SendEmailAsync(string toEmail, string subject, string htmlBody);
+    Task SendEmailForHoldersAsync(HolderTicketEmailModel request);
 }
