@@ -247,7 +247,7 @@ public class AiContentController(IAiContentService aiContentService, ILogger<AiC
     }
 
     [HttpGet("chart")]
-    [Authorize(Roles = "Admin")]
+    [Authorize]
     public async Task<IActionResult> GetAiChart()
     {
         var result = await aiContentService.GetAIToken();
