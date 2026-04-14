@@ -7,7 +7,7 @@ public static class EventPermissions
     public const string EditEvent = "can_edit_event";
     public const string ManageTickets = "can_manage_tickets";
     public const string ManageSessions = "can_manage_sessions";
-    public const string ManageTalent = "can_manage_talent";
+    public const string ManageLineup = "can_manage_lineup";
     public const string ManageTeam = "can_manage_team";
     public const string CheckIn = "can_checkin";
     public const string SendNotifications = "can_send_notifications";
@@ -27,7 +27,7 @@ public static class EventPermissions
     /// </summary>
     public static readonly IReadOnlySet<string> AllKeys = new HashSet<string>
     {
-        EditEvent, ManageTickets, ManageSessions, ManageTalent,
+        EditEvent, ManageTickets, ManageSessions, ManageLineup,
         ManageTeam, CheckIn, SendNotifications, ViewAnalytics,
         ManageSponsors, ManageVenue, ExportData
     };
@@ -43,7 +43,7 @@ public static class EventPermissions
             [EditEvent] = true,
             [ManageTickets] = true,
             [ManageSessions] = true,
-            [ManageTalent] = true,
+            [ManageLineup] = true,
             [ManageTeam] = false,  // Only Organizer can manage team
             [CheckIn] = true,
             [SendNotifications] = true,
@@ -57,7 +57,7 @@ public static class EventPermissions
             [EditEvent] = false,
             [ManageTickets] = false,
             [ManageSessions] = false,
-            [ManageTalent] = false,
+            [ManageLineup] = false,
             [ManageTeam] = false,
             [CheckIn] = true,
             [SendNotifications] = false,

@@ -74,7 +74,7 @@ public class EventServiceClient : IEventServiceClient
         try
         {
             var httpClient = _httpClientFactory.CreateClient("EventService");
-            var response = await httpClient.GetAsync($"/api/TicketTypes/event/{eventId}");
+            var response = await httpClient.GetAsync($"/api/events/{eventId}/ticket-types");
             if (!response.IsSuccessStatusCode)
             {
                 var error = await response.Content.ReadAsStringAsync();

@@ -1,5 +1,7 @@
+using EventService_Api.Filters;
 using EventService_Application.DTOs;
 using EventService_Application.Interfaces;
+using EventService_Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -12,6 +14,7 @@ public class TeamMemberController(ITeamMemberService teamMemberService) : Contro
 {
     [Authorize]
     [HttpPost]
+    [RequireEventPermission(EventPermissions.ManageTeam)]
     public async Task<IActionResult> Invite(Guid eventId, [FromBody] InviteTeamMemberRequest request)
     {
         var result = await teamMemberService.InviteAsync(eventId, GetCurrentUserId(), GetCurrentUserName(), request);
@@ -52,6 +55,7 @@ public class TeamMemberController(ITeamMemberService teamMemberService) : Contro
 
     [Authorize]
     [HttpDelete("{memberId:guid}")]
+    [RequireEventPermission(EventPermissions.ManageTeam)]
     public async Task<IActionResult> RemoveMember(Guid eventId, Guid memberId)
     {
         var result = await teamMemberService.RemoveMemberAsync(eventId, memberId, GetCurrentUserId());
@@ -60,6 +64,7 @@ public class TeamMemberController(ITeamMemberService teamMemberService) : Contro
 
     [Authorize]
     [HttpPatch("{memberId:guid}/permissions")]
+    [RequireEventPermission(EventPermissions.ManageTeam)]
     public async Task<IActionResult> UpdatePermissions(
         Guid eventId,
         Guid memberId,

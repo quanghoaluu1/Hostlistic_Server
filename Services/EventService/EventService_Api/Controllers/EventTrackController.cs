@@ -1,6 +1,8 @@
 ﻿using Common;
+using EventService_Api.Filters;
 using EventService_Application.DTOs;
 using EventService_Application.Interfaces;
+using EventService_Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -41,6 +43,7 @@ public class EventTrackController(ITrackService trackService) : ControllerBase
     /// EventId comes from URL — NOT from request body.
     /// </summary>
     [HttpPost]
+    [RequireEventPermission(EventPermissions.ManageSessions)]
     public async Task<IActionResult> CreateTrack(Guid eventId, [FromBody] CreateTrackRequest request)
     {
         // TODO: Permission check — verify caller has "can_edit_event" on this event
@@ -57,6 +60,7 @@ public class EventTrackController(ITrackService trackService) : ControllerBase
     /// Requires: authenticated + can_edit_event permission.
     /// </summary>
     [HttpPut("{trackId:guid}")]
+    [RequireEventPermission(EventPermissions.ManageSessions)]
     public async Task<IActionResult> UpdateTrack(
         Guid eventId, Guid trackId, [FromBody] UpdateTrackRequest request)
     {
@@ -69,6 +73,7 @@ public class EventTrackController(ITrackService trackService) : ControllerBase
     /// Requires: authenticated + can_edit_event permission.
     /// </summary>
     [HttpDelete("{trackId:guid}")]
+    [RequireEventPermission(EventPermissions.ManageSessions)]
     public async Task<IActionResult> DeleteTrack(Guid eventId, Guid trackId)
     {
         var result = await trackService.DeleteTrackAsync(eventId, trackId);

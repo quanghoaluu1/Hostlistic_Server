@@ -1,6 +1,8 @@
 ﻿using Common;
+using EventService_Api.Filters;
 using EventService_Application.DTOs;
 using EventService_Application.Interfaces;
+using EventService_Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -49,6 +51,7 @@ public class EventSessionsController(ISessionService sessionService) : Controlle
     /// Runs 5-step validation: time → track exists → event bounds → track overlap → venue overlap.
     /// </summary>
     [HttpPost]
+    [RequireEventPermission(EventPermissions.ManageSessions)]
     public async Task<IActionResult> CreateSession(
         Guid eventId, [FromBody] CreateSessionRequest request)
     {
@@ -61,6 +64,7 @@ public class EventSessionsController(ISessionService sessionService) : Controlle
     /// Re-validates overlap rules if time or track/venue changed.
     /// </summary>
     [HttpPut("{sessionId:guid}")]
+    [RequireEventPermission(EventPermissions.ManageSessions)]
     public async Task<IActionResult> UpdateSession(
         Guid eventId, Guid sessionId, [FromBody] UpdateSessionRequest request)
     {
@@ -80,6 +84,7 @@ public class EventSessionsController(ISessionService sessionService) : Controlle
     ///   OnGoing   → Completed | Cancelled
     /// </summary>
     [HttpPatch("{sessionId:guid}/status")]
+    [RequireEventPermission(EventPermissions.ManageSessions)]
     public async Task<IActionResult> UpdateSessionStatus(
         Guid eventId, Guid sessionId, [FromBody] UpdateSessionStatusRequest request)
     {
@@ -91,6 +96,7 @@ public class EventSessionsController(ISessionService sessionService) : Controlle
     /// Delete a session. Fails with 409 if session has active bookings.
     /// </summary>
     [HttpDelete("{sessionId:guid}")]
+    [RequireEventPermission(EventPermissions.ManageSessions)]
     public async Task<IActionResult> DeleteSession(Guid eventId, Guid sessionId)
     {
         var result = await sessionService.DeleteSessionAsync(eventId, sessionId);
