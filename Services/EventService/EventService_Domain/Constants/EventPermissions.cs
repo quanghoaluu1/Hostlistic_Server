@@ -7,7 +7,7 @@ public static class EventPermissions
     public const string EditEvent = "can_edit_event";
     public const string ManageTickets = "can_manage_tickets";
     public const string ManageSessions = "can_manage_sessions";
-    public const string ManageTalent = "can_manage_talent";
+    public const string ManageLineup = "can_manage_lineup";
     public const string ManageTeam = "can_manage_team";
     public const string CheckIn = "can_checkin";
     public const string SendNotifications = "can_send_notifications";

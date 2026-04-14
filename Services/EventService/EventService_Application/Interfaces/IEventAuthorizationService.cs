@@ -47,4 +47,10 @@ public interface IEventAuthorizationService
         Guid eventId,
         Guid userId,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// Get the team role of a user on an event.
+    /// Returns null if the user is not an active team member (e.g. they are the owner or have no role).
+    /// </summary>
+    Task<string?> GetUserRoleAsync(Guid eventId, Guid userId, CancellationToken ct = default);
 }

@@ -1,6 +1,8 @@
 ﻿using Common;
+using EventService_Api.Filters;
 using EventService_Application.DTOs;
 using EventService_Application.Interfaces;
+using EventService_Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -40,6 +42,7 @@ public class EventVenueController(IVenueService venueService) : ControllerBase
     /// Requires: authenticated + can_edit_event permission.
     /// </summary>
     [HttpPost]
+    [RequireEventPermission(EventPermissions.ManageVenue)]
     public async Task<IActionResult> CreateVenue(
         Guid eventId, [FromForm] CreateVenueRequest request)
     {
@@ -56,6 +59,7 @@ public class EventVenueController(IVenueService venueService) : ControllerBase
     /// Update a venue. Supports partial update (PATCH semantics over PUT).
     /// </summary>
     [HttpPut("{venueId:guid}")]
+    [RequireEventPermission(EventPermissions.ManageVenue)]
     public async Task<IActionResult> UpdateVenue(
         Guid eventId, Guid venueId, [FromForm] UpdateVenueRequest request)
     {
@@ -67,6 +71,7 @@ public class EventVenueController(IVenueService venueService) : ControllerBase
     /// Delete a venue. Fails if sessions are assigned to it.
     /// </summary>
     [HttpDelete("{venueId:guid}")]
+    [RequireEventPermission(EventPermissions.ManageVenue)]
     public async Task<IActionResult> DeleteVenue(Guid eventId, Guid venueId)
     {
         var result = await venueService.DeleteAsync(eventId, venueId);
