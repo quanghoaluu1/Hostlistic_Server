@@ -22,7 +22,7 @@ public class EventService(
             return ApiResponse<EventResponseDto>.Fail(403, entitlement.Message);
 
         var currentEventCount = eventRepository.GetQueryable()
-            .Count(e => e.OrganizerId == organizerId && e.EventStatus != EventStatus.Cancelled);
+            .Count(e => e.OrganizerId == organizerId && e.EventStatus != EventStatus.Cancelled && e.EventStatus != EventStatus.Completed );
         if (currentEventCount >= entitlement.MaxEvents)
         {
             return ApiResponse<EventResponseDto>.Fail(403,
