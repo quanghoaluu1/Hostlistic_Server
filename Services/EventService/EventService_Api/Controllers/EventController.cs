@@ -1,6 +1,8 @@
 using Common;
+using EventService_Api.Filters;
 using EventService_Application.DTOs;
 using EventService_Application.Interfaces;
+using EventService_Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -43,6 +45,7 @@ public class EventController(IEventService eventService, IPhotoService photoServ
     }
 
     [HttpPatch("cover-image/{eventId:guid}")]
+    [RequireEventPermission(EventPermissions.EditEvent)]
     public async Task<IActionResult> SetEventCover(Guid eventId, IFormFile file)
     {
         var eventEntity = await eventService.GetEventByIdAsync(eventId);
@@ -60,6 +63,7 @@ public class EventController(IEventService eventService, IPhotoService photoServ
     }
 
     [HttpPatch("{eventId:guid}")]
+    [RequireEventPermission(EventPermissions.EditEvent)]
     public async Task<IActionResult> UpdateEvent(Guid eventId, EventRequestDto dto)
     {
         var eventEntity = await eventService.GetEventByIdAsync(eventId);
@@ -78,6 +82,7 @@ public class EventController(IEventService eventService, IPhotoService photoServ
         return Ok(result);
     }
     [HttpPatch("{eventId:guid}/agenda-mode")]
+    [RequireEventPermission(EventPermissions.EditEvent)]
     public async Task<IActionResult> SetAgendaMode(
         Guid eventId)
     {
@@ -111,6 +116,7 @@ public class EventController(IEventService eventService, IPhotoService photoServ
     }
 
     [HttpPatch("{eventId:guid}/start")]
+    [RequireEventOwner]
     public async Task<IActionResult> StartEvent(Guid eventId)
     {
         var result = await lifecycleService.StartEventAsync(eventId, GetCurrentUserId());
@@ -118,6 +124,7 @@ public class EventController(IEventService eventService, IPhotoService photoServ
     }
 
     [HttpPatch("{eventId:guid}/complete")]
+    [RequireEventOwner]
     public async Task<IActionResult> CompleteEvent(Guid eventId)
     {
         var result = await lifecycleService.CompleteEventAsync(eventId, GetCurrentUserId());
@@ -125,6 +132,7 @@ public class EventController(IEventService eventService, IPhotoService photoServ
     }
 
     [HttpPatch("{eventId:guid}/cancel")]
+    [RequireEventOwner]
     public async Task<IActionResult> CancelEvent(Guid eventId, [FromBody] CancelEventRequest request)
     {
         var result = await lifecycleService.CancelEventAsync(eventId, GetCurrentUserId(), request.Reason);

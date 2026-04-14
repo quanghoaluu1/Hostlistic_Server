@@ -111,4 +111,15 @@ public class EventAuthorizationService(
         return permissions ?? new Dictionary<string, bool>();
     }
 
+    public async Task<string?> GetUserRoleAsync(Guid eventId, Guid userId, CancellationToken ct = default)
+    {
+        var memberQueryable = teamMemberRepository.GetQueryable();
+        var role = await memberQueryable
+            .AsNoTracking()
+            .Where(m => m.EventId == eventId && m.UserId == userId && m.Status == EventMemberStatus.Active)
+            .Select(m => (EventRole?)m.Role)
+            .FirstOrDefaultAsync(ct);
+        return role?.ToString();
+    }
+
 }
