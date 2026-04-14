@@ -25,18 +25,7 @@ public class EventMembershipController(IEventAuthorizationService authService) :
         var ct = HttpContext.RequestAborted;
         var userId = User.GetUserId();
 
-        var isOwnerTask = authService.IsEventOwnerAsync(eventId, userId, ct);
-        var permissionsTask = authService.GetUserPermissionsAsync(eventId, userId, ct);
-        var roleTask = authService.GetUserRoleAsync(eventId, userId, ct);
-
-        await Task.WhenAll(isOwnerTask, permissionsTask, roleTask);
-
-        var isOwner = isOwnerTask.Result;
-        var permissions = permissionsTask.Result;
-        // Event owner is not stored in EventTeamMember; reflect "Organizer" role for them.
-        var role = isOwner ? "Organizer" : roleTask.Result;
-
-        var dto = new EventPermissionDto(isOwner, role, permissions);
+        var dto = await authService.GetEventPermissionDtoAsync(eventId, userId, ct);
         return StatusCode(200, ApiResponse<EventPermissionDto>.Success(200, "Permissions retrieved successfully.", dto));
     }
 }

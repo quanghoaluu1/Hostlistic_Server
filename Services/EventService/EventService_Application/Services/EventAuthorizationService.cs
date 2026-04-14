@@ -1,3 +1,4 @@
+using EventService_Application.DTOs;
 using EventService_Application.Interfaces;
 using EventService_Domain.Constants;
 using EventService_Domain.Enums;
@@ -120,6 +121,33 @@ public class EventAuthorizationService(
             .Select(m => (EventRole?)m.Role)
             .FirstOrDefaultAsync(ct);
         return role?.ToString();
+    }
+
+    public async Task<EventPermissionDto> GetEventPermissionDtoAsync(
+        Guid eventId,
+        Guid userId,
+        CancellationToken ct = default)
+    {
+        var isOwner = await eventRepository.IsOwnerAsync(eventId, userId);
+
+        if (isOwner)
+        {
+            return new EventPermissionDto(
+                true,
+                "Organizer",
+                EventPermissions.AllKeys.ToDictionary(k => k, _ => true));
+        }
+
+        var member = await teamMemberRepository.GetQueryable()
+            .AsNoTracking()
+            .Where(m => m.EventId == eventId && m.UserId == userId && m.Status == EventMemberStatus.Active)
+            .Select(m => new { m.Role, m.Permissions })
+            .FirstOrDefaultAsync(ct);
+
+        return new EventPermissionDto(
+            false,
+            member?.Role.ToString(),
+            member?.Permissions ?? new Dictionary<string, bool>());
     }
 
 }

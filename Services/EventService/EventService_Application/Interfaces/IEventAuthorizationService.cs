@@ -1,3 +1,5 @@
+using EventService_Application.DTOs;
+
 namespace EventService_Application.Interfaces;
 
 public interface IEventAuthorizationService
@@ -53,4 +55,10 @@ public interface IEventAuthorizationService
     /// Returns null if the user is not an active team member (e.g. they are the owner or have no role).
     /// </summary>
     Task<string?> GetUserRoleAsync(Guid eventId, Guid userId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Returns the complete permission snapshot (isOwner, role, permissions) in a single sequential
+    /// flow — safe to call on a shared DbContext without concurrency errors.
+    /// </summary>
+    Task<EventPermissionDto> GetEventPermissionDtoAsync(Guid eventId, Guid userId, CancellationToken ct = default);
 }
