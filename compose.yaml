@@ -162,6 +162,8 @@ services:
       - RabbitMq__Username=guest
       - RabbitMq__Password=guest
       - Email__DailyLimit=100
+      - ServiceUrls__EventService=http://eventservice:8080
+      - ServiceUrls__BookingService=http://bookingservice:8080
     networks:
       - hostlistic_net
     restart: unless-stopped

@@ -14,6 +14,10 @@ public class EmailCampaignRepository(NotificationServiceDbContext dbContext) : I
             .FirstOrDefaultAsync(ec => ec.Id == id);
     }
 
+    public IQueryable<EmailCampaign> GetQueryable()
+    {
+        return dbContext.EmailCampaigns;
+    }
     public async Task<List<EmailCampaign>> GetAllAsync()
     {
         return await dbContext.EmailCampaigns

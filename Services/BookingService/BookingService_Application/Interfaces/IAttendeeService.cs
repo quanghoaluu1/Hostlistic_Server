@@ -7,4 +7,8 @@ public interface IAttendeeService
 {
     Task<ApiResponse<AttendeeListResponse>> GetAttendeesAsync(Guid eventId, AttendeeListRequest request, CancellationToken ct = default);
     Task<ApiResponse<AttendeeSummaryDto>> GetAttendeeSummaryAsync(Guid eventId, CancellationToken ct = default);
+    Task<ApiResponse<List<EmailRecipientDto>>> GetRecipientsAsync(
+        Guid eventId,
+        GetEmailRecipientsRequest request,
+        CancellationToken ct = default);
 }

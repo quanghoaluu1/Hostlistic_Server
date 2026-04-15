@@ -8,6 +8,7 @@ public interface IEmailCampaignRepository
     Task<List<EmailCampaign>> GetAllAsync();
     Task AddAsync(EmailCampaign emailCampaign);
     Task UpdateAsync(EmailCampaign emailCampaign);
+    IQueryable<EmailCampaign> GetQueryable();
     Task DeleteAsync(EmailCampaign emailCampaign);
     Task SaveChangesAsync();
 }

@@ -1,6 +1,9 @@
 using System.Security.Authentication;
 using System.Text;
 using Common;
+using Hangfire;
+using Hangfire.Dashboard;
+using Hangfire.PostgreSql;
 using Mapster;
 using MassTransit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -77,6 +80,31 @@ builder.Services.AddAuthentication(options =>
 });
 builder.Services.AddAuthorization();
 
+var hangfireConn = builder.Configuration.GetConnectionString("NotificationDbConnection");
+builder.Services.AddHangfire(cfg => cfg
+    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+    .UseSimpleAssemblyNameTypeSerializer()
+    .UseRecommendedSerializerSettings()
+    .UsePostgreSqlStorage(opts => opts.UseNpgsqlConnection(hangfireConn),
+        new PostgreSqlStorageOptions()
+    {
+        SchemaName                  =  "hangfire",
+        PrepareSchemaIfNecessary    = true,  // tự tạo bảng lần đầu
+        QueuePollInterval           = TimeSpan.FromSeconds(5),
+        InvisibilityTimeout         = TimeSpan.FromMinutes(30),
+        DistributedLockTimeout      = TimeSpan.FromMinutes(10),
+    }));
+
+builder.Services.AddHangfireServer(opts =>
+{
+    opts.ServerName  = "NotificationService";
+    opts.WorkerCount = 5;
+    opts.Queues      = ["reminders", "campaigns", "default"];
+    
+    opts.HeartbeatInterval        = TimeSpan.FromSeconds(30);
+    opts.ServerCheckInterval      = TimeSpan.FromMinutes(1);
+    opts.SchedulePollingInterval  = TimeSpan.FromSeconds(15);
+});
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Production", policy =>
@@ -148,6 +176,22 @@ builder.Services.Configure<ResendClientOptions>(o =>
 });
 builder.Services.AddTransient<IResend, ResendClient>();
 
+var eventServiceUrl = builder.Configuration["ServiceUrls:EventService"];
+if (string.IsNullOrWhiteSpace(eventServiceUrl))
+    eventServiceUrl = "http://localhost:5139";
+builder.Services.AddHttpClient("EventService", client =>
+{
+    client.BaseAddress = new Uri(eventServiceUrl.TrimEnd('/'));
+});
+
+var bookingServiceUrl = builder.Configuration["ServiceUrls:BookingService"];
+if (string.IsNullOrWhiteSpace(bookingServiceUrl))
+    bookingServiceUrl = "http://localhost:5077";
+builder.Services.AddHttpClient("BookingService", client =>
+{
+    client.BaseAddress = new Uri(bookingServiceUrl.TrimEnd('/'));
+});
+
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<IUserIdProvider, SubClaimUserIdProvider>();
 
@@ -171,5 +215,14 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHealthChecks("/health");
 app.MapHub<NotificationHub>("/hubs/notifications");
+
+    app.UseHangfireDashboard("/hangfire", new DashboardOptions()
+    {
+        Authorization = [new LocalRequestsOnlyAuthorizationFilter()],
+        AppPath                = null,
+        DisplayStorageConnectionString = false,
+        DashboardTitle         = "Hostlistic — Job Dashboard",
+    });
+
 
 app.Run();

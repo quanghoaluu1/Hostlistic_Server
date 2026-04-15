@@ -153,4 +153,66 @@ public class AttendeeService(BookingServiceDbContext dbContext) : IAttendeeServi
 
         return ApiResponse<AttendeeSummaryDto>.Success(200, "Attendee summary retrieved", summary);
     }
+
+    public async Task<ApiResponse<List<EmailRecipientDto>>> GetRecipientsAsync(
+        Guid eventId,
+        GetEmailRecipientsRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var recipientGroup = (RecipientGroup)request.RecipientGroup;
+        var query = dbContext.Tickets.AsNoTracking().Where(t => t.Order.EventId == eventId && t.Order.Status != OrderStatus.Cancelled);
+
+        query = recipientGroup switch
+        {
+            RecipientGroup.NotCheckedIn =>
+                query.Where(t => !t.IsUsed),
+
+            RecipientGroup.SpecificTicketType when request.TicketTypeIds?.Count > 0 =>
+                query.Where(t => request.TicketTypeIds.Contains(t.TicketTypeId)),
+
+            RecipientGroup.ManualList when request.SpecificUserIds?.Count > 0 =>
+                query.Where(t => request.SpecificUserIds.Contains(t.Order.UserId)),
+
+            _ => query
+        };
+        
+        if (request.PurchasedAfter.HasValue)
+            query = query.Where(t => t.Order.OrderDate >= request.PurchasedAfter.Value);
+        
+        var raw = await query
+            .Select(t => new
+            {
+                UserId         = t.Order.UserId,
+                Email          = t.HolderEmail ?? t.Order.BuyerEmail,
+                FullName       = t.HolderName  ?? t.Order.BuyerName,
+                TicketTypeName = t.TicketTypeName,
+            })
+            .ToListAsync(cancellationToken);
+        
+        var recipients = raw
+            .Where(r => !string.IsNullOrWhiteSpace(r.Email))
+            .GroupBy(r => r.Email.ToLowerInvariant())
+            .Select(g =>
+            {
+                var first = g.First();
+                return new EmailRecipientDto
+                {
+                    UserId         = first.UserId,
+                    Email          = first.Email,
+                    FullName       = first.FullName,
+                    TicketTypeName = first.TicketTypeName
+                };
+            })
+            .ToList();
+
+        return ApiResponse<List<EmailRecipientDto>>.Success(
+            200, $"Found {recipients.Count} recipients.", recipients);
+    }
+}
+public enum RecipientGroup
+{
+    AllTicketHolders = 0,    // Gửi hết cho ai đã mua vé
+    SpecificTicketType = 1,  // Chỉ gửi cho vé VIP
+    NotCheckedIn = 2,        // Nhắc nhở ai chưa check-in
+    ManualList = 3           // Danh sách cụ thể (import excel)
 }
