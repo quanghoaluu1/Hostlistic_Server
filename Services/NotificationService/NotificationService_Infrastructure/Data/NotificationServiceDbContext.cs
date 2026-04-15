@@ -30,7 +30,7 @@ public class NotificationServiceDbContext : DbContext
             });
 
             entity.HasMany(e => e.UserNotifications)
-                .WithOne()
+                .WithOne(un => un.Notification)
                 .HasForeignKey(un => un.NotificationId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
