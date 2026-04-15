@@ -11,4 +11,5 @@ public class UserNotification
     public DateTime ReadAt { get; set; }
     public DeliveryStatus DeliveryStatus { get; set; }
     public string? DeliveryError { get; set; }
+    public Notification? Notification { get; set; }
 }

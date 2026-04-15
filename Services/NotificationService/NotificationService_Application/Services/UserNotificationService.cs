@@ -26,18 +26,18 @@ public class UserNotificationService(IUserNotificationRepository userNotificatio
         return ApiResponse<List<UserNotificationDto>>.Success(200, "User notifications retrieved successfully", dtos);
     }
 
-    public async Task<ApiResponse<List<UserNotificationDto>>> GetByUserIdAsync(Guid userId)
+    public async Task<ApiResponse<List<NotificationFeedDto>>> GetByUserIdAsync(Guid userId)
     {
         var userNotifications = await userNotificationRepository.GetByUserIdAsync(userId);
-        var dtos = userNotifications.Adapt<List<UserNotificationDto>>();
-        return ApiResponse<List<UserNotificationDto>>.Success(200, "User notifications retrieved successfully", dtos);
+        var dtos = userNotifications.Select(MapToFeedDto).ToList();
+        return ApiResponse<List<NotificationFeedDto>>.Success(200, "User notifications retrieved successfully", dtos);
     }
 
-    public async Task<ApiResponse<List<UserNotificationDto>>> GetUnreadByUserIdAsync(Guid userId)
+    public async Task<ApiResponse<List<NotificationFeedDto>>> GetUnreadByUserIdAsync(Guid userId)
     {
         var userNotifications = await userNotificationRepository.GetUnreadByUserIdAsync(userId);
-        var dtos = userNotifications.Adapt<List<UserNotificationDto>>();
-        return ApiResponse<List<UserNotificationDto>>.Success(200, "Unread notifications retrieved successfully", dtos);
+        var dtos = userNotifications.Select(MapToFeedDto).ToList();
+        return ApiResponse<List<NotificationFeedDto>>.Success(200, "Unread notifications retrieved successfully", dtos);
     }
 
     public async Task<ApiResponse<UserNotificationDto>> MarkAsReadAsync(Guid id, Guid userId)
@@ -107,5 +107,25 @@ public class UserNotificationService(IUserNotificationRepository userNotificatio
         await userNotificationRepository.SaveChangesAsync();
 
         return ApiResponse<bool>.Success(200, "User notification deleted successfully", true);
+    }
+
+    private static NotificationFeedDto MapToFeedDto(UserNotification userNotification)
+    {
+        var notification = userNotification.Notification;
+        return new NotificationFeedDto
+        {
+            Id = userNotification.Id,
+            Type = notification?.Type.ToString() ?? string.Empty,
+            Title = notification?.Title ?? string.Empty,
+            Body = notification?.Content ?? string.Empty,
+            IsRead = userNotification.IsRead,
+            ReadAt = userNotification.ReadAt == default ? null : userNotification.ReadAt,
+            CreatedAt = notification?.SentAt
+                ?? (userNotification.ReadAt == default ? DateTime.UtcNow : userNotification.ReadAt),
+            Metadata = new NotificationMetadataDto
+            {
+                EventId = notification?.EventId,
+            }
+        };
     }
 }

@@ -20,15 +20,18 @@ public class UserNotificationRepository(NotificationServiceDbContext dbContext) 
     public async Task<List<UserNotification>> GetByUserIdAsync(Guid userId)
     {
         return await dbContext.UserNotifications
+            .Include(un => un.Notification)
             .Where(un => un.UserId == userId)
-            .OrderByDescending(un => un.ReadAt)
+            .OrderByDescending(un => un.Notification != null ? un.Notification.SentAt : un.ReadAt)
             .ToListAsync();
     }
 
     public async Task<List<UserNotification>> GetUnreadByUserIdAsync(Guid userId)
     {
         return await dbContext.UserNotifications
+            .Include(un => un.Notification)
             .Where(un => un.UserId == userId && !un.IsRead)
+            .OrderByDescending(un => un.Notification != null ? un.Notification.SentAt : un.ReadAt)
             .ToListAsync();
     }
 

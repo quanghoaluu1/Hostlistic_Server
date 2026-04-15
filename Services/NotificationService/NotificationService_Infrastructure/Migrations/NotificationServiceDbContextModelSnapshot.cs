@@ -44,12 +44,6 @@ namespace NotificationService_Infrastructure.Migrations
                     b.Property<int>("FailedCount")
                         .HasColumnType("integer");
 
-                    b.Property<string>("HangfireJobId")
-                        .HasColumnType("text");
-
-                    b.Property<bool>("IsAutoReminder")
-                        .HasColumnType("boolean");
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");
@@ -80,7 +74,7 @@ namespace NotificationService_Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("EmailCampaigns");
+                    b.ToTable("EmailCampaigns", (string)null);
                 });
 
             modelBuilder.Entity("NotificationService_Domain.Entities.EmailLog", b =>
@@ -124,7 +118,7 @@ namespace NotificationService_Infrastructure.Migrations
 
                     b.HasIndex("CampaignId");
 
-                    b.ToTable("EmailLogs");
+                    b.ToTable("EmailLogs", (string)null);
                 });
 
             modelBuilder.Entity("NotificationService_Domain.Entities.EventRecipient", b =>
@@ -173,7 +167,7 @@ namespace NotificationService_Infrastructure.Migrations
                         .IsUnique()
                         .HasFilter("\"TicketTypeId\" IS NOT NULL");
 
-                    b.ToTable("EventRecipients");
+                    b.ToTable("EventRecipients", (string)null);
                 });
 
             modelBuilder.Entity("NotificationService_Domain.Entities.Notification", b =>
@@ -213,7 +207,7 @@ namespace NotificationService_Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Notifications");
+                    b.ToTable("Notifications", (string)null);
                 });
 
             modelBuilder.Entity("NotificationService_Domain.Entities.UserNotification", b =>
@@ -244,7 +238,7 @@ namespace NotificationService_Infrastructure.Migrations
 
                     b.HasIndex("NotificationId");
 
-                    b.ToTable("UserNotifications");
+                    b.ToTable("UserNotifications", (string)null);
                 });
 
             modelBuilder.Entity("NotificationService_Domain.Entities.EmailCampaign", b =>
@@ -261,7 +255,7 @@ namespace NotificationService_Infrastructure.Migrations
 
                             b1.HasKey("EmailCampaignId");
 
-                            b1.ToTable("EmailCampaigns");
+                            b1.ToTable("EmailCampaigns", (string)null);
 
                             b1
                                 .ToJson("TargetFilter")
@@ -297,7 +291,7 @@ namespace NotificationService_Infrastructure.Migrations
 
                             b1.HasKey("NotificationId");
 
-                            b1.ToTable("Notifications");
+                            b1.ToTable("Notifications", (string)null);
 
                             b1
                                 .ToJson("TargetData")
