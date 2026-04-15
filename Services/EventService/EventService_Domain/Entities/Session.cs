@@ -34,6 +34,5 @@ public class Session
     public ICollection<SessionBooking> SessionBookings { get; set; } = new List<SessionBooking>();
     public ICollection<Lineup> Lineups { get; set; } = new List<Lineup>();
     public ICollection<CheckIn> CheckIns { get; set; } = new List<CheckIn>();
-    public ICollection<Feedback> Feedbacks { get; set; } = new List<Feedback>();
     public ICollection<TicketType> TicketTypes { get; set; } = new List<TicketType>();
 }

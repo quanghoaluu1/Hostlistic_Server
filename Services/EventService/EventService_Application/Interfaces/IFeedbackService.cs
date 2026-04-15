@@ -5,12 +5,12 @@ namespace EventService_Application.Interfaces
 {
     public interface IFeedbackService
     {
-        Task<ApiResponse<FeedbackDto>> AddFeedbackAsync(FeedbackDto request);
+        Task<ApiResponse<FeedbackDto>> AddFeedbackAsync(CreateFeedbackDto request, Guid userId);
         Task<ApiResponse<FeedbackDto>> GetFeedbackByIdAsync(Guid id);
         Task<ApiResponse<List<FeedbackDto>>> GetAllFeedbacksAsync();
         Task<ApiResponse<List<FeedbackDto>>> GetFeedbacksByEventIdAsync(Guid eventId);
-        Task<ApiResponse<List<FeedbackDto>>> GetFeedbacksBySessionIdAsync(Guid sessionId);
-        Task<ApiResponse<FeedbackDto>> UpdateFeedbackAsync(Guid id, UpdateFeedbackDto request);
-        Task<ApiResponse<bool>> DeleteFeedbackAsync(Guid id);
+        Task<ApiResponse<FeedbackDto?>> GetMyFeedbackForEventAsync(Guid eventId, Guid userId);
+        Task<ApiResponse<FeedbackDto>> UpdateFeedbackAsync(Guid id, UpdateFeedbackDto request, Guid userId);
+        Task<ApiResponse<bool>> DeleteFeedbackAsync(Guid id, Guid userId);
     }
 }

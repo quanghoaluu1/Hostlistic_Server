@@ -1,23 +1,28 @@
-﻿using EventService_Application.DTOs;
+﻿using System.Security.Claims;
+using EventService_Application.DTOs;
 using EventService_Application.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace EventService_Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class FeedbackController : ControllerBase
     {
         private readonly IFeedbackService _feedbackService;
+
         public FeedbackController(IFeedbackService feedbackService)
         {
             _feedbackService = feedbackService;
         }
 
         [HttpPost]
-        public async Task<IActionResult> AddFeedbackAsync([FromBody] FeedbackDto request)
+        public async Task<IActionResult> AddFeedbackAsync([FromBody] CreateFeedbackDto request)
         {
-            var result = await _feedbackService.AddFeedbackAsync(request);
+            var userId = GetCurrentUserId();
+            var result = await _feedbackService.AddFeedbackAsync(request, userId);
             return StatusCode(result.StatusCode, result);
         }
 
@@ -35,10 +40,11 @@ namespace EventService_Api.Controllers
             return StatusCode(result.StatusCode, result);
         }
 
-        [HttpGet("session/{sessionId:guid}")]
-        public async Task<IActionResult> GetFeedbacksBySessionIdAsync(Guid sessionId)
+        [HttpGet("event/{eventId:guid}/mine")]
+        public async Task<IActionResult> GetMyFeedbackForEventAsync(Guid eventId)
         {
-            var result = await _feedbackService.GetFeedbacksBySessionIdAsync(sessionId);
+            var userId = GetCurrentUserId();
+            var result = await _feedbackService.GetMyFeedbackForEventAsync(eventId, userId);
             return StatusCode(result.StatusCode, result);
         }
 
@@ -52,15 +58,24 @@ namespace EventService_Api.Controllers
         [HttpPut("{id:guid}")]
         public async Task<IActionResult> UpdateFeedbackAsync(Guid id, [FromBody] UpdateFeedbackDto request)
         {
-            var result = await _feedbackService.UpdateFeedbackAsync(id, request);
+            var userId = GetCurrentUserId();
+            var result = await _feedbackService.UpdateFeedbackAsync(id, request, userId);
             return StatusCode(result.StatusCode, result);
         }
 
         [HttpDelete("{id:guid}")]
         public async Task<IActionResult> DeleteFeedbackAsync(Guid id)
         {
-            var result = await _feedbackService.DeleteFeedbackAsync(id);
+            var userId = GetCurrentUserId();
+            var result = await _feedbackService.DeleteFeedbackAsync(id, userId);
             return StatusCode(result.StatusCode, result);
+        }
+
+        private Guid GetCurrentUserId()
+        {
+            var sub = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                      ?? User.FindFirstValue("sub");
+            return Guid.Parse(sub ?? throw new UnauthorizedAccessException("User ID not found in token"));
         }
     }
 }
