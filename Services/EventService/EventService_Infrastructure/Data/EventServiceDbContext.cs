@@ -210,11 +210,6 @@ public class EventServiceDbContext : DbContext
                 .HasForeignKey(c => c.SessionId)
                 .OnDelete(DeleteBehavior.SetNull);
             
-            entity.HasMany(e => e.Feedbacks)
-                .WithOne(f => f.Session)
-                .HasForeignKey(f => f.SessionId)
-                .OnDelete(DeleteBehavior.Cascade);
-            
             entity.HasMany(e => e.TicketTypes)
                 .WithOne(tt => tt.Session)
                 .HasForeignKey(tt => tt.SessionId)
@@ -364,6 +359,12 @@ public class EventServiceDbContext : DbContext
         modelBuilder.Entity<Feedback>(entity =>
         {
             entity.HasKey(e => e.Id);
+            entity.Property(e => e.EventId).IsRequired();
+            entity.Property(e => e.UserId).IsRequired();
+            entity.Property(e => e.UserFullName).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Rating).IsRequired();
+            entity.Property(e => e.Comment).IsRequired().HasMaxLength(1000);
+            entity.HasIndex(e => new { e.EventId, e.UserId }).IsUnique();
         });
 
         // EventDay configuration

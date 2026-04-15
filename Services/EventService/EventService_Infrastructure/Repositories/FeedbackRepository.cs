@@ -32,11 +32,18 @@ namespace EventService_Infrastructure.Repositories
 
         public async Task<IEnumerable<Feedback>> GetFeedbacksByEventIdAsync(Guid eventId)
         {
-            return await _context.Feedbacks.Where(f => f.EventId == eventId).ToListAsync();
+            return await _context.Feedbacks
+                .AsNoTracking()
+                .Where(f => f.EventId == eventId)
+                .OrderByDescending(f => f.CreatedAt)
+                .ToListAsync();
         }
-        public async Task<IEnumerable<Feedback>> GetFeedbacksBySessionAsync(Guid sessionId)
+
+        public async Task<Feedback?> GetFeedbackByEventAndUserAsync(Guid eventId, Guid userId)
         {
-            return await _context.Feedbacks.Where(f => f.SessionId == sessionId).ToListAsync();
+            return await _context.Feedbacks
+                .AsNoTracking()
+                .FirstOrDefaultAsync(f => f.EventId == eventId && f.UserId == userId);
         }
 
         public async Task<Feedback> UpdateFeedbackAsync(Feedback feedback)

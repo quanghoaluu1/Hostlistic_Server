@@ -5,17 +5,17 @@ public static class FeedbackBuilder
     public static Feedback CreateEntity(
         Guid? id = null,
         Guid? eventId = null,
-        Guid? sessionId = null,
         Guid? userId = null,
         int rating = 4,
-        string comment = "Great session!")
+        string comment = "Great event!",
+        string userFullName = "Test User")
     {
         return new Feedback
         {
             Id = id ?? Guid.NewGuid(),
             EventId = eventId ?? Guid.NewGuid(),
-            SessionId = sessionId ?? Guid.NewGuid(),
             UserId = userId ?? Guid.NewGuid(),
+            UserFullName = userFullName,
             Rating = rating,
             Comment = comment,
             CreatedAt = DateTime.UtcNow,
@@ -23,17 +23,12 @@ public static class FeedbackBuilder
         };
     }
 
-    public static FeedbackDto CreateDto(
+    public static CreateFeedbackDto CreateDto(
         Guid? eventId = null,
-        Guid? sessionId = null,
-        Guid? userId = null,
         int rating = 4,
-        string comment = "Very informative") => new FeedbackDto
+        string comment = "Very informative") => new CreateFeedbackDto
     {
-        Id = Guid.NewGuid(),
         EventId = eventId ?? Guid.NewGuid(),
-        SessionId = sessionId ?? Guid.NewGuid(),
-        UserId = userId ?? Guid.NewGuid(),
         Rating = rating,
         Comment = comment
     };

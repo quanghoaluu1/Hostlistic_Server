@@ -7,15 +7,14 @@ public class FeedbackServiceTest
 {
     private readonly IFeedbackRepository _feedbackRepository;
     private readonly IEventRepository _eventRepository;
-    private readonly ISessionRepository _sessionRepository;
     private readonly FeedbackService _sut;
+    private readonly Guid _userId = Guid.NewGuid();
 
     public FeedbackServiceTest()
     {
         _feedbackRepository = Substitute.For<IFeedbackRepository>();
         _eventRepository = Substitute.For<IEventRepository>();
-        _sessionRepository = Substitute.For<ISessionRepository>();
-        _sut = new FeedbackService(_feedbackRepository, _eventRepository, _sessionRepository);
+        _sut = new FeedbackService(_feedbackRepository, _eventRepository);
 
         TypeAdapterConfig<Feedback, FeedbackDto>.NewConfig();
     }
@@ -25,135 +24,44 @@ public class FeedbackServiceTest
     [Fact]
     public async Task AddFeedbackAsync_WhenEventNotFound_ReturnsFail404()
     {
-        // Arrange
         _eventRepository.GetEventByIdAsync(Arg.Any<Guid>()).Returns((Event?)null);
         var dto = FeedbackBuilder.CreateDto();
 
-        // Act
-        var result = await _sut.AddFeedbackAsync(dto);
+        var result = await _sut.AddFeedbackAsync(dto, _userId, "Test User");
 
-        // Assert
         result.IsSuccess.Should().BeFalse();
         result.StatusCode.Should().Be(404);
         result.Message.Should().Contain("Event not found");
     }
 
     [Fact]
-    public async Task AddFeedbackAsync_WhenSessionNotInEvent_ReturnsFail400()
+    public async Task AddFeedbackAsync_WhenDuplicateExists_ReturnsFail409()
     {
-        // Arrange
-        var eventId = Guid.NewGuid();
-        var otherEventId = Guid.NewGuid();
-        var sessionId = Guid.NewGuid();
-        _eventRepository.GetEventByIdAsync(eventId).Returns(EventBuilder.CreateEvent(id: eventId));
-        _sessionRepository.GetSessionByIdAsync(sessionId).Returns(SessionBuilder.CreateEntity(id: sessionId, eventId: otherEventId));
-        var dto = FeedbackBuilder.CreateDto(eventId: eventId, sessionId: sessionId);
-
-        // Act
-        var result = await _sut.AddFeedbackAsync(dto);
-
-        // Assert
-        result.IsSuccess.Should().BeFalse();
-        result.StatusCode.Should().Be(400);
-        result.Message.Should().Contain("does not belong");
-    }
-
-    [Fact]
-    public async Task AddFeedbackAsync_WhenSessionNotFound_ReturnsFail404()
-    {
-        // Arrange
         var eventId = Guid.NewGuid();
         _eventRepository.GetEventByIdAsync(eventId).Returns(EventBuilder.CreateEvent(id: eventId));
-        _sessionRepository.GetSessionByIdAsync(Arg.Any<Guid>()).Returns((Session?)null);
+        _feedbackRepository.GetFeedbackByEventAndUserAsync(eventId, _userId)
+            .Returns(FeedbackBuilder.CreateEntity(eventId: eventId, userId: _userId));
+
         var dto = FeedbackBuilder.CreateDto(eventId: eventId);
 
-        // Act
-        var result = await _sut.AddFeedbackAsync(dto);
+        var result = await _sut.AddFeedbackAsync(dto, _userId, "Test User");
 
-        // Assert
         result.IsSuccess.Should().BeFalse();
-        result.StatusCode.Should().Be(404);
-        result.Message.Should().Contain("Session not found");
-    }
-
-    [Theory]
-    [InlineData(0)]
-    [InlineData(6)]
-    public async Task AddFeedbackAsync_WithInvalidRating_ReturnsFail400(int rating)
-    {
-        // Arrange
-        var eventId = Guid.NewGuid();
-        var sessionId = Guid.NewGuid();
-        _eventRepository.GetEventByIdAsync(eventId).Returns(EventBuilder.CreateEvent(id: eventId));
-        _sessionRepository.GetSessionByIdAsync(sessionId).Returns(SessionBuilder.CreateEntity(id: sessionId, eventId: eventId));
-
-        var dto = FeedbackBuilder.CreateDto(eventId: eventId, sessionId: sessionId, rating: rating);
-
-        // Act
-        var result = await _sut.AddFeedbackAsync(dto);
-
-        // Assert
-        result.IsSuccess.Should().BeFalse();
-        result.StatusCode.Should().Be(400);
-        result.Message.Should().Contain("Rating must be between 1 and 5");
-    }
-
-    [Fact]
-    public async Task AddFeedbackAsync_WithEmptyUserId_ReturnsFail400()
-    {
-        // Arrange
-        var eventId = Guid.NewGuid();
-        var sessionId = Guid.NewGuid();
-        _eventRepository.GetEventByIdAsync(eventId).Returns(EventBuilder.CreateEvent(id: eventId));
-        _sessionRepository.GetSessionByIdAsync(sessionId).Returns(SessionBuilder.CreateEntity(id: sessionId, eventId: eventId));
-
-        var dto = FeedbackBuilder.CreateDto(eventId: eventId, sessionId: sessionId, userId: Guid.Empty);
-
-        // Act
-        var result = await _sut.AddFeedbackAsync(dto);
-
-        // Assert
-        result.IsSuccess.Should().BeFalse();
-        result.StatusCode.Should().Be(400);
-        result.Message.Should().Contain("UserId is required");
-    }
-
-    [Fact]
-    public async Task AddFeedbackAsync_WithEmptyComment_ReturnsFail400()
-    {
-        // Arrange
-        var eventId = Guid.NewGuid();
-        var sessionId = Guid.NewGuid();
-        _eventRepository.GetEventByIdAsync(eventId).Returns(EventBuilder.CreateEvent(id: eventId));
-        _sessionRepository.GetSessionByIdAsync(sessionId).Returns(SessionBuilder.CreateEntity(id: sessionId, eventId: eventId));
-
-        var dto = FeedbackBuilder.CreateDto(eventId: eventId, sessionId: sessionId);
-        dto.Comment = "";
-
-        // Act
-        var result = await _sut.AddFeedbackAsync(dto);
-
-        // Assert
-        result.IsSuccess.Should().BeFalse();
-        result.StatusCode.Should().Be(400);
-        result.Message.Should().Contain("Comment is required");
+        result.StatusCode.Should().Be(409);
+        result.Message.Should().Contain("already submitted");
     }
 
     [Fact]
     public async Task AddFeedbackAsync_WithValidDto_ReturnsSuccess201()
     {
-        // Arrange
         var eventId = Guid.NewGuid();
-        var sessionId = Guid.NewGuid();
         _eventRepository.GetEventByIdAsync(eventId).Returns(EventBuilder.CreateEvent(id: eventId));
-        _sessionRepository.GetSessionByIdAsync(sessionId).Returns(SessionBuilder.CreateEntity(id: sessionId, eventId: eventId));
+        _feedbackRepository.GetFeedbackByEventAndUserAsync(eventId, _userId).Returns((Feedback?)null);
 
-        var dto = FeedbackBuilder.CreateDto(eventId: eventId, sessionId: sessionId, rating: 5);
+        var dto = FeedbackBuilder.CreateDto(eventId: eventId, rating: 5);
 
-        // Act
-        var result = await _sut.AddFeedbackAsync(dto);
+        var result = await _sut.AddFeedbackAsync(dto, _userId, "Test User");
 
-        // Assert
         result.IsSuccess.Should().BeTrue();
         result.StatusCode.Should().Be(201);
         await _feedbackRepository.Received(1).AddFeedbackAsync(Arg.Any<Feedback>());
@@ -164,13 +72,10 @@ public class FeedbackServiceTest
     [Fact]
     public async Task GetFeedbackByIdAsync_WhenNotFound_ReturnsFail404()
     {
-        // Arrange
         _feedbackRepository.GetFeedbackByIdAsync(Arg.Any<Guid>()).Returns((Feedback?)null);
 
-        // Act
         var result = await _sut.GetFeedbackByIdAsync(Guid.NewGuid());
 
-        // Assert
         result.IsSuccess.Should().BeFalse();
         result.StatusCode.Should().Be(404);
     }
@@ -178,17 +83,42 @@ public class FeedbackServiceTest
     [Fact]
     public async Task GetFeedbackByIdAsync_WhenExists_ReturnsSuccess200()
     {
-        // Arrange
         var id = Guid.NewGuid();
         var feedback = FeedbackBuilder.CreateEntity(id: id);
         _feedbackRepository.GetFeedbackByIdAsync(id).Returns(feedback);
 
-        // Act
         var result = await _sut.GetFeedbackByIdAsync(id);
 
-        // Assert
         result.IsSuccess.Should().BeTrue();
         result.StatusCode.Should().Be(200);
+    }
+
+    // ── GetMyFeedbackForEventAsync ─────────────────────────────────────────
+
+    [Fact]
+    public async Task GetMyFeedbackForEventAsync_WhenNotFound_Returns204()
+    {
+        var eventId = Guid.NewGuid();
+        _feedbackRepository.GetFeedbackByEventAndUserAsync(eventId, _userId).Returns((Feedback?)null);
+
+        var result = await _sut.GetMyFeedbackForEventAsync(eventId, _userId);
+
+        result.StatusCode.Should().Be(204);
+        result.Data.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task GetMyFeedbackForEventAsync_WhenExists_Returns200()
+    {
+        var eventId = Guid.NewGuid();
+        var feedback = FeedbackBuilder.CreateEntity(eventId: eventId, userId: _userId);
+        _feedbackRepository.GetFeedbackByEventAndUserAsync(eventId, _userId).Returns(feedback);
+
+        var result = await _sut.GetMyFeedbackForEventAsync(eventId, _userId);
+
+        result.IsSuccess.Should().BeTrue();
+        result.StatusCode.Should().Be(200);
+        result.Data.Should().NotBeNull();
     }
 
     // ── UpdateFeedbackAsync ────────────────────────────────────────────────
@@ -196,46 +126,37 @@ public class FeedbackServiceTest
     [Fact]
     public async Task UpdateFeedbackAsync_WhenNotFound_ReturnsFail404()
     {
-        // Arrange
         _feedbackRepository.GetFeedbackByIdAsync(Arg.Any<Guid>()).Returns((Feedback?)null);
 
-        // Act
-        var result = await _sut.UpdateFeedbackAsync(Guid.NewGuid(), FeedbackBuilder.UpdateRequest());
+        var result = await _sut.UpdateFeedbackAsync(Guid.NewGuid(), FeedbackBuilder.UpdateRequest(), _userId);
 
-        // Assert
         result.IsSuccess.Should().BeFalse();
         result.StatusCode.Should().Be(404);
     }
 
-    [Theory]
-    [InlineData(0)]
-    [InlineData(6)]
-    public async Task UpdateFeedbackAsync_WithInvalidRating_ReturnsFail400(int rating)
+    [Fact]
+    public async Task UpdateFeedbackAsync_WhenNotOwner_ReturnsFail403()
     {
-        // Arrange
         var id = Guid.NewGuid();
-        _feedbackRepository.GetFeedbackByIdAsync(id).Returns(FeedbackBuilder.CreateEntity(id: id));
+        var otherUserId = Guid.NewGuid();
+        _feedbackRepository.GetFeedbackByIdAsync(id)
+            .Returns(FeedbackBuilder.CreateEntity(id: id, userId: otherUserId));
 
-        // Act
-        var result = await _sut.UpdateFeedbackAsync(id, FeedbackBuilder.UpdateRequest(rating: rating));
+        var result = await _sut.UpdateFeedbackAsync(id, FeedbackBuilder.UpdateRequest(), _userId);
 
-        // Assert
         result.IsSuccess.Should().BeFalse();
-        result.StatusCode.Should().Be(400);
+        result.StatusCode.Should().Be(403);
     }
 
     [Fact]
     public async Task UpdateFeedbackAsync_WithValidRequest_ReturnsSuccess200()
     {
-        // Arrange
         var id = Guid.NewGuid();
-        var feedback = FeedbackBuilder.CreateEntity(id: id, comment: "Old comment");
+        var feedback = FeedbackBuilder.CreateEntity(id: id, userId: _userId, comment: "Old comment");
         _feedbackRepository.GetFeedbackByIdAsync(id).Returns(feedback);
 
-        // Act
-        var result = await _sut.UpdateFeedbackAsync(id, FeedbackBuilder.UpdateRequest(comment: "New comment"));
+        var result = await _sut.UpdateFeedbackAsync(id, FeedbackBuilder.UpdateRequest(comment: "New comment"), _userId);
 
-        // Assert
         result.IsSuccess.Should().BeTrue();
         result.StatusCode.Should().Be(200);
         await _feedbackRepository.Received(1).UpdateFeedbackAsync(Arg.Any<Feedback>());
@@ -244,15 +165,12 @@ public class FeedbackServiceTest
     [Fact]
     public async Task UpdateFeedbackAsync_UpdatesRating()
     {
-        // Arrange
         var id = Guid.NewGuid();
-        var feedback = FeedbackBuilder.CreateEntity(id: id, rating: 2);
+        var feedback = FeedbackBuilder.CreateEntity(id: id, userId: _userId, rating: 2);
         _feedbackRepository.GetFeedbackByIdAsync(id).Returns(feedback);
 
-        // Act
-        var result = await _sut.UpdateFeedbackAsync(id, FeedbackBuilder.UpdateRequest(rating: 5, comment: "x"));
+        var result = await _sut.UpdateFeedbackAsync(id, FeedbackBuilder.UpdateRequest(rating: 5, comment: "x"), _userId);
 
-        // Assert
         result.IsSuccess.Should().BeTrue();
         result.Data!.Rating.Should().Be(5);
         await _feedbackRepository.Received(1).UpdateFeedbackAsync(Arg.Is<Feedback>(f => f.Rating == 5));
@@ -263,28 +181,38 @@ public class FeedbackServiceTest
     [Fact]
     public async Task DeleteFeedbackAsync_WhenNotFound_ReturnsFail404()
     {
-        // Arrange
-        _feedbackRepository.DeleteFeedbackAsync(Arg.Any<Guid>()).Returns(false);
+        _feedbackRepository.GetFeedbackByIdAsync(Arg.Any<Guid>()).Returns((Feedback?)null);
 
-        // Act
-        var result = await _sut.DeleteFeedbackAsync(Guid.NewGuid());
+        var result = await _sut.DeleteFeedbackAsync(Guid.NewGuid(), _userId);
 
-        // Assert
         result.IsSuccess.Should().BeFalse();
         result.StatusCode.Should().Be(404);
     }
 
     [Fact]
+    public async Task DeleteFeedbackAsync_WhenNotOwner_ReturnsFail403()
+    {
+        var id = Guid.NewGuid();
+        var otherUserId = Guid.NewGuid();
+        _feedbackRepository.GetFeedbackByIdAsync(id)
+            .Returns(FeedbackBuilder.CreateEntity(id: id, userId: otherUserId));
+
+        var result = await _sut.DeleteFeedbackAsync(id, _userId);
+
+        result.IsSuccess.Should().BeFalse();
+        result.StatusCode.Should().Be(403);
+    }
+
+    [Fact]
     public async Task DeleteFeedbackAsync_WhenExists_ReturnsSuccess200()
     {
-        // Arrange
         var id = Guid.NewGuid();
+        _feedbackRepository.GetFeedbackByIdAsync(id)
+            .Returns(FeedbackBuilder.CreateEntity(id: id, userId: _userId));
         _feedbackRepository.DeleteFeedbackAsync(id).Returns(true);
 
-        // Act
-        var result = await _sut.DeleteFeedbackAsync(id);
+        var result = await _sut.DeleteFeedbackAsync(id, _userId);
 
-        // Assert
         result.IsSuccess.Should().BeTrue();
         result.StatusCode.Should().Be(200);
     }

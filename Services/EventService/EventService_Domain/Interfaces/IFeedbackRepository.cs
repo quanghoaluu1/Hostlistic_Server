@@ -8,7 +8,7 @@ namespace EventService_Domain.Interfaces
         Task<Feedback?> GetFeedbackByIdAsync(Guid id);
         Task<IEnumerable<Feedback>> GetAllFeedbacksAsync();
         Task<IEnumerable<Feedback>> GetFeedbacksByEventIdAsync(Guid eventId);
-        Task<IEnumerable<Feedback>> GetFeedbacksBySessionAsync(Guid sessionId);
+        Task<Feedback?> GetFeedbackByEventAndUserAsync(Guid eventId, Guid userId);
         Task<Feedback> UpdateFeedbackAsync(Feedback feedback);
         Task<bool> DeleteFeedbackAsync(Guid id);
     }
