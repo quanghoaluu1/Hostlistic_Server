@@ -18,6 +18,8 @@ public class EmailCampaign : BaseClass
     public DateTime? SendStartedAt { get; set; }
     public DateTime? SendCompletedAt { get; set; }
     public EmailTargetFilter? TargetFilter { get; set; }
+    public string? HangfireJobId { get; set; }
+    public bool IsAutoReminder { get; set; }
     
     public ICollection<EmailLog> EmailLogs { get; set; } = new List<EmailLog>();
 }

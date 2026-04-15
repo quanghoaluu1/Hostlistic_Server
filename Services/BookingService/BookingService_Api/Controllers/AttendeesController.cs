@@ -26,4 +26,27 @@ public class AttendeesController(IAttendeeService attendeeService) : ControllerB
         var result = await attendeeService.GetAttendeeSummaryAsync(eventId, ct);
         return StatusCode(result.StatusCode, result);
     }
+    
+    [HttpGet("/email-recipients")]
+    public async Task<IActionResult> GetEmailRecipients(
+        Guid eventId,
+        [FromQuery] int recipientGroup = 0,
+        [FromQuery] List<Guid>? ticketTypeIds = null,
+        [FromQuery] List<Guid>? specificUserIds = null,
+        [FromQuery] DateTime? purchasedAfter = null,
+        CancellationToken cancellationToken = default)
+    {
+        var request = new GetEmailRecipientsRequest
+        {
+            RecipientGroup  = recipientGroup,
+            TicketTypeIds   = ticketTypeIds,
+            SpecificUserIds = specificUserIds,
+            PurchasedAfter  = purchasedAfter
+        };
+
+        var result = await attendeeService.GetRecipientsAsync(
+            eventId, request, cancellationToken);
+
+        return StatusCode(result.StatusCode, result);
+    }
 }
