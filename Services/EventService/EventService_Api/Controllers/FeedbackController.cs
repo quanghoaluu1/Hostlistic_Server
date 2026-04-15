@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using EventService_Application.DTOs;
 using EventService_Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -22,7 +23,8 @@ namespace EventService_Api.Controllers
         public async Task<IActionResult> AddFeedbackAsync([FromBody] CreateFeedbackDto request)
         {
             var userId = GetCurrentUserId();
-            var result = await _feedbackService.AddFeedbackAsync(request, userId);
+            var fullName = User.FindFirstValue(JwtRegisteredClaimNames.Name) ?? "Anonymous";
+            var result = await _feedbackService.AddFeedbackAsync(request, userId, fullName);
             return StatusCode(result.StatusCode, result);
         }
 

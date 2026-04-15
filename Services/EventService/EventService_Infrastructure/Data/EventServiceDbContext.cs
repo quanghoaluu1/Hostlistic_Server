@@ -361,6 +361,7 @@ public class EventServiceDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.EventId).IsRequired();
             entity.Property(e => e.UserId).IsRequired();
+            entity.Property(e => e.UserFullName).IsRequired().HasMaxLength(200);
             entity.Property(e => e.Rating).IsRequired();
             entity.Property(e => e.Comment).IsRequired().HasMaxLength(1000);
             entity.HasIndex(e => new { e.EventId, e.UserId }).IsUnique();

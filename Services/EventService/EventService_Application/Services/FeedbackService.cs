@@ -18,7 +18,7 @@ namespace EventService_Application.Services
             _eventRepository = eventRepository;
         }
 
-        public async Task<ApiResponse<FeedbackDto>> AddFeedbackAsync(CreateFeedbackDto request, Guid userId)
+        public async Task<ApiResponse<FeedbackDto>> AddFeedbackAsync(CreateFeedbackDto request, Guid userId, string userFullName)
         {
             var existingEvent = await _eventRepository.GetEventByIdAsync(request.EventId);
             if (existingEvent == null)
@@ -35,6 +35,7 @@ namespace EventService_Application.Services
                 Rating = request.Rating,
                 Comment = request.Comment,
                 UserId = userId,
+                UserFullName = userFullName,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };

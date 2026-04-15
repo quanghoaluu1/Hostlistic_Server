@@ -7,13 +7,15 @@ public static class FeedbackBuilder
         Guid? eventId = null,
         Guid? userId = null,
         int rating = 4,
-        string comment = "Great event!")
+        string comment = "Great event!",
+        string userFullName = "Test User")
     {
         return new Feedback
         {
             Id = id ?? Guid.NewGuid(),
             EventId = eventId ?? Guid.NewGuid(),
             UserId = userId ?? Guid.NewGuid(),
+            UserFullName = userFullName,
             Rating = rating,
             Comment = comment,
             CreatedAt = DateTime.UtcNow,

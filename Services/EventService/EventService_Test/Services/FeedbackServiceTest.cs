@@ -27,7 +27,7 @@ public class FeedbackServiceTest
         _eventRepository.GetEventByIdAsync(Arg.Any<Guid>()).Returns((Event?)null);
         var dto = FeedbackBuilder.CreateDto();
 
-        var result = await _sut.AddFeedbackAsync(dto, _userId);
+        var result = await _sut.AddFeedbackAsync(dto, _userId, "Test User");
 
         result.IsSuccess.Should().BeFalse();
         result.StatusCode.Should().Be(404);
@@ -44,7 +44,7 @@ public class FeedbackServiceTest
 
         var dto = FeedbackBuilder.CreateDto(eventId: eventId);
 
-        var result = await _sut.AddFeedbackAsync(dto, _userId);
+        var result = await _sut.AddFeedbackAsync(dto, _userId, "Test User");
 
         result.IsSuccess.Should().BeFalse();
         result.StatusCode.Should().Be(409);
@@ -60,7 +60,7 @@ public class FeedbackServiceTest
 
         var dto = FeedbackBuilder.CreateDto(eventId: eventId, rating: 5);
 
-        var result = await _sut.AddFeedbackAsync(dto, _userId);
+        var result = await _sut.AddFeedbackAsync(dto, _userId, "Test User");
 
         result.IsSuccess.Should().BeTrue();
         result.StatusCode.Should().Be(201);

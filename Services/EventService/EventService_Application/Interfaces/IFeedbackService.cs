@@ -5,7 +5,7 @@ namespace EventService_Application.Interfaces
 {
     public interface IFeedbackService
     {
-        Task<ApiResponse<FeedbackDto>> AddFeedbackAsync(CreateFeedbackDto request, Guid userId);
+        Task<ApiResponse<FeedbackDto>> AddFeedbackAsync(CreateFeedbackDto request, Guid userId, string userFullName);
         Task<ApiResponse<FeedbackDto>> GetFeedbackByIdAsync(Guid id);
         Task<ApiResponse<List<FeedbackDto>>> GetAllFeedbacksAsync();
         Task<ApiResponse<List<FeedbackDto>>> GetFeedbacksByEventIdAsync(Guid eventId);
