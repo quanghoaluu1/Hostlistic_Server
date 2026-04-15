@@ -14,11 +14,6 @@ public sealed record ReminderEmailContent
 
 public sealed record SetupAutoRemindersRequest
 {
-    public string Tone { get; init; } = "formal";
-    public string Language { get; init; } = "en";
-    public string? AgendaHighlights { get; init; }
-    public string? CheckinInstructions { get; init; }
-    public string? PreparationNotes { get; init; }
     public List<ReminderEmailContent> Reminders { get; init; } = [];
     public bool OverwriteExisting { get; init; } = false;
 }
