@@ -19,7 +19,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ITicketTypeRepository, TicketTypeRepository>();
         services.AddScoped<ITalentRepository, TalentRepository>();
         services.AddScoped<ILineupRepository, LineupRepository>();
-        services.AddScoped<ICheckInRepository, CheckInRepository>();
         services.AddScoped<IEventTemplateRepository, EventTemplateRepository>();
         services.AddScoped<ISponsorRepository, SponsorRepository>();
         services.AddScoped<ISponsorTierRepository, SponsorTierRepository>();
@@ -41,7 +40,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPhotoService, PhotoService>();
         services.AddScoped<ITalentService, TalentService>();
         services.AddScoped<ILineupService, LineupService>();
-        services.AddScoped<ICheckInService, CheckInService>();
         services.AddScoped<IEventTemplateService, EventTemplateService>();
         services.AddScoped<ISponsorService, SponsorService>();
         services.AddScoped<ISponsorTierService, SponsorTierService>();

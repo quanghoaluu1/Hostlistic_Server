@@ -7,7 +7,10 @@ using Mapster;
 
 namespace EventService_Application.Services;
 
-public class EventDayService(IEventDayRepository eventDayRepository, IEventRepository eventRepository)
+public class EventDayService(
+    IEventDayRepository eventDayRepository,
+    IEventRepository eventRepository,
+    ISessionRepository sessionRepository)
     : IEventDayService
 {
     public async Task<ApiResponse<IReadOnlyList<EventDayResponse>>> GetByEventIdAsync(Guid eventId)
@@ -41,10 +44,17 @@ public class EventDayService(IEventDayRepository eventDayRepository, IEventRepos
             return ApiResponse<IReadOnlyList<EventDayResponse>>.Fail(400,
                 "Event must have both StartDate and EndDate set before generating days.");
 
-        var alreadyExist = await eventDayRepository.AnyExistAsync(eventId);
-        if (alreadyExist)
-            return ApiResponse<IReadOnlyList<EventDayResponse>>.Fail(409,
-                "Event days already generated. Delete existing days first.");
+        // Sync mode (force = false): add missing dates, remove orphans, preserve existing metadata.
+        // DayOverrides are intentionally not applied in sync mode — they apply only to a full regeneration.
+        if (!request.Force)
+            return await SyncDaysAsync(
+                eventId,
+                eventEntity.StartDate!.Value,
+                eventEntity.EndDate!.Value,
+                request.TimeZoneId ?? eventEntity.TimeZoneId);
+
+        // Regenerate mode (force = true): wipe all existing days and regenerate from scratch.
+        // This is the original behavior and loses all existing metadata.
 
         // Resolve timezone — default to UTC if not provided
         TimeZoneInfo tz;
@@ -59,6 +69,11 @@ public class EventDayService(IEventDayRepository eventDayRepository, IEventRepos
             return ApiResponse<IReadOnlyList<EventDayResponse>>.Fail(400,
                 $"Unknown timezone: '{request.TimeZoneId}'. Use IANA format like 'Asia/Ho_Chi_Minh'.");
         }
+
+        // Wipe existing days before regenerating
+        var existingDays = await eventDayRepository.GetByEventIdAsync(eventId);
+        foreach (var existing in existingDays)
+            eventDayRepository.Remove(existing);
 
         // Convert UTC stored dates to user's local dates before extracting DateOnly
         var localStart = TimeZoneInfo.ConvertTimeFromUtc(eventEntity.StartDate!.Value, tz);
@@ -100,7 +115,115 @@ public class EventDayService(IEventDayRepository eventDayRepository, IEventRepos
         await eventDayRepository.SaveChangesAsync();
 
         var response = days.Adapt<IReadOnlyList<EventDayResponse>>();
-        return ApiResponse<IReadOnlyList<EventDayResponse>>.Success(201, "Event days generated.", response);
+        return ApiResponse<IReadOnlyList<EventDayResponse>>.Success(201, "Event days regenerated.", response);
+    }
+
+    public async Task<ApiResponse<IReadOnlyList<EventDayResponse>>> SyncDaysAsync(
+        Guid eventId, DateTime newStartDateUtc, DateTime newEndDateUtc,
+        string? timeZoneId, CancellationToken ct = default)
+    {
+        var eventEntity = await eventRepository.GetEventByIdAsync(eventId);
+        if (eventEntity is null)
+            return ApiResponse<IReadOnlyList<EventDayResponse>>.Fail(404, "Event not found.");
+
+        // Resolve timezone — prefer explicit arg, then event's stored timezone, then UTC
+        var tzId = !string.IsNullOrWhiteSpace(timeZoneId) ? timeZoneId : eventEntity.TimeZoneId;
+        TimeZoneInfo tz;
+        try
+        {
+            tz = string.IsNullOrWhiteSpace(tzId)
+                ? TimeZoneInfo.Utc
+                : TimeZoneInfo.FindSystemTimeZoneById(tzId);
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            return ApiResponse<IReadOnlyList<EventDayResponse>>.Fail(400,
+                $"Unknown timezone: '{tzId}'. Use IANA format like 'Asia/Ho_Chi_Minh'.");
+        }
+
+        // Convert UTC bounds to local DateOnly values
+        var newLocalStart = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(newStartDateUtc, tz));
+        var newLocalEnd = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(newEndDateUtc, tz));
+
+        // Load existing EventDays ordered by DayNumber
+        var existingDays = await eventDayRepository.GetByEventIdAsync(eventId);
+
+        // Build the new date set
+        var newDateSet = new HashSet<DateOnly>();
+        for (var d = newLocalStart; d <= newLocalEnd; d = d.AddDays(1))
+            newDateSet.Add(d);
+
+        var existingDateSet = existingDays.Select(d => d.Date).ToHashSet();
+        var toRemoveDates = existingDateSet.Except(newDateSet).ToHashSet();
+        var toAddCount = newDateSet.Except(existingDateSet).Count();
+
+        // Short-circuit: nothing to do
+        if (toRemoveDates.Count == 0 && toAddCount == 0)
+        {
+            var unchanged = existingDays.Adapt<IReadOnlyList<EventDayResponse>>();
+            return ApiResponse<IReadOnlyList<EventDayResponse>>.Success(200, "Event days are already in sync.", unchanged);
+        }
+
+        // Delete-block check: are any sessions scheduled on dates that would be removed?
+        // Sessions have no direct FK to EventDay — the relationship is derived by converting
+        // Session.StartTime (UTC) to local DateOnly and matching against EventDay.Date.
+        // We fetch only StartTime values (indexed by EventId) and do the conversion in memory.
+        if (toRemoveDates.Count > 0)
+        {
+            var sessionStartTimes = await sessionRepository.GetSessionStartTimesByEventIdAsync(eventId);
+            var blockedErrors = sessionStartTimes
+                .Select(utc => DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(utc, tz)))
+                .Where(date => toRemoveDates.Contains(date))
+                .GroupBy(date => date)
+                .Select(g => $"{g.Key:yyyy-MM-dd}: {g.Count()} session(s)")
+                .OrderBy(s => s)
+                .ToList();
+
+            if (blockedErrors.Count > 0)
+                return ApiResponse<IReadOnlyList<EventDayResponse>>.FailWithErrors(
+                    409,
+                    "Cannot remove event days because sessions are scheduled on those dates. " +
+                    "Reassign or delete those sessions first.",
+                    blockedErrors);
+        }
+
+        // Build a metadata lookup for dates that remain in the new range.
+        // Title, Theme, and Description are preserved; DayNumber is reassigned sequentially (1-based).
+        // We delete all existing days and re-insert the full set to avoid unique-constraint conflicts
+        // that would arise from renumbering kept days in-place within a single SaveChanges call.
+        var keptMeta = existingDays
+            .Where(d => newDateSet.Contains(d.Date))
+            .ToDictionary(
+                d => d.Date,
+                d => (d.Title, d.Theme, d.Description));
+
+        // Phase 1: remove all existing days
+        foreach (var day in existingDays)
+            eventDayRepository.Remove(day);
+
+        // Phase 2: insert the full new set with 1-based sequential DayNumbers in chronological order
+        var newDays = new List<EventDay>();
+        var dayNum = 1;
+        for (var date = newLocalStart; date <= newLocalEnd; date = date.AddDays(1))
+        {
+            keptMeta.TryGetValue(date, out var meta);
+            newDays.Add(new EventDay
+            {
+                Id = Guid.CreateVersion7(),
+                EventId = eventId,
+                DayNumber = dayNum++,
+                Date = date,
+                Title = meta.Title,
+                Theme = meta.Theme,
+                Description = meta.Description
+            });
+        }
+
+        await eventDayRepository.AddRangeAsync(newDays);
+        await eventDayRepository.SaveChangesAsync();
+
+        var response = newDays.Adapt<IReadOnlyList<EventDayResponse>>();
+        return ApiResponse<IReadOnlyList<EventDayResponse>>.Success(200, "Event days synced.", response);
     }
 
     public async Task<ApiResponse<EventDayResponse>> CreateAsync(Guid eventId, CreateEventDayRequest request)

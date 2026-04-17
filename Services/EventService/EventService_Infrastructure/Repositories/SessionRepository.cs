@@ -154,4 +154,12 @@ public class SessionRepository : ISessionRepository
     {
         await _context.SaveChangesAsync();
     }
+
+    public async Task<IReadOnlyList<DateTime>> GetSessionStartTimesByEventIdAsync(Guid eventId)
+    {
+        return await _context.Sessions
+            .Where(s => s.EventId == eventId && s.StartTime.HasValue)
+            .Select(s => s.StartTime!.Value)
+            .ToListAsync();
+    }
 }

@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Services\AIService\AIService_Infrastructure\AIService_Infrastructure.csproj" />
+      <ProjectReference Include="..\Services\BookingService\BookingService_Infrastructure\BookingService_Infrastructure.csproj" />
+      <ProjectReference Include="..\Services\EventService\EventService_Infrastructure\EventService_Infrastructure.csproj" />
+      <ProjectReference Include="..\Services\IdentityService\IdentityService_Infrastructure\IdentityService_Infrastructure.csproj" />
+      <ProjectReference Include="..\Services\NotificationService\NotificationService_Infrastructure\NotificationService_Infrastructure.csproj" />
+      <ProjectReference Include="..\Services\StreamingService\StreamingService_Infrastructure\StreamingService_Infrastructure.csproj" />
+    </ItemGroup>
+
+</Project>

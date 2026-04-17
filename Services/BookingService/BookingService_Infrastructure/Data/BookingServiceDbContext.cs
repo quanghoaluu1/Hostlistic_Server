@@ -1,4 +1,4 @@
-using BookingService_Domain.Entities;
+﻿using BookingService_Domain.Entities;
 using BookingService_Domain.Enum;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,7 +14,6 @@ public class BookingServiceDbContext : DbContext
     public DbSet<OrderDetail> OrderDetails => Set<OrderDetail>();
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<PaymentMethod> PaymentMethods => Set<PaymentMethod>();
-    public DbSet<PayoutRequest> PayoutRequests => Set<PayoutRequest>();
     public DbSet<Ticket> Tickets => Set<Ticket>();
     public DbSet<InventoryReservation> InventoryReservations => Set<InventoryReservation>();
     public DbSet<Wallet> Wallets => Set<Wallet>();
@@ -87,10 +86,7 @@ public class BookingServiceDbContext : DbContext
                 .HasForeignKey(p => p.PaymentMethodId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
-
-        // PayoutRequest configuration
-        modelBuilder.Entity<PayoutRequest>(entity => { entity.HasKey(e => e.Id); });
-
+        
         // Ticket configuration
         modelBuilder.Entity<Ticket>(entity =>
         {

@@ -36,7 +36,6 @@ public class Event : BaseClass
     public ICollection<Lineup> Lineups { get; set; } = new List<Lineup>();
     public ICollection<TicketType> TicketTypes { get; set; } = new List<TicketType>();
     public ICollection<Sponsor> Sponsors { get; set; } = new List<Sponsor>();
-    public ICollection<CheckIn> CheckIns { get; set; } = new List<CheckIn>();
     public ICollection<Feedback> Feedbacks { get; set; } = new List<Feedback>();
     public ICollection<Venue> Venues { get; set; } = [];
     public ICollection<EventDay> EventDays { get; set; } = new List<EventDay>();

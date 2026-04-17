@@ -6,7 +6,7 @@ public class AttendeeListRequest
     public int Page { get; set; } = 1;
     public int PageSize { get; set; } = 20;
     public string? Search { get; set; }
-    public Guid? TicketTypeId { get; set; }
+    public string? TicketTypeId { get; set; }
     public bool? IsCheckedIn { get; set; }
     public string SortBy { get; set; } = "orderDate";
     public string SortOrder { get; set; } = "desc";

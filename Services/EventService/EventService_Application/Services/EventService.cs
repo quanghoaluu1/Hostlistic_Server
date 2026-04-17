@@ -5,6 +5,7 @@ using EventService_Domain.Entities;
 using EventService_Domain.Enums;
 using EventService_Domain.Interfaces;
 using Mapster;
+using Microsoft.Extensions.Logging;
 
 namespace EventService_Application.Services;
 
@@ -13,7 +14,9 @@ public class EventService(
     ITrackService trackService,
     ISessionService sessionService,
     IEventTeamMemberRepository eventTeamMemberRepository,
-    IUserPlanServiceClient userPlanServiceClient) : IEventService
+    IUserPlanServiceClient userPlanServiceClient,
+    IEventDayService eventDayService,
+    ILogger<EventService> logger) : IEventService
 {
     public async Task<ApiResponse<EventResponseDto>> CreateEventAsync(EventRequestDto request, Guid organizerId)
     {
@@ -95,6 +98,42 @@ public class EventService(
         eventRepository.AddEventAsync(eventEntity);
         await eventRepository.SaveChangesAsync();
 
+        // Auto-generate EventDays when the event spans more than one local calendar day.
+        // Failure is non-fatal — the organizer can trigger generation manually via POST /days/generate.
+        if (eventEntity.StartDate.HasValue && eventEntity.EndDate.HasValue)
+        {
+            try
+            {
+                var tzId = eventEntity.TimeZoneId;
+                var tz = string.IsNullOrWhiteSpace(tzId)
+                    ? TimeZoneInfo.Utc
+                    : TimeZoneInfo.FindSystemTimeZoneById(tzId);
+
+                var localStart = DateOnly.FromDateTime(
+                    TimeZoneInfo.ConvertTimeFromUtc(eventEntity.StartDate.Value, tz));
+                var localEnd = DateOnly.FromDateTime(
+                    TimeZoneInfo.ConvertTimeFromUtc(eventEntity.EndDate.Value, tz));
+
+                if (localEnd > localStart)
+                {
+                    var genResult = await eventDayService.GenerateDaysAsync(
+                        eventEntity.Id,
+                        new GenerateEventDaysRequest { TimeZoneId = tzId, Force = false });
+
+                    if (!genResult.IsSuccess)
+                        logger.LogWarning(
+                            "Auto-generation of event days failed for event {EventId}: {Message}",
+                            eventEntity.Id, genResult.Message);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex,
+                    "Auto-generation of event days threw an unexpected exception for event {EventId}.",
+                    eventEntity.Id);
+            }
+        }
+
         var responseDto = eventEntity.Adapt<EventResponseDto>();
         return ApiResponse<EventResponseDto>.Success(201, "Event created successfully", responseDto);
     }
@@ -126,6 +165,41 @@ public class EventService(
         {
             return ApiResponse<EventResponseDto>.Fail(403,
                 $"Plan limit reached: max attendees per event = {entitlement.MaxAttendeesPerEvent}");
+        }
+
+        // Detect whether StartDate or EndDate is changing so we know whether to sync EventDays.
+        var incomingStart = request.StartDate.HasValue
+            ? DateTime.SpecifyKind(request.StartDate.Value, DateTimeKind.Utc)
+            : (DateTime?)null;
+        var incomingEnd = request.EndDate.HasValue
+            ? DateTime.SpecifyKind(request.EndDate.Value, DateTimeKind.Utc)
+            : (DateTime?)null;
+
+        bool datesChanged =
+            (incomingStart.HasValue && incomingStart != eventEntity.StartDate) ||
+            (incomingEnd.HasValue && incomingEnd != eventEntity.EndDate);
+
+        if (datesChanged)
+        {
+            var startForSync = incomingStart ?? eventEntity.StartDate;
+            var endForSync = incomingEnd ?? eventEntity.EndDate;
+            var tzIdForSync = !string.IsNullOrWhiteSpace(request.TimeZoneId)
+                ? request.TimeZoneId
+                : eventEntity.TimeZoneId;
+
+            if (startForSync.HasValue && endForSync.HasValue)
+            {
+                // Transactional strategy: dry-run sync (read-only conflict check) before persisting
+                // event date changes. This prevents the event's dates from ever being committed in a
+                // state that contradicts its EventDays without requiring an explicit database transaction
+                // (which the rest of this service does not use). The negligible TOCTOU window is
+                // acceptable for an organizer-driven admin flow.
+                var syncResult = await eventDayService.SyncDaysAsync(
+                    eventId, startForSync.Value, endForSync.Value, tzIdForSync);
+
+                if (!syncResult.IsSuccess)
+                    return ApiResponse<EventResponseDto>.Fail(syncResult.StatusCode, syncResult.Message);
+            }
         }
 
         ApplyEventUpdate(eventEntity, request);
