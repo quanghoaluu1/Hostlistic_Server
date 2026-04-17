@@ -1,4 +1,5 @@
 ﻿using EventService_Test.Helpers.TestDataBuilders;
+using Microsoft.Extensions.Logging;
 
 namespace EventService_Test;
 
@@ -9,6 +10,8 @@ public class EventServiceTest
     private readonly ISessionService _sessionService;
     private readonly IEventTeamMemberRepository _eventTeamMemberRepository;
     private readonly IUserPlanServiceClient _userPlanServiceClient;
+    private readonly IEventDayService _eventDayService;
+    private readonly ILogger<EventService> _logger = Substitute.For<ILogger<EventService>>();
 
     //System under test
     private readonly EventService _sut;
@@ -20,13 +23,17 @@ public class EventServiceTest
         _sessionService = Substitute.For<ISessionService>();
         _eventTeamMemberRepository = Substitute.For<IEventTeamMemberRepository>();
         _userPlanServiceClient = Substitute.For<IUserPlanServiceClient>();
+        _eventDayService = Substitute.For<IEventDayService>();
+        
 
         _sut = new EventService(
             _eventRepository,
             _trackService,
             _sessionService,
             _eventTeamMemberRepository,
-            _userPlanServiceClient);
+            _userPlanServiceClient,
+            _eventDayService,
+            _logger);
     }
 
     #region CreateEventAsync

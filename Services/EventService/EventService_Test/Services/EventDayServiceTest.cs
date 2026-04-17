@@ -7,13 +7,15 @@ public class EventDayServiceTest
 {
     private readonly IEventDayRepository _eventDayRepository;
     private readonly IEventRepository _eventRepository;
+    private readonly ISessionRepository _sessionRepository;
     private readonly EventDayService _sut;
 
     public EventDayServiceTest()
     {
         _eventDayRepository = Substitute.For<IEventDayRepository>();
         _eventRepository = Substitute.For<IEventRepository>();
-        _sut = new EventDayService(_eventDayRepository, _eventRepository);
+        _sessionRepository = Substitute.For<ISessionRepository>();
+        _sut = new EventDayService(_eventDayRepository, _eventRepository, _sessionRepository);
 
         TypeAdapterConfig<EventDay, EventDayResponse>.NewConfig();
     }
