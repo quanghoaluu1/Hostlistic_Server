@@ -2,6 +2,7 @@ using Common;
 using BookingService_Application.DTOs;
 using BookingService_Application.Interfaces;
 using BookingService_Domain.Entities;
+using BookingService_Domain.Enum;
 using BookingService_Domain.Interfaces;
 using Mapster;
 
@@ -36,6 +37,39 @@ public class TicketService : ITicketService
 
         var ticketDto = ticket.Adapt<TicketDto>();
         return ApiResponse<TicketDto>.Success(200, "Ticket retrieved successfully", ticketDto);
+    }
+
+    public async Task<ApiResponse<GuestLiveAccessTicketDto>> ValidateGuestLiveAccessAsync(ValidateGuestLiveAccessRequest request)
+    {
+        if (request.EventId == Guid.Empty)
+            return ApiResponse<GuestLiveAccessTicketDto>.Fail(400, "Event id is required.");
+
+        if (string.IsNullOrWhiteSpace(request.TicketCode))
+            return ApiResponse<GuestLiveAccessTicketDto>.Fail(400, "Ticket code is required.");
+
+        var normalizedTicketCode = request.TicketCode.Trim().ToUpperInvariant();
+        var ticket = await _ticketRepository.GetTicketByCodeAsync(normalizedTicketCode);
+        if (ticket == null)
+            return ApiResponse<GuestLiveAccessTicketDto>.Fail(404, "Ticket not found.");
+
+        if (ticket.Order.EventId != request.EventId)
+            return ApiResponse<GuestLiveAccessTicketDto>.Fail(403, "This ticket does not belong to the requested event.");
+
+        if (ticket.Order.Status != OrderStatus.Confirmed)
+            return ApiResponse<GuestLiveAccessTicketDto>.Fail(403, "This ticket is not eligible for live access.");
+
+        var response = new GuestLiveAccessTicketDto
+        {
+            TicketId = ticket.Id,
+            EventId = ticket.Order.EventId,
+            OrderId = ticket.OrderId,
+            TicketCode = ticket.TicketCode,
+            HolderName = ticket.HolderName,
+            HolderEmail = ticket.HolderEmail,
+            IsUsed = ticket.IsUsed
+        };
+
+        return ApiResponse<GuestLiveAccessTicketDto>.Success(200, "Ticket is valid for guest live access.", response);
     }
 
     public async Task<ApiResponse<IEnumerable<TicketDto>>> GetTicketsByOrderIdAsync(Guid orderId)

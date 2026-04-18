@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.DependencyInjection;
+using System.Text.RegularExpressions;
 using StreamingService_Application.UseCases.Streams.Commands.CreateStreamRoom;
 using StreamingService_Application.UseCases.Streams.Commands.EndStreamRoom;
 using StreamingService_Application.UseCases.Streams.Queries.GetStreamToken;
@@ -24,17 +26,26 @@ public class StreamsController : ControllerBase
     private readonly IStreamingServiceDbContext _dbContext;
     private readonly IHubContext<StreamingHub> _hubContext;
     private readonly IEventServiceClient _eventServiceClient;
+    private readonly IBookingServiceClient _bookingServiceClient;
+    private readonly IGuestStreamAccessService _guestStreamAccessService;
+    private readonly ITokenGenerator _tokenGenerator;
 
     public StreamsController(
         IMediator mediator,
         IStreamingServiceDbContext dbContext,
         IHubContext<StreamingHub> hubContext,
-        IEventServiceClient eventServiceClient)
+        IEventServiceClient eventServiceClient,
+        IBookingServiceClient bookingServiceClient,
+        IGuestStreamAccessService guestStreamAccessService,
+        ITokenGenerator tokenGenerator)
     {
         _mediator = mediator;
         _dbContext = dbContext;
         _hubContext = hubContext;
         _eventServiceClient = eventServiceClient;
+        _bookingServiceClient = bookingServiceClient;
+        _guestStreamAccessService = guestStreamAccessService;
+        _tokenGenerator = tokenGenerator;
     }
 
     [HttpPost("rooms")]
@@ -143,6 +154,154 @@ public class StreamsController : ControllerBase
         }
 
         return Ok(room);
+    }
+
+    [HttpGet("events/{eventId}/active-rooms")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetActiveRooms(Guid eventId)
+    {
+        var rooms = await _dbContext.StreamRooms
+            .Where(r => r.EventId == eventId)
+            .Select(r => new
+            {
+                Room = r,
+                HasConnectedHost = _dbContext.StreamParticipants.Any(p =>
+                    p.StreamRoomId == r.Id &&
+                    p.IsCurrentlyConnected &&
+                    (p.Role == ParticipantRole.Organizer || p.Role == ParticipantRole.CoOrganizer)),
+                HasHostHistory = _dbContext.StreamParticipants.Any(p =>
+                    p.StreamRoomId == r.Id &&
+                    (p.Role == ParticipantRole.Organizer || p.Role == ParticipantRole.CoOrganizer) &&
+                    (p.JoinedAt != null || !string.IsNullOrWhiteSpace(p.LiveKitIdentity)))
+            })
+            .Where(x =>
+                x.Room.Status == StreamRoomStatus.Live ||
+                (x.Room.Status != StreamRoomStatus.Ended && (x.HasConnectedHost || x.HasHostHistory)))
+            .OrderByDescending(x => x.Room.CreatedAt)
+            .Select(x => new
+            {
+                RoomId = x.Room.Id,
+                x.Room.TrackId,
+                x.Room.SessionId,
+                Status = (x.Room.Status == StreamRoomStatus.Live ||
+                          (x.Room.Status != StreamRoomStatus.Ended && (x.HasConnectedHost || x.HasHostHistory)))
+                    ? StreamRoomStatus.Live.ToString()
+                    : x.Room.Status.ToString(),
+                x.Room.CreatedAt,
+                x.Room.ActualStartAt,
+                x.Room.LiveKitRoomName
+            })
+            .ToListAsync();
+
+        return Ok(rooms);
+    }
+
+    [HttpPost("events/{eventId}/guest-access")]
+    [AllowAnonymous]
+    public async Task<IActionResult> CreateGuestAccess(Guid eventId, [FromBody] GuestStreamAccessRequest request)
+    {
+        var clientKey = BuildClientKey();
+        var attemptStatus = _guestStreamAccessService.GetAttemptStatus(eventId, clientKey);
+        if (attemptStatus.IsBlocked)
+        {
+            return StatusCode(StatusCodes.Status429TooManyRequests, new
+            {
+                message = "Too many invalid ticket code attempts. Please try again later.",
+                attemptStatus.BlockedUntilUtc,
+                attemptStatus.FailedAttempts,
+                attemptStatus.RemainingAttempts
+            });
+        }
+
+        var room = await _dbContext.StreamRooms
+            .AsNoTracking()
+            .Where(r =>
+                r.EventId == eventId &&
+                (!request.TrackId.HasValue || r.TrackId == request.TrackId.Value) &&
+                r.Status != StreamRoomStatus.Ended)
+            .OrderByDescending(r => r.CreatedAt)
+            .FirstOrDefaultAsync(HttpContext.RequestAborted);
+
+        if (room == null || room.Status != StreamRoomStatus.Live)
+        {
+            return BadRequest(new
+            {
+                message = request.TrackId.HasValue
+                    ? "There is no live stream active for the selected track right now."
+                    : "There is no live stream active for this event right now."
+            });
+        }
+
+        var normalizedTicketCode = NormalizeTicketCode(request.TicketCode);
+        var ticket = await _bookingServiceClient.ValidateGuestLiveTicketAsync(eventId, normalizedTicketCode, HttpContext.RequestAborted);
+        if (ticket == null)
+        {
+            var failedAttempt = _guestStreamAccessService.RegisterFailedAttempt(eventId, clientKey);
+            var statusCode = failedAttempt.IsBlocked
+                ? StatusCodes.Status429TooManyRequests
+                : StatusCodes.Status400BadRequest;
+
+            return StatusCode(statusCode, new
+            {
+                message = failedAttempt.IsBlocked
+                    ? "Too many invalid ticket code attempts. Please try again in 10 minutes."
+                    : "Ticket code is invalid for this live event.",
+                failedAttempt.BlockedUntilUtc,
+                failedAttempt.FailedAttempts,
+                failedAttempt.RemainingAttempts
+            });
+        }
+
+        if (_guestStreamAccessService.TryGetActiveSession(ticket.TicketId, out var activeSession) && activeSession != null)
+        {
+            return Conflict(new
+            {
+                message = "This ticket is already being used in another live session.",
+                activeSessionId = activeSession.SessionId,
+                activeSession.LastSeenAtUtc,
+                activeSession.ExpiresAtUtc
+            });
+        }
+
+        _guestStreamAccessService.ResetAttempts(eventId, clientKey);
+
+        var guestSession = _guestStreamAccessService.CreateOrReplaceSession(eventId, room.Id, ticket, request.HolderName);
+        var token = GenerateGuestToken(room.LiveKitRoomName, guestSession.Identity);
+
+        return Ok(new
+        {
+            roomId = room.Id,
+            token,
+            identity = guestSession.Identity,
+            guestSessionId = guestSession.SessionId,
+            expiresAtUtc = guestSession.ExpiresAtUtc,
+            ticketCode = ticket.TicketCode,
+            holderName = guestSession.HolderName ?? "Guest",
+            roomStatus = room.Status.ToString()
+        });
+    }
+
+    [HttpPost("guest-sessions/{sessionId:guid}/heartbeat")]
+    [AllowAnonymous]
+    public IActionResult HeartbeatGuestSession(Guid sessionId)
+    {
+        if (!_guestStreamAccessService.TouchSession(sessionId, out var session) || session == null)
+            return NotFound(new { message = "Guest live session not found or expired." });
+
+        return Ok(new
+        {
+            sessionId = session.SessionId,
+            session.ExpiresAtUtc,
+            session.LastSeenAtUtc
+        });
+    }
+
+    [HttpPost("guest-sessions/{sessionId:guid}/release")]
+    [AllowAnonymous]
+    public IActionResult ReleaseGuestSession(Guid sessionId)
+    {
+        _guestStreamAccessService.ReleaseSession(sessionId);
+        return NoContent();
     }
 
     [HttpGet("events/{eventId}/recordings")]
@@ -327,4 +486,29 @@ public class StreamsController : ControllerBase
         var normalizedPath = value.StartsWith('/') ? value : $"/{value}";
         return $"{request.Scheme}://{request.Host}{normalizedPath}";
     }
+
+    private string BuildClientKey()
+    {
+        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown-ip";
+        var userAgent = HttpContext.Request.Headers.UserAgent.ToString();
+        return $"{ipAddress}:{userAgent}";
+    }
+
+    private string NormalizeTicketCode(string? value)
+    {
+        var compact = Regex.Replace(value ?? string.Empty, @"\s+", string.Empty);
+        return compact.Trim().ToUpperInvariant();
+    }
+
+    private string GenerateGuestToken(string roomName, string identity)
+    {
+        return _tokenGenerator.GenerateLiveKitToken(roomName, identity, ParticipantRole.Attendee);
+    }
+}
+
+public class GuestStreamAccessRequest
+{
+    public string TicketCode { get; set; } = string.Empty;
+    public string? HolderName { get; set; }
+    public Guid? TrackId { get; set; }
 }

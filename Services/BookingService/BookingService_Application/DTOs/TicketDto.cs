@@ -37,3 +37,20 @@ public class UpdateTicketRequest
 {
     public bool IsUsed { get; set; }
 }
+
+public class ValidateGuestLiveAccessRequest
+{
+    public Guid EventId { get; set; }
+    public string TicketCode { get; set; } = string.Empty;
+}
+
+public class GuestLiveAccessTicketDto
+{
+    public Guid TicketId { get; set; }
+    public Guid EventId { get; set; }
+    public Guid OrderId { get; set; }
+    public string TicketCode { get; set; } = string.Empty;
+    public string? HolderName { get; set; }
+    public string? HolderEmail { get; set; }
+    public bool IsUsed { get; set; }
+}

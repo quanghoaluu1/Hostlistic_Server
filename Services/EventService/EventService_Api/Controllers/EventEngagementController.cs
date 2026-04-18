@@ -43,6 +43,20 @@ public class EventEngagementController : ControllerBase
         return Ok(ApiResponse<EventEngagementStateDto>.Success(200, "Engagement state retrieved successfully.", state));
     }
 
+    [HttpGet("analytics")]
+    public async Task<IActionResult> GetAnalytics(Guid eventId)
+    {
+        var userId = GetCurrentUserId();
+        var access = await ResolveAccessAsync(eventId, userId);
+        if (access is null || !CanModerate(access.Role))
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, ApiResponse<object>.Fail(403, "You are not allowed to view engagement analytics."));
+        }
+
+        var analytics = await BuildAnalyticsAsync(eventId);
+        return Ok(ApiResponse<EventEngagementAnalyticsDto>.Success(200, "Engagement analytics retrieved successfully.", analytics));
+    }
+
     [HttpGet("chat-access")]
     [AllowAnonymous]
     public async Task<IActionResult> GetChatAccess(Guid eventId, [FromQuery] Guid sessionId, [FromQuery] Guid userId)
@@ -602,6 +616,142 @@ public class EventEngagementController : ControllerBase
                 ? await BuildAttendeeStateAsync(eventId, session.Id, membershipNames, membershipEmails, restrictionLookup)
                 : [],
             RequestedSessionId = sessionId ?? session.Id
+        };
+    }
+
+    private async Task<EventEngagementAnalyticsDto> BuildAnalyticsAsync(Guid eventId)
+    {
+        var sessions = await _dbContext.Sessions
+            .AsNoTracking()
+            .Where(session => session.EventId == eventId)
+            .OrderBy(session => session.StartTime ?? DateTime.MaxValue)
+            .ThenBy(session => session.SortOrder)
+            .Select(session => new
+            {
+                session.Id,
+                session.Title,
+                session.StartTime,
+                session.EndTime
+            })
+            .ToListAsync();
+
+        var sessionIds = sessions.Select(session => session.Id).ToList();
+        if (sessionIds.Count == 0)
+        {
+            return new EventEngagementAnalyticsDto();
+        }
+
+        var questions = await _dbContext.QaQuestions
+            .AsNoTracking()
+            .Where(question => sessionIds.Contains(question.SessionId))
+            .Select(question => new
+            {
+                question.SessionId,
+                question.UserId,
+                question.Status
+            })
+            .ToListAsync();
+
+        var polls = await _dbContext.Polls
+            .AsNoTracking()
+            .Where(poll => sessionIds.Contains(poll.SessionId))
+            .Select(poll => new
+            {
+                poll.Id,
+                poll.SessionId,
+                poll.IsActive
+            })
+            .ToListAsync();
+
+        var pollIds = polls.Select(poll => poll.Id).ToList();
+        var pollResponses = await _dbContext.PollResponses
+            .AsNoTracking()
+            .Where(response => pollIds.Contains(response.PollId))
+            .Select(response => new
+            {
+                response.PollId,
+                response.UserId,
+                VoteCount = response.SelectedOptionId.Length
+            })
+            .ToListAsync();
+
+        var pollParticipantUserIds = pollResponses
+            .Where(response => response.UserId.HasValue)
+            .Select(response => response.UserId!.Value)
+            .Distinct()
+            .ToList();
+
+        var questionParticipants = questions
+            .Select(question => question.UserId)
+            .Distinct()
+            .Count();
+
+        var pollParticipants = pollParticipantUserIds.Count;
+
+        var engagedUserIds = questions
+            .Select(question => question.UserId)
+            .ToHashSet();
+        foreach (var pollParticipantUserId in pollParticipantUserIds)
+        {
+            engagedUserIds.Add(pollParticipantUserId);
+        }
+        var engagedParticipants = engagedUserIds.Count;
+
+        var sessionAnalytics = sessions.Select(session =>
+        {
+            var sessionQuestions = questions.Where(question => question.SessionId == session.Id).ToList();
+            var sessionPolls = polls.Where(poll => poll.SessionId == session.Id).ToList();
+            var sessionPollIds = sessionPolls.Select(poll => poll.Id).ToHashSet();
+            var sessionResponses = pollResponses
+                .Where(response => sessionPollIds.Contains(response.PollId))
+                .ToList();
+
+            var sessionEngagedUserIds = sessionQuestions
+                .Select(question => question.UserId)
+                .ToHashSet();
+            foreach (var pollParticipantUserId in sessionResponses
+                         .Where(response => response.UserId.HasValue)
+                         .Select(response => response.UserId!.Value)
+                         .Distinct())
+            {
+                sessionEngagedUserIds.Add(pollParticipantUserId);
+            }
+            var sessionEngagedParticipants = sessionEngagedUserIds.Count;
+
+            return new EventEngagementSessionAnalyticsDto
+            {
+                SessionId = session.Id,
+                SessionTitle = session.Title,
+                StartTime = session.StartTime,
+                EndTime = session.EndTime,
+                QuestionCount = sessionQuestions.Count,
+                ApprovedQuestionCount = sessionQuestions.Count(question => question.Status == QaStatus.Approved),
+                UniqueQuestionParticipants = sessionQuestions.Select(question => question.UserId).Distinct().Count(),
+                PollCount = sessionPolls.Count,
+                ActivePollCount = sessionPolls.Count(poll => poll.IsActive),
+                PollResponseCount = sessionResponses.Count,
+                UniquePollParticipants = sessionResponses
+                    .Where(response => response.UserId.HasValue)
+                    .Select(response => response.UserId!.Value)
+                    .Distinct()
+                    .Count(),
+                TotalPollVotes = sessionResponses.Sum(response => response.VoteCount),
+                TotalEngagedParticipants = sessionEngagedParticipants
+            };
+        }).ToList();
+
+        return new EventEngagementAnalyticsDto
+        {
+            TotalQuestions = questions.Count,
+            ApprovedQuestions = questions.Count(question => question.Status == QaStatus.Approved),
+            UniqueQuestionParticipants = questionParticipants,
+            TotalPolls = polls.Count,
+            ActivePolls = polls.Count(poll => poll.IsActive),
+            PollResponseCount = pollResponses.Count,
+            UniquePollParticipants = pollParticipants,
+            TotalPollVotes = pollResponses.Sum(response => response.VoteCount),
+            TotalEngagedParticipants = engagedParticipants,
+            Sessions = sessionAnalytics
         };
     }
 
