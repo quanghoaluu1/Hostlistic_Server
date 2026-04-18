@@ -42,7 +42,7 @@ namespace EventService_Application.Services
 
             // 5. Persist
             await venueRepository.AddVenueAsync(venue);
-
+            await venueRepository.SaveChangesAsync();
             var response = venue.Adapt<VenueResponse>();
             return ApiResponse<VenueResponse>.Success(201, "Venue created successfully.", response);
         }
@@ -117,7 +117,7 @@ namespace EventService_Application.Services
 
             // 5. Persist
             await venueRepository.UpdateVenueAsync(venue);
-
+            await venueRepository.SaveChangesAsync();
             return ApiResponse<VenueResponse>.Success(200, "Venue updated.", venue.Adapt<VenueResponse>());
         }
 
@@ -132,7 +132,7 @@ namespace EventService_Application.Services
                 await photoService.DeletePhotoAsync(venue.LayoutPublicId);
 
             await venueRepository.DeleteVenueAsync(venueId);
-
+            await venueRepository.SaveChangesAsync();
             return ApiResponse<bool>.Success(200, "Venue deleted.", true);
         }
 
