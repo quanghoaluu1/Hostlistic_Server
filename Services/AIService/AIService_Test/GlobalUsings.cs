@@ -1,0 +1,12 @@
+global using Xunit;
+global using NSubstitute;
+global using FluentAssertions;
+global using AIService_Application.Interface;
+global using AIService_Application.DTOs.Requests;
+global using AIService_Application.DTOs.Responses;
+global using AIService_Domain.Entities;
+global using AIService_Domain.Enum;
+global using AIService_Domain.Interfaces;
+global using Microsoft.Extensions.Logging;
+global using AIService_Application.Services;
+global using Common;

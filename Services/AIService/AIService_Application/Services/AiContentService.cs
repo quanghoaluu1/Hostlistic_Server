@@ -42,10 +42,14 @@ public partial class AiContentService(
         };
         aiRequestRepository.Add(aiRequest);
         await aiRequestRepository.SaveChangesAsync(ct);
-        var eventEntity = await eventServiceClient.GetEventByIdAsync(request.EventId, ct) ??
-                          throw new Exception("Event not found");
-        var template = promptTemplateRepository.GetByKeyAsync(PromptTemplateKey.EventDescription, ct).Result ??
-                       throw new Exception("Event description prompt template not found");
+
+        var eventEntity = await eventServiceClient.GetEventByIdAsync(request.EventId, ct);
+        if (eventEntity == null)
+            return ApiResponse<AiContentResponse>.Fail(404, "Event not found");
+
+        var template = await promptTemplateRepository.GetByKeyAsync(PromptTemplateKey.EventDescription, ct);
+        if (template == null)
+            return ApiResponse<AiContentResponse>.Fail(500, "Event description prompt template not found");
         // var systemPrompt = PromptBuilder.BuildSystemPrompt(request.Language);
         // var userPrompt = PromptBuilder.BuildDescriptionPrompt(request);
         var systemPrompt = template.SystemPrompt;
