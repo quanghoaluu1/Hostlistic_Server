@@ -42,7 +42,7 @@ namespace EventService_Application.Services
 
             // 5. Persist
             await venueRepository.AddVenueAsync(venue);
-
+            await venueRepository.SaveChangesAsync();
             var response = venue.Adapt<VenueResponse>();
             return ApiResponse<VenueResponse>.Success(201, "Venue created successfully.", response);
         }

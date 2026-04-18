@@ -129,5 +129,10 @@ namespace EventService_Infrastructure.Repositories
                 byCapacity
             };
         }
+        
+        public async Task SaveChangesAsync()
+        {
+            await _context.SaveChangesAsync();
+        }
     }
 }
