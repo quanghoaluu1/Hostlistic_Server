@@ -14,5 +14,4 @@ public class Wallet : BaseClass
     public WalletStatus Status { get; set; }
     
     public ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
-    public ICollection<PayoutRequest> PayoutRequests { get; set; } = new List<PayoutRequest>();
 }

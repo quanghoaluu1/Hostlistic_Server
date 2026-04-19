@@ -20,7 +20,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPaymentRepository, PaymentRepository>();
         services.AddScoped<IPaymentMethodRepository, PaymentMethodRepository>();
         services.AddScoped<ITicketRepository, TicketRepository>();
-        services.AddScoped<IPayoutRequestRepository, PayoutRequestRepository>();
         services.AddScoped<IInventoryReservationRepository, InventoryReservationRepository>();
         services.AddScoped<IWalletRepository, WalletRepository>();
         services.AddScoped<IEventSettlementRepository, EventSettlementRepository>();
@@ -37,7 +36,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPaymentService, PaymentService>();
         services.AddScoped<IPaymentMethodService, PaymentMethodService>();
         services.AddScoped<ITicketService, TicketService>();
-        services.AddScoped<IPayoutRequestService, PayoutRequestService>();
         services.AddScoped<IPhotoService, PhotoService>();
         services.AddScoped<IWalletService, WalletService>();
         services.AddScoped<IEventServiceClient, EventServiceClient>();

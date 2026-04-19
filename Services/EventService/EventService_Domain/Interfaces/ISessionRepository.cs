@@ -25,4 +25,8 @@ public interface ISessionRepository
     Task<bool> DeleteSessionAsync(Guid sessionId);
     Task<bool> SessionExistsAsync(Guid sessionId);
     Task SaveChangesAsync();
+
+    // Returns UTC StartTime for all sessions of an event that have a start time set.
+    // Used by day-sync logic to detect sessions scheduled on dates being removed.
+    Task<IReadOnlyList<DateTime>> GetSessionStartTimesByEventIdAsync(Guid eventId);
 }

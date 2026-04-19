@@ -34,6 +34,12 @@ public record GenerateEventDaysRequest
     public string? TimeZoneId { get; init; }
 
     public List<DayMetadata>? DayOverrides { get; init; }
+
+    // When true: wipe all existing days and regenerate from scratch (original behavior, loses metadata).
+    // When false (default): delegate to SyncDaysAsync — add missing dates, remove orphans,
+    // preserve metadata on overlapping dates. Returns 409 if sessions block a removal.
+    // DayOverrides are only applied when Force = true.
+    public bool Force { get; init; } = false;
 }
 
 public record DayMetadata
@@ -42,3 +48,7 @@ public record DayMetadata
     public string? Title { get; init; }
     public string? Theme { get; init; }
 }
+
+// Returned in the Errors list of a 409 response from SyncDaysAsync when sessions
+// block the removal of specific days.
+public record SyncBlockedDay(DateOnly Date, int SessionCount);

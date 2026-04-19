@@ -25,7 +25,6 @@ public class EventServiceDbContext : DbContext
     public DbSet<Sponsor> Sponsors => Set<Sponsor>();
     public DbSet<SponsorTier> SponsorTiers => Set<SponsorTier>();
     public DbSet<SponsorInteraction> SponsorInteractions => Set<SponsorInteraction>();
-    public DbSet<CheckIn> CheckIns => Set<CheckIn>();
     public DbSet<Poll> Polls => Set<Poll>();
     public DbSet<PollResponse> PollResponses => Set<PollResponse>();
     public DbSet<QaQuestion> QaQuestions => Set<QaQuestion>();
@@ -93,11 +92,6 @@ public class EventServiceDbContext : DbContext
             entity.HasMany(e => e.Sponsors)
                 .WithOne(s => s.Event)
                 .HasForeignKey(s => s.EventId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            entity.HasMany(e => e.CheckIns)
-                .WithOne(c => c.Event)
-                .HasForeignKey(c => c.EventId)
                 .OnDelete(DeleteBehavior.Cascade);
             
             entity.HasMany(e => e.Feedbacks)
@@ -204,11 +198,6 @@ public class EventServiceDbContext : DbContext
                 .WithOne(l => l.Session)
                 .HasForeignKey(l => l.SessionId)
                 .OnDelete(DeleteBehavior.SetNull);
-
-            entity.HasMany(e => e.CheckIns)
-                .WithOne(c => c.Session)
-                .HasForeignKey(c => c.SessionId)
-                .OnDelete(DeleteBehavior.SetNull);
             
             entity.HasMany(e => e.TicketTypes)
                 .WithOne(tt => tt.Session)
@@ -285,12 +274,6 @@ public class EventServiceDbContext : DbContext
 
         // SponsorInteraction configuration
         modelBuilder.Entity<SponsorInteraction>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-        });
-
-        // CheckIn configuration
-        modelBuilder.Entity<CheckIn>(entity =>
         {
             entity.HasKey(e => e.Id);
         });

@@ -29,9 +29,9 @@ public class AttendeeService(BookingServiceDbContext dbContext) : IAttendeeServi
                 (o.BuyerEmail != null && o.BuyerEmail.ToLower().Contains(search)));
         }
 
-        if (request.TicketTypeId.HasValue)
+        if (!string.IsNullOrEmpty(request.TicketTypeId))
         {
-            query = query.Where(o => o.OrderDetails.Any(od => od.TicketTypeId == request.TicketTypeId.Value));
+            query = query.Where(o => o.OrderDetails.Any(od => od.TicketTypeName == request.TicketTypeId));
         }
 
         if (request.IsCheckedIn.HasValue)
