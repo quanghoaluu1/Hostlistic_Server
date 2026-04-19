@@ -35,6 +35,13 @@ public class EventService(
                 $"Plan limit reached: max attendees per event = {entitlement.MaxAttendeesPerEvent}");
         }
 
+        if (request.StartDate is { } startDate)
+        {
+            var startUtc = DateTime.SpecifyKind(startDate, DateTimeKind.Utc);
+            if (startUtc < DateTime.UtcNow)
+                return ApiResponse<EventResponseDto>.Fail(400, "Start date cannot be in the past");
+        }
+
         var eventEntity = request.Adapt<Event>();
         eventEntity.StartDate = request.StartDate == null
             ? null
