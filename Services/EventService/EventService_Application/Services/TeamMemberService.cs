@@ -279,6 +279,7 @@ public class TeamMemberService(
                 target.Permissions[key] = value;
         }
 
+        memberRepository.UpdateMember(target);
         await memberRepository.SaveChangesAsync();
         return ApiResponse<TeamMemberDto>.Success(200, "Permissions updated.", ToDto(target));
     }
