@@ -20,7 +20,9 @@ public class CreateEventValidator : AbstractValidator<EventRequestDto>
             .IsInEnum().WithMessage("Event mode is invalid");
 
         RuleFor(x => x.StartDate)
-            .NotNull().WithMessage("Start date is required");
+            .NotNull().WithMessage("Start date is required")
+            .Must(start => start!.Value >= DateTime.UtcNow)
+            .WithMessage("Start date cannot be in the past");
 
         RuleFor(x => x.EndDate)
             .NotNull().WithMessage("End date is required")
