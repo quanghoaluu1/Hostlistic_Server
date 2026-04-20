@@ -129,6 +129,7 @@ public class StreamsController : ControllerBase
                 RoomId = r.Room.Id,
                 r.Room.TrackId,
                 r.Room.SessionId,
+                r.Room.CreatedBy,
                 Status = (r.Room.Status == StreamRoomStatus.Live ||
                           (r.Room.Status != StreamRoomStatus.Ended && (r.HasConnectedHost || r.HasHostHistory)))
                     ? StreamRoomStatus.Live.ToString()
@@ -146,6 +147,7 @@ public class StreamsController : ControllerBase
                 RoomId = (Guid?)null,
                 TrackId = (Guid?)null,
                 SessionId = (Guid?)null,
+                CreatedBy = (Guid?)null,
                 Status = "None",
                 CreatedAt = (DateTime?)null,
                 ActualStartAt = (DateTime?)null,
@@ -183,6 +185,7 @@ public class StreamsController : ControllerBase
                 RoomId = x.Room.Id,
                 x.Room.TrackId,
                 x.Room.SessionId,
+                x.Room.CreatedBy,
                 Status = (x.Room.Status == StreamRoomStatus.Live ||
                           (x.Room.Status != StreamRoomStatus.Ended && (x.HasConnectedHost || x.HasHostHistory)))
                     ? StreamRoomStatus.Live.ToString()
