@@ -33,6 +33,15 @@ public class TicketsController : ControllerBase
         return Ok(result);
     }
 
+    [HttpPost("guest-live-access")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ValidateGuestLiveAccess([FromBody] ValidateGuestLiveAccessRequest request)
+    {
+        var result = await _ticketService.ValidateGuestLiveAccessAsync(request);
+        if (!result.IsSuccess) return StatusCode(result.StatusCode, result);
+        return Ok(result);
+    }
+
     [HttpGet("order/{orderId:guid}")]
     public async Task<IActionResult> GetTicketsByOrderId(Guid orderId)
     {

@@ -18,7 +18,12 @@ public class EventController(IEventService eventService, IPhotoService photoServ
     public async Task<IActionResult> CreateEventAsync([FromBody] EventRequestDto dto)
     {
         var organizerId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-        var result = await eventService.CreateEventAsync(dto, organizerId);
+        var organizerName = User.FindFirstValue(ClaimTypes.Name)
+                            ?? User.FindFirstValue("name");
+        var organizerEmail = User.FindFirstValue(ClaimTypes.Email)
+                             ?? User.FindFirstValue("email");
+
+        var result = await eventService.CreateEventAsync(dto, organizerId, organizerName, organizerEmail);
         return Ok(result);
     }
 

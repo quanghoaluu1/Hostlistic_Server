@@ -61,8 +61,15 @@ namespace EventService_Application.Services
             // No pagination — room count per event is inherently low (2–20).
             // Thesis rationale: "Pagination adds query overhead without meaningful benefit
             // when cardinality is bounded by physical/virtual room constraints."
+            queryParams ??= new BaseQueryParams();
+
             var venues = await venueRepository.GetByEventIdAsync(eventId, queryParams);
-            var response = venues.Items.Adapt<PagedResult<VenueResponse>>();
+            var venueItems = venues.Items.Adapt<List<VenueResponse>>();
+            var response = new PagedResult<VenueResponse>(
+                venueItems,
+                venues.TotalItems,
+                venues.CurrentPage,
+                venues.PageSize);
             return ApiResponse<PagedResult<VenueResponse>>.Success(200, "Retrieved venues.", response);
         }
 

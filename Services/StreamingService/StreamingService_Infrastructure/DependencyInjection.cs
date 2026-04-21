@@ -17,6 +17,7 @@ public static class DependencyInjection
 
         services.AddHttpClient<ILiveKitService, LiveKitService>();
         services.AddTransient<ITokenGenerator, TokenGenerator>();
+        services.AddSingleton<IGuestStreamAccessService, GuestStreamAccessService>();
         services.AddSingleton<IRecordingStorageService>(sp =>
         {
             var s3 = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<RecordingS3Settings>>().Value;
@@ -32,6 +33,12 @@ public static class DependencyInjection
             var config = provider.GetRequiredService<IConfiguration>();
             var eventServiceUrl = config["ServiceUrls:EventService"];
             client.BaseAddress = new Uri(eventServiceUrl ?? "https://localhost:7075");
+        });
+        services.AddHttpClient<IBookingServiceClient, BookingServiceClient>((provider, client) =>
+        {
+            var config = provider.GetRequiredService<IConfiguration>();
+            var bookingServiceUrl = config["ServiceUrls:BookingService"];
+            client.BaseAddress = new Uri(bookingServiceUrl ?? "http://localhost:5077");
         });
         
         return services;

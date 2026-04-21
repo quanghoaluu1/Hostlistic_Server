@@ -1,6 +1,7 @@
 using Common;
 using EventService_Application.DTOs;
 using EventService_Application.Interfaces;
+using EventService_Domain.Constants;
 using EventService_Domain.Entities;
 using EventService_Domain.Enums;
 using EventService_Domain.Interfaces;
@@ -18,7 +19,11 @@ public class EventService(
     IEventDayService eventDayService,
     ILogger<EventService> logger) : IEventService
 {
-    public async Task<ApiResponse<EventResponseDto>> CreateEventAsync(EventRequestDto request, Guid organizerId)
+    public async Task<ApiResponse<EventResponseDto>> CreateEventAsync(
+        EventRequestDto request,
+        Guid organizerId,
+        string? organizerFullName = null,
+        string? organizerEmail = null)
     {
         var entitlement = await GetActiveEntitlementAsync(organizerId);
         if (!entitlement.IsSuccess)
@@ -93,12 +98,9 @@ public class EventService(
             Status = EventMemberStatus.Active,
             InvitedAt = DateTime.UtcNow,
             JoinedAt = DateTime.UtcNow,
-            Permissions = new Dictionary<string, bool>
-            {
-                { "can_checkin", true },
-                { "can_edit_event", true },
-                { "can_manage_members", true }
-            }
+            Permissions = EventPermissions.AllKeys.ToDictionary(key => key, _ => true),
+            UserFullName = organizerFullName,
+            UserEmail = organizerEmail
         };
         eventEntity.EventTeamMembers.Add(organizerMember);
 

@@ -1,0 +1,11 @@
+global using Xunit;
+global using NSubstitute;
+global using FluentAssertions;
+global using StreamingService_Application.Interfaces;
+global using StreamingService_Domain.Entities;
+global using StreamingService_Domain.Enums;
+global using StreamingService_Application.UseCases.Streams.Commands.CreateStreamRoom;
+global using StreamingService_Application.UseCases.Streams.Commands.EndStreamRoom;
+global using StreamingService_Application.UseCases.Streams.Queries.GetStreamToken;
+global using Microsoft.EntityFrameworkCore;
+global using System.Linq.Expressions;

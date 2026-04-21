@@ -51,54 +51,46 @@ builder.Services.AddOpenApi(options =>
 var secretKey = builder.Configuration["Jwt:Key"];
 var issuer = builder.Configuration["Jwt:Issuer"];
 var audience = builder.Configuration["Jwt:Audience"];
+var key = Encoding.UTF8.GetBytes(secretKey);
 
-var authenticationBuilder = builder.Services.AddAuthentication();
-
-if (!string.IsNullOrWhiteSpace(secretKey))
+builder.Services.AddAuthentication(options =>
 {
-    var key = Encoding.UTF8.GetBytes(secretKey);
-
-    authenticationBuilder.AddJwtBearer(options =>
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+}).AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
     {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(key),
-            ValidateIssuer = true,
-            ValidIssuer = issuer,
-            ValidateAudience = true,
-            ValidAudience = audience,
-            ValidateLifetime = true,
-            ClockSkew = TimeSpan.Zero,
-            RoleClaimType = "Role"
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(key),
+        ValidateIssuer = true,
+        ValidIssuer = issuer,
+        ValidateAudience = true,
+        ValidAudience = audience,
+        ValidateLifetime = true,
+        ClockSkew = TimeSpan.Zero,
+        RoleClaimType = "Role"
 
-        };
-        options.Events = new JwtBearerEvents
+    };
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
         {
-            OnMessageReceived = context =>
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+            if (!string.IsNullOrWhiteSpace(accessToken) && path.StartsWithSegments("/hubs/streaming"))
             {
-                var accessToken = context.Request.Query["access_token"];
-                var path = context.HttpContext.Request.Path;
-                if (!string.IsNullOrWhiteSpace(accessToken) && path.StartsWithSegments("/hubs/streaming"))
-                {
-                    context.Token = accessToken;
-                }
-                return Task.CompletedTask;
-            },
-            OnAuthenticationFailed = context =>
-            {
-                Console.WriteLine("Token validation failed: " + context.Exception.Message);
-                return Task.CompletedTask;
+                context.Token = accessToken;
             }
-        };
-    });
-
-    builder.Services.PostConfigure<AuthenticationOptions>(options =>
-    {
-        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-    });
-}
+            return Task.CompletedTask;
+        },
+        OnAuthenticationFailed = context =>
+        {
+            Console.WriteLine("Token validation failed: " + context.Exception.Message);
+            return Task.CompletedTask;
+        }
+    };
+});
 
 builder.Services.AddAuthorization();
 

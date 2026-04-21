@@ -5,7 +5,11 @@ namespace EventService_Application.Interfaces;
 
 public interface IEventService
 {
-    Task<ApiResponse<EventResponseDto>> CreateEventAsync(EventRequestDto request, Guid organizerId);
+    Task<ApiResponse<EventResponseDto>> CreateEventAsync(
+        EventRequestDto request,
+        Guid organizerId,
+        string? organizerFullName = null,
+        string? organizerEmail = null);
     Task<ApiResponse<PagedResult<EventResponseDto>>> GetAllEventsAsync(BaseQueryParams request);
     Task<ApiResponse<EventResponseDto>> GetEventByIdAsync(Guid eventId);
     Task<ApiResponse<EventResponseDto>> UpdateEventAsync(Guid eventId, EventRequestDto request, string? publicId);
