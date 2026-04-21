@@ -60,6 +60,7 @@ public class TicketTypeService : ITicketTypeService
         ticketType.Status = TicketTypeStatus.Active;
         ticketType.SaleStartDate = DateTime.SpecifyKind(request.SaleStartDate, DateTimeKind.Utc);
         ticketType.SaleEndTime = DateTime.SpecifyKind(request.SaleEndTime, DateTimeKind.Utc);
+        ticketType.UpdateStreamingBenefits(request.MaxQaQuestions, request.AllowedTrackIds);
 
         await _ticketTypeRepository.AddTicketTypeAsync(ticketType);
         await _ticketTypeRepository.SaveChangesAsync();
@@ -100,6 +101,7 @@ public class TicketTypeService : ITicketTypeService
         existing.IsRequireHolderInfo = request.IsRequireHolderInfo;
         existing.Status = request.Status;
         existing.SaleChannel = request.SaleChannel;
+        existing.UpdateStreamingBenefits(request.MaxQaQuestions, request.AllowedTrackIds);
 
         await _ticketTypeRepository.UpdateTicketTypeAsync(existing);
         await _ticketTypeRepository.SaveChangesAsync();

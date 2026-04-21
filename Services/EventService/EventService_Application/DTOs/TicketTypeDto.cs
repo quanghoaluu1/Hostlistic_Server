@@ -21,6 +21,10 @@ public class TicketTypeDto
     public bool IsRequireHolderInfo { get; set; }
     public TicketTypeStatus Status { get; set; }
     public SaleChannel SaleChannel { get; set; }
+
+    // Streaming benefits
+    public int? MaxQaQuestions { get; set; }
+    public List<Guid> AllowedTrackIds { get; set; } = new();
 }
 
 public class CreateTicketTypeRequest
@@ -37,6 +41,10 @@ public class CreateTicketTypeRequest
     public int MaxPerOrder { get; set; }
     public bool IsRequireHolderInfo { get; set; }
     public SaleChannel SaleChannel { get; set; }
+
+    // Streaming benefits
+    public int? MaxQaQuestions { get; set; }
+    public List<Guid>? AllowedTrackIds { get; set; }
 }
 
 public class UpdateTicketTypeRequest
@@ -52,4 +60,8 @@ public class UpdateTicketTypeRequest
     public bool IsRequireHolderInfo { get; set; }
     public TicketTypeStatus Status { get; set; }
     public SaleChannel SaleChannel { get; set; }
+
+    // Streaming benefits
+    public int? MaxQaQuestions { get; set; }
+    public List<Guid>? AllowedTrackIds { get; set; }
 }
