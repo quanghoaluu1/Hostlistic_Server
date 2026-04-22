@@ -6,12 +6,16 @@ namespace EventService_Test;
 public class TicketTypeServiceTest
 {
     private readonly ITicketTypeRepository _ticketTypeRepository;
+    private readonly IUserPlanServiceClient _userPlanServiceClient;
     private readonly TicketTypeService _sut;
 
     public TicketTypeServiceTest()
     {
         _ticketTypeRepository = Substitute.For<ITicketTypeRepository>();
-        _sut = new TicketTypeService(_ticketTypeRepository);
+        _userPlanServiceClient = Substitute.For<IUserPlanServiceClient>();
+        _userPlanServiceClient.GetByUserIdAsync(Arg.Any<Guid>(), Arg.Any<bool>())
+            .Returns(new UserPlanLookupResult { Plans = [] });
+        _sut = new TicketTypeService(_ticketTypeRepository, _userPlanServiceClient);
 
         TypeAdapterConfig<TicketType, TicketTypeDto>.NewConfig();
         TypeAdapterConfig<CreateTicketTypeRequest, TicketType>.NewConfig();
@@ -59,7 +63,7 @@ public class TicketTypeServiceTest
         var request = TicketTypeBuilder.CreateRequest(name: "   ");
 
         // Act
-        var result = await _sut.CreateTicketTypeAsync(request);
+        var result = await _sut.CreateTicketTypeAsync(request, Guid.NewGuid());
 
         // Assert
         result.IsSuccess.Should().BeFalse();
@@ -74,7 +78,7 @@ public class TicketTypeServiceTest
         var request = TicketTypeBuilder.CreateRequest(price: -10);
 
         // Act
-        var result = await _sut.CreateTicketTypeAsync(request);
+        var result = await _sut.CreateTicketTypeAsync(request, Guid.NewGuid());
 
         // Assert
         result.IsSuccess.Should().BeFalse();
@@ -89,7 +93,7 @@ public class TicketTypeServiceTest
         var request = TicketTypeBuilder.CreateRequest(quantity: 0);
 
         // Act
-        var result = await _sut.CreateTicketTypeAsync(request);
+        var result = await _sut.CreateTicketTypeAsync(request, Guid.NewGuid());
 
         // Assert
         result.IsSuccess.Should().BeFalse();
@@ -104,7 +108,7 @@ public class TicketTypeServiceTest
         var request = TicketTypeBuilder.CreateRequest(minPerOrder: 10, maxPerOrder: 5);
 
         // Act
-        var result = await _sut.CreateTicketTypeAsync(request);
+        var result = await _sut.CreateTicketTypeAsync(request, Guid.NewGuid());
 
         // Assert
         result.IsSuccess.Should().BeFalse();
@@ -118,7 +122,7 @@ public class TicketTypeServiceTest
         var request = TicketTypeBuilder.CreateRequest();
 
         // Act
-        var result = await _sut.CreateTicketTypeAsync(request);
+        var result = await _sut.CreateTicketTypeAsync(request, Guid.NewGuid());
 
         // Assert
         result.IsSuccess.Should().BeTrue();

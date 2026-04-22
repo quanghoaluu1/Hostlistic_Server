@@ -8,18 +8,14 @@ using Mapster;
 
 namespace EventService_Application.Services;
 
-public class TicketTypeService : ITicketTypeService
+public class TicketTypeService(
+    ITicketTypeRepository ticketTypeRepository,
+    IUserPlanServiceClient userPlanServiceClient) : ITicketTypeService
 {
-    private readonly ITicketTypeRepository _ticketTypeRepository;
-
-    public TicketTypeService(ITicketTypeRepository ticketTypeRepository)
-    {
-        _ticketTypeRepository = ticketTypeRepository;
-    }
 
     public async Task<ApiResponse<TicketTypeDto>> GetTicketTypeByIdAsync(Guid ticketTypeId)
     {
-        var ticketType = await _ticketTypeRepository.GetTicketTypeByIdAsync(ticketTypeId);
+        var ticketType = await ticketTypeRepository.GetTicketTypeByIdAsync(ticketTypeId);
         if (ticketType == null)
             return ApiResponse<TicketTypeDto>.Fail(404, "Ticket type not found");
 
@@ -29,20 +25,30 @@ public class TicketTypeService : ITicketTypeService
 
     public async Task<ApiResponse<IEnumerable<TicketTypeDto>>> GetTicketTypesByEventIdAsync(Guid eventId)
     {
-        var ticketTypes = await _ticketTypeRepository.GetTicketTypesByEventIdAsync(eventId);
+        var ticketTypes = await ticketTypeRepository.GetTicketTypesByEventIdAsync(eventId);
         var dtos = ticketTypes.Adapt<IEnumerable<TicketTypeDto>>();
         return ApiResponse<IEnumerable<TicketTypeDto>>.Success(200, "Ticket types retrieved successfully", dtos);
     }
 
     public async Task<ApiResponse<IEnumerable<TicketTypeDto>>> GetTicketTypesBySessionIdAsync(Guid sessionId)
     {
-        var ticketTypes = await _ticketTypeRepository.GetTicketTypesBySessionIdAsync(sessionId);
+        var ticketTypes = await ticketTypeRepository.GetTicketTypesBySessionIdAsync(sessionId);
         var dtos = ticketTypes.Adapt<IEnumerable<TicketTypeDto>>();
         return ApiResponse<IEnumerable<TicketTypeDto>>.Success(200, "Ticket types retrieved successfully", dtos);
     }
 
-    public async Task<ApiResponse<TicketTypeDto>> CreateTicketTypeAsync(CreateTicketTypeRequest request)
+    public async Task<ApiResponse<TicketTypeDto>> CreateTicketTypeAsync(CreateTicketTypeRequest request, Guid userId)
     {
+        var userPlanResult = await userPlanServiceClient.GetByUserIdAsync(userId, onlyActive: true);
+        var activePlan = userPlanResult.Plans.FirstOrDefault();
+
+        if (activePlan != null && 
+            activePlan.SubscriptionPlan?.Name.Equals("Free", StringComparison.OrdinalIgnoreCase) == true &&
+            request.Price > 0)
+        {
+            return ApiResponse<TicketTypeDto>.Fail(403, "Users on the Free plan can only create free tickets. Please upgrade your plan to sell paid tickets.");
+        }
+
         if (string.IsNullOrWhiteSpace(request.Name))
             return ApiResponse<TicketTypeDto>.Fail(400, "Ticket type name is required");
 
@@ -62,8 +68,8 @@ public class TicketTypeService : ITicketTypeService
         ticketType.SaleEndTime = DateTime.SpecifyKind(request.SaleEndTime, DateTimeKind.Utc);
         ticketType.UpdateStreamingBenefits(request.MaxQaQuestions, request.AllowedTrackIds);
 
-        await _ticketTypeRepository.AddTicketTypeAsync(ticketType);
-        await _ticketTypeRepository.SaveChangesAsync();
+        await ticketTypeRepository.AddTicketTypeAsync(ticketType);
+        await ticketTypeRepository.SaveChangesAsync();
 
         var dto = ticketType.Adapt<TicketTypeDto>();
         return ApiResponse<TicketTypeDto>.Success(201, "Ticket type created successfully", dto);
@@ -71,7 +77,7 @@ public class TicketTypeService : ITicketTypeService
 
     public async Task<ApiResponse<TicketTypeDto>> UpdateTicketTypeAsync(Guid ticketTypeId, UpdateTicketTypeRequest request)
     {
-        var existing = await _ticketTypeRepository.GetTicketTypeByIdAsync(ticketTypeId);
+        var existing = await ticketTypeRepository.GetTicketTypeByIdAsync(ticketTypeId);
         if (existing == null)
             return ApiResponse<TicketTypeDto>.Fail(404, "Ticket type not found");
 
@@ -103,8 +109,8 @@ public class TicketTypeService : ITicketTypeService
         existing.SaleChannel = request.SaleChannel;
         existing.UpdateStreamingBenefits(request.MaxQaQuestions, request.AllowedTrackIds);
 
-        await _ticketTypeRepository.UpdateTicketTypeAsync(existing);
-        await _ticketTypeRepository.SaveChangesAsync();
+        await ticketTypeRepository.UpdateTicketTypeAsync(existing);
+        await ticketTypeRepository.SaveChangesAsync();
 
         var dto = existing.Adapt<TicketTypeDto>();
         return ApiResponse<TicketTypeDto>.Success(200, "Ticket type updated successfully", dto);
@@ -113,7 +119,7 @@ public class TicketTypeService : ITicketTypeService
     // Handle ticket purchase - updates both QuantityAvailable and QuantitySold
     public async Task<ApiResponse<TicketTypeDto>> ProcessTicketPurchaseAsync(Guid ticketTypeId, int quantity)
     {
-        var existing = await _ticketTypeRepository.GetTicketTypeByIdAsync(ticketTypeId);
+        var existing = await ticketTypeRepository.GetTicketTypeByIdAsync(ticketTypeId);
         if (existing == null)
             return ApiResponse<TicketTypeDto>.Fail(404, "Ticket type not found");
 
@@ -126,8 +132,8 @@ public class TicketTypeService : ITicketTypeService
         existing.QuantitySold += quantity;
         // Note: QuantityAvailable stays the same (total capacity), only QuantitySold increases
 
-        await _ticketTypeRepository.UpdateTicketTypeAsync(existing);
-        await _ticketTypeRepository.SaveChangesAsync();
+        await ticketTypeRepository.UpdateTicketTypeAsync(existing);
+        await ticketTypeRepository.SaveChangesAsync();
 
         var dto = existing.Adapt<TicketTypeDto>();
         return ApiResponse<TicketTypeDto>.Success(200, "Ticket purchase processed successfully", dto);
@@ -142,7 +148,7 @@ public class TicketTypeService : ITicketTypeService
             var ticketTypes = new Dictionary<Guid, TicketType>();
             foreach (var item in request.Items)
             {
-                var ticketType = await _ticketTypeRepository.GetTicketTypeByIdAsync(item.TicketTypeId);
+                var ticketType = await ticketTypeRepository.GetTicketTypeByIdAsync(item.TicketTypeId);
                 if (ticketType == null)
                     return ApiResponse<bool>.Fail(404, $"Ticket type {item.TicketTypeId} not found");
 
@@ -158,10 +164,10 @@ public class TicketTypeService : ITicketTypeService
             {
                 var ticketType = ticketTypes[item.TicketTypeId];
                 ticketType.QuantitySold += item.Quantity;
-                await _ticketTypeRepository.UpdateTicketTypeAsync(ticketType);
+                await ticketTypeRepository.UpdateTicketTypeAsync(ticketType);
             }
 
-            await _ticketTypeRepository.SaveChangesAsync();
+            await ticketTypeRepository.SaveChangesAsync();
             return ApiResponse<bool>.Success(200, "Bulk ticket purchase processed successfully", true);
         }
         catch (Exception ex)
@@ -172,15 +178,15 @@ public class TicketTypeService : ITicketTypeService
 
     public async Task<ApiResponse<bool>> DeleteTicketTypeAsync(Guid ticketTypeId)
     {
-        var exists = await _ticketTypeRepository.TicketTypeExistsAsync(ticketTypeId);
+        var exists = await ticketTypeRepository.TicketTypeExistsAsync(ticketTypeId);
         if (!exists)
             return ApiResponse<bool>.Fail(404, "Ticket type not found");
 
-        var deleted = await _ticketTypeRepository.DeleteTicketTypeAsync(ticketTypeId);
+        var deleted = await ticketTypeRepository.DeleteTicketTypeAsync(ticketTypeId);
         if (!deleted)
             return ApiResponse<bool>.Fail(500, "Failed to delete ticket type");
 
-        await _ticketTypeRepository.SaveChangesAsync();
+        await ticketTypeRepository.SaveChangesAsync();
         return ApiResponse<bool>.Success(200, "Ticket type deleted successfully", true);
     }
 }
