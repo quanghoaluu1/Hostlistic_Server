@@ -1,4 +1,4 @@
-﻿namespace EventService_Domain.Enums;
+namespace EventService_Domain.Enums;
 
 public enum EventStatus
 {
@@ -8,4 +8,5 @@ public enum EventStatus
     OnGoing,
     Completed,
     Unpublished,
+    Postponed
 }

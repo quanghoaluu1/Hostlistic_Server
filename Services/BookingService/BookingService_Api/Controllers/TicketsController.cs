@@ -80,4 +80,11 @@ public class TicketsController : ControllerBase
         if (!result.IsSuccess) return BadRequest(result);
         return Ok(result);
     }
+
+    [HttpPost("{ticketId:guid}/postponement-decision")]
+    public async Task<IActionResult> PostponementDecision(Guid ticketId, [FromBody] PostponementDecisionRequest request)
+    {
+        var result = await _ticketService.ProcessPostponementDecisionAsync(ticketId, request.Decision);
+        return StatusCode(result.StatusCode, result);
+    }
 }

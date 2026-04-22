@@ -74,6 +74,7 @@ builder.Services.AddMassTransit(config =>
     config.AddConsumer<SessionDeletedEventConsumer>();
     config.AddConsumer<WalletBookingConfirmConsumer>();
     config.AddConsumer<FreePurchaseCompletedConsumer>();
+    config.AddConsumer<EventPostponedIntegrationEventConsumer>();
     config.UsingRabbitMq((context, cfg) =>
     {
         var uri = builder.Configuration.GetConnectionString("rabbitmq");

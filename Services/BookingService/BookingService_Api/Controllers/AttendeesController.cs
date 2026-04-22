@@ -28,8 +28,9 @@ public class AttendeesController(IAttendeeService attendeeService) : ControllerB
     }
     
     [HttpGet("/email-recipients")]
+    [AllowAnonymous]
     public async Task<IActionResult> GetEmailRecipients(
-        Guid eventId,
+        [FromQuery] Guid eventId,
         [FromQuery] int recipientGroup = 0,
         [FromQuery] List<Guid>? ticketTypeIds = null,
         [FromQuery] List<Guid>? specificUserIds = null,

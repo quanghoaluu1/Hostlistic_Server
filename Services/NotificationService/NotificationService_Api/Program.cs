@@ -29,6 +29,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 builder.Services.AddControllers();
+builder.Services.AddHttpContextAccessor();
+
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi(options => options.AddDocumentTransformer<BearerSecuritySchemeTransformer>());
 var secretKey = builder.Configuration["Jwt:Key"];
@@ -145,6 +147,7 @@ builder.Services.AddMassTransit(x =>
     x.AddConsumer<BookingConfirmedConsumer>();
     x.AddConsumer<BulkEmailConsumer>();
     x.AddConsumer<TeamMemberInvitedConsumer>();
+    x.AddConsumer<EventPostponedConsumer>();
  
     x.UsingRabbitMq((context, cfg) =>
     {

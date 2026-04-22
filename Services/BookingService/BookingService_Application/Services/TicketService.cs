@@ -135,4 +135,25 @@ public class TicketService : ITicketService
         await _ticketRepository.SaveChangesAsync();
         return ApiResponse<bool>.Success(200, "Ticket deleted successfully", true);
     }
+
+    public async Task<ApiResponse<TicketDto>> ProcessPostponementDecisionAsync(Guid ticketId, PostponementDecision decision)
+    {
+        var existingTicket = await _ticketRepository.GetTicketByIdAsync(ticketId);
+        if (existingTicket == null)
+            return ApiResponse<TicketDto>.Fail(404, "Ticket not found");
+
+        if (existingTicket.PostponementStatus != PostponementStatus.PendingDecision)
+            return ApiResponse<TicketDto>.Fail(400, "Ticket is not pending a postponement decision");
+
+        existingTicket.PostponementStatus = decision == PostponementDecision.Accept 
+            ? PostponementStatus.Accepted 
+            : PostponementStatus.RefundRequested;
+
+        await _ticketRepository.UpdateTicketAsync(existingTicket);
+        await _ticketRepository.SaveChangesAsync();
+
+        var ticketDto = existingTicket.Adapt<TicketDto>();
+        return ApiResponse<TicketDto>.Success(200, "Postponement decision processed successfully", ticketDto);
+    }
 }
+

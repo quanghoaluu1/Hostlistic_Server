@@ -24,6 +24,10 @@ public class Event : BaseClass
     
     public string? TimeZoneId { get; set; }
 
+    public string? PostponementReason { get; set; }
+    public DateTime? OriginalStartDate { get; set; }
+    public DateTime? OriginalEndDate { get; set; }
+
     // Navigation properties to parent
     [ForeignKey("EventTypeId")]
     public virtual EventType? EventType { get; set; }
@@ -45,6 +49,31 @@ public class Event : BaseClass
     {
         if (AgendaMode == AgendaMode.Auto)
             AgendaMode = AgendaMode.Custom;
+    }
+
+    public ApiResponse<bool> Postpone(DateTime currentUtcTime, DateTime? newStartTime, DateTime? newEndTime, string reason)
+    {
+        var allowedStatuses = new[] { EventStatus.Published };
+        if (!allowedStatuses.Contains(EventStatus))
+            return ApiResponse<bool>.Fail(400,
+                $"Cannot postpone event with status '{EventStatus}'. Only Published events can be postponed.");
+
+        if (StartDate.HasValue && (StartDate.Value - currentUtcTime).TotalHours < 24)
+            return ApiResponse<bool>.Fail(400,
+                "Cannot postpone event less than 24 hours before its scheduled start time.");
+
+        if (newStartTime.HasValue && newEndTime.HasValue && newEndTime <= newStartTime)
+            return ApiResponse<bool>.Fail(400, "New end time must be after new start time.");
+
+        OriginalStartDate = StartDate;
+        OriginalEndDate = EndDate;
+        PostponementReason = reason;
+        EventStatus = EventStatus.Postponed;
+        StartDate = newStartTime;
+        EndDate = newEndTime;
+        UpdatedAt = currentUtcTime;
+
+        return ApiResponse<bool>.Success(200, "Event postponed successfully.", true);
     }
 }
 

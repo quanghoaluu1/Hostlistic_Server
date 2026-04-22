@@ -1,5 +1,6 @@
 using Common;
 using BookingService_Application.DTOs;
+using BookingService_Domain.Enum;
 
 namespace BookingService_Application.Interfaces;
 
@@ -13,4 +14,6 @@ public interface ITicketService
     Task<ApiResponse<bool>> DeleteTicketAsync(Guid ticketId);
     Task<ApiResponse<int>> RegenerateAllQrCodesAsync();
     Task<ApiResponse<GuestLiveAccessTicketDto>> ValidateGuestLiveAccessAsync(ValidateGuestLiveAccessRequest request);
+    Task<ApiResponse<TicketDto>> ProcessPostponementDecisionAsync(Guid ticketId, PostponementDecision decision);
 }
+

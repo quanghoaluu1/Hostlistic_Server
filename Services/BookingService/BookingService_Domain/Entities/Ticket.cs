@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations.Schema;
+using BookingService_Domain.Enum;
 
 namespace BookingService_Domain.Entities;
 
@@ -16,6 +17,7 @@ public class Ticket
     public string? HolderEmail { get; set; }
     public string? HolderPhone { get; set; }
     public bool IsUsed { get; set; } = false;
+    public PostponementStatus? PostponementStatus { get; set; }
     
     // Navigation property to parent
     [ForeignKey("OrderId")]

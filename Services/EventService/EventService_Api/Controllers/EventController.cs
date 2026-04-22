@@ -144,6 +144,15 @@ public class EventController(IEventService eventService, IPhotoService photoServ
         return StatusCode(result.StatusCode, result);
     }
 
+    [HttpPost("{eventId:guid}/postpone")]
+    [RequireEventOwner]
+    public async Task<IActionResult> PostponeEvent(Guid eventId, [FromBody] PostponeEventRequest request)
+    {
+        var result = await lifecycleService.PostponeEventAsync(
+            eventId, GetCurrentUserId(), request.NewStartTime, request.NewEndTime, request.Reason);
+        return StatusCode(result.StatusCode, result);
+    }
+
     private Guid GetCurrentUserId()
     {
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
