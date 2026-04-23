@@ -253,4 +253,60 @@ public class AiContentController(IAiContentService aiContentService, ILogger<AiC
         var result = await aiContentService.GetAIToken();
         return Ok(result);
     }
-}
+
+    [HttpPost("events/{eventId:guid}/report")]
+    [Authorize]
+    [ServiceFilter(typeof(RequireAiSubscriptionFilter))]
+    [ProducesResponseType(typeof(ApiResponse<AiContentResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status429TooManyRequests)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GeneratePostEventReport(
+        [FromRoute] Guid eventId,
+        [FromBody] GeneratePostEventReportRequest request,
+        CancellationToken ct)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        // Ensure route param and body are consistent
+        if (request.EventId != eventId)
+            return BadRequest(new { error = "Route eventId does not match body EventId." });
+
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userId = Guid.Parse(userIdClaim ??
+                                throw new UnauthorizedAccessException("User ID not found in token"));
+
+        try
+        {
+            var result = await aiContentService.GeneratePostEventReportAsync(request, userId, ct);
+
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, result);
+
+            return Ok(result);
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("429"))
+        {
+            logger.LogWarning("Gemini rate limit hit for post-event report, event {EventId}", eventId);
+            return StatusCode(429, new
+            {
+                error = "AI service rate limit exceeded. Please retry in a few seconds."
+            });
+        }
+        catch (OperationCanceledException)
+        {
+            return StatusCode(499, new { error = "Request cancelled by client." });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex,
+                "Unexpected error generating post-event report for event {EventId}", eventId);
+            return StatusCode(500, new
+            {
+                error = "An unexpected error occurred while generating content."
+            });
+        }
+    }
+}

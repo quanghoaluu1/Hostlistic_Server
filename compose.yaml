@@ -188,6 +188,7 @@ services:
       - Gemini__Model=gemini-3-flash-preview
       - ServiceUrls__EventService=http://eventservice:8080
       - ServiceUrls__IdentityService=http://identityservice:8080
+      - ServiceUrls__BookingService=http://bookingservice:8080
     networks:
       - hostlistic_net
     restart: unless-stopped

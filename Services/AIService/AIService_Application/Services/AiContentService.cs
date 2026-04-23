@@ -1,3 +1,4 @@
+using AIService_Application.DTOs;
 using AIService_Application.DTOs.Requests;
 using AIService_Application.DTOs.Responses;
 using AIService_Application.Interface;
@@ -19,6 +20,7 @@ public partial class AiContentService(
     IPromptTemplateRepository promptTemplateRepository,
     IPromptTemplateEngine promptTemplateEngine,
     IEventServiceClient eventServiceClient,
+    IAiDataAggregationService aiDataAggregationService,
     ILogger<AiContentService> logger)
     : IAiContentService
 {
@@ -695,6 +697,197 @@ public partial class AiContentService(
         return ApiResponse<List<TokenChartDto>>.Success(200, "AI token usage data retrieved successfully", chart);
     }
 
+    public async Task<ApiResponse<AiContentResponse>> GeneratePostEventReportAsync(
+        GeneratePostEventReportRequest request,
+        Guid organizerId,
+        CancellationToken ct = default)
+    {
+        // ── Step 1: Aggregate post-event data ──
+        var aggregationResult = await aiDataAggregationService.GetEventSummaryContextAsync(request.EventId, ct);
+        if (!aggregationResult.IsSuccess || aggregationResult.Data is null)
+            return ApiResponse<AiContentResponse>.Fail(aggregationResult.StatusCode,
+                aggregationResult.Message ?? "Failed to aggregate event data");
+
+        var summaryData = aggregationResult.Data;
+
+        // ── Step 2: Fetch prompt template ──
+        var template = await promptTemplateRepository.GetByKeyAsync(PromptTemplateKey.PostEventReport, ct);
+        if (template is null)
+            return ApiResponse<AiContentResponse>.Fail(500, "Post-event report prompt template not found");
+
+        // ── Step 3: Build & render prompt ──
+        var parameters = FormatReportContext(summaryData);
+        parameters["language"] = request.Language;
+        parameters["language_instruction"] = request.Language.Equals("Vietnamese",
+            StringComparison.OrdinalIgnoreCase)
+            ? "Respond entirely in Vietnamese. Use natural, professional Vietnamese."
+            : $"Respond entirely in {request.Language}. Use professional language appropriate for an executive audience.";
+        var renderedUserPrompt = promptTemplateEngine.Render(template.UserPromptTemplate, parameters);
+
+        // ── Step 4: Persist AiRequest record ──
+        var aiRequest = new AiRequest
+        {
+            Id = Guid.NewGuid(),
+            EventId = request.EventId,
+            CreatedBy = organizerId,
+            RequestType = AiRequestType.GeneratePostEventReport,
+            Language = request.Language,
+            Status = AiRequestStatus.Pending,
+            CreatedAt = DateTime.UtcNow
+        };
+        aiRequestRepository.Add(aiRequest);
+        await aiRequestRepository.SaveChangesAsync(ct);
+
+        var sw = Stopwatch.StartNew();
+        try
+        {
+            logger.LogInformation(
+                "Generating post-event report for event {EventId}, language = {Language}",
+                request.EventId, request.Language);
+
+            // ── Step 5: Call AI provider ──
+            var aiResult = await aiProvider.GenerateContentAsync(
+                template.SystemPrompt,
+                renderedUserPrompt,
+                new AiRequestOptions
+                {
+                    Temperature = template.DefaultTemperature,
+                    MaxTokens = template.DefaultMaxTokens,
+                }, ct);
+            sw.Stop();
+
+            // ── Step 6: Persist generated content ──
+            var htmlContent = promptTemplateEngine.SanitizeHtml(aiResult.Content);
+            var plainContent = StripHtmlTags(aiResult.Content);
+
+            var generatedContent = new AiGeneratedContent
+            {
+                Id = Guid.NewGuid(),
+                RequestId = aiRequest.Id,
+                HtmlContent = htmlContent,
+                PlainContent = plainContent,
+                Model = aiResult.Model,
+                PromptTokens = aiResult.PromptTokens,
+                CompletionTokens = aiResult.CompletionTokens,
+                LatencyMs = sw.ElapsedMilliseconds,
+                CreatedAt = DateTime.UtcNow
+            };
+            aiGeneratedContentRepository.Add(generatedContent);
+
+            aiRequest.Status = AiRequestStatus.Completed;
+            aiRequest.CompletedAt = DateTime.UtcNow;
+            aiRequestRepository.Update(aiRequest);
+            await aiRequestRepository.SaveChangesAsync(ct);
+
+            // ── Step 7: Build and return response ──
+            var response = new AiContentResponse
+            {
+                RequestId = aiRequest.Id,
+                ContentId = generatedContent.Id,
+                HtmlContent = htmlContent,
+                PlainContent = plainContent,
+                IsAiGenerated = true,
+                Metadata = new AiMetadataDto
+                {
+                    Model = aiResult.Model,
+                    PromptTokens = aiResult.PromptTokens,
+                    CompletionTokens = aiResult.CompletionTokens,
+                    LatencyMs = sw.ElapsedMilliseconds,
+                    DataQuality = summaryData.HasPartialData ? "partial" : "rich",
+                    NeedsReview = summaryData.HasPartialData
+                }
+            };
+
+            return ApiResponse<AiContentResponse>.Success(
+                200, "Post-event report generated successfully", response);
+        }
+        catch (Exception ex)
+        {
+            sw.Stop();
+            aiRequest.Status = AiRequestStatus.Failed;
+            aiRequest.ErrorMessage = ex.Message;
+            aiRequest.CompletedAt = DateTime.UtcNow;
+            aiRequestRepository.Update(aiRequest);
+            await aiRequestRepository.SaveChangesAsync(CancellationToken.None);
+
+            logger.LogError(ex,
+                "Failed to generate post-event report for event {EventId}", request.EventId);
+
+            return ApiResponse<AiContentResponse>.Fail(500, "Failed to generate post-event report");
+        }
+    }
+
+    /// <summary>
+    /// Flattens the complex <see cref="EventExecutiveSummaryDataDto"/> into a flat
+    /// string dictionary that can be injected directly into a Handlebars-style prompt template.
+    /// </summary>
+    private static Dictionary<string, string> FormatReportContext(EventExecutiveSummaryDataDto dto)
+    {
+        // ── Ticket-type breakdown (bulleted list) ──
+        var ticketBreakdown = dto.ByTicketType.Count > 0
+            ? string.Join("\n", dto.ByTicketType.Select(t =>
+                $"  • {t.TicketTypeName}: {t.TicketCount} sold, {t.CheckedInCount} checked-in" +
+                (t.Revenue > 0 ? $", revenue: {t.Revenue:N0}" : string.Empty)))
+            : "No ticket-type data available.";
+
+        // ── Top engaged sessions (descriptive sentences) ──
+        var topSessions = dto.TopEngagedSessions.Count > 0
+            ? string.Join("\n", dto.TopEngagedSessions.Select((s, i) =>
+                $"  {i + 1}. \"{s.SessionTitle}\" — {s.TotalEngagedParticipants} participants engaged" +
+                (s.QuestionCount > 0 ? $", {s.ApprovedQuestionCount}/{s.QuestionCount} Q&A approved" : string.Empty) +
+                (s.TotalPollVotes > 0 ? $", {s.TotalPollVotes} poll votes" : string.Empty)))
+            : "No session engagement data available.";
+
+        // ── Positive feedback (quoted bullets) ──
+        var positiveFeedback = dto.HighlightPositiveFeedbacks.Count > 0
+            ? string.Join("\n", dto.HighlightPositiveFeedbacks.Select(f => $"  • \"{f}\""))
+            : "No positive feedback recorded.";
+
+        // ── Critical feedback (quoted bullets) ──
+        var criticalFeedback = dto.HighlightCriticalFeedbacks.Count > 0
+            ? string.Join("\n", dto.HighlightCriticalFeedbacks.Select(f => $"  • \"{f}\""))
+            : "No critical feedback recorded.";
+
+        // ── Data quality signals ──
+        var dataQualityNote = dto.HasPartialData
+            ? $"⚠️ Partial data: the following sources returned no data and should be treated with caution: {string.Join(", ", dto.MissingDataSources)}."
+            : "All data sources returned successfully.";
+
+        return new Dictionary<string, string>
+        {
+            // Identity
+            ["event_id"]             = dto.EventId.ToString(),
+            ["event_name"]           = dto.EventName,
+
+            // Attendance
+            ["total_tickets_sold"]   = dto.TotalTicketsSold.ToString(),
+            ["total_checked_in"]     = dto.TotalCheckedIn.ToString(),
+            ["check_in_rate"]        = $"{dto.CheckInRate:F1}%",
+            ["by_ticket_type"]       = ticketBreakdown,
+
+            // Revenue
+            ["total_revenue"]        = dto.TotalRevenue.ToString("N0"),
+
+            // Engagement
+            ["total_questions"]      = dto.TotalQuestions.ToString(),
+            ["approved_questions"]   = dto.ApprovedQuestions.ToString(),
+            ["total_poll_votes"]     = dto.TotalPollVotes.ToString(),
+            ["top_engaged_sessions"] = topSessions,
+
+            // Feedback
+            ["average_rating"]       = dto.AverageRating.HasValue
+                                         ? $"{dto.AverageRating.Value:F1} / 5"
+                                         : "N/A",
+            ["total_feedback_count"] = dto.TotalFeedbackCount.ToString(),
+            ["positive_feedback"]    = positiveFeedback,
+            ["critical_feedback"]    = criticalFeedback,
+
+            // Data quality
+            ["has_partial_data"]     = dto.HasPartialData ? "true" : "false",
+            ["data_quality_note"]    = dataQualityNote,
+        };
+    }
+
     private static string StripHtmlTags(string html)
     {
         var text = Regex.Replace(html, @"<br\s*/?>", "\n");
@@ -704,3 +897,4 @@ public partial class AiContentService(
         return text.Trim();
     }
 }
+
