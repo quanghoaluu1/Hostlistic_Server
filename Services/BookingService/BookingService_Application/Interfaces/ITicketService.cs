@@ -14,6 +14,7 @@ public interface ITicketService
     Task<ApiResponse<bool>> DeleteTicketAsync(Guid ticketId);
     Task<ApiResponse<int>> RegenerateAllQrCodesAsync();
     Task<ApiResponse<GuestLiveAccessTicketDto>> ValidateGuestLiveAccessAsync(ValidateGuestLiveAccessRequest request);
-    Task<ApiResponse<TicketDto>> ProcessPostponementDecisionAsync(Guid ticketId, PostponementDecision decision);
+    Task<ApiResponse<TicketDto>> ProcessPostponementDecisionAsync(Guid ticketId, PostponementDecision decision, Guid callerUserId);
+    Task<ApiResponse<int>> ProcessRefundsForPostponedEventAsync(Guid eventId);
 }
 
