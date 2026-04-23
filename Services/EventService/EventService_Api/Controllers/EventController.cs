@@ -35,6 +35,14 @@ public class EventController(IEventService eventService, IPhotoService photoServ
         return Ok(result);
     }
 
+    [HttpGet("postponed")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> GetPostponedEventsAsync([FromQuery] BaseQueryParams request)
+    {
+        var result = await eventService.GetPostponedEventsAsync(request);
+        return Ok(result);
+    }
+
     [HttpGet("paged")]
     public async Task<IActionResult> GetPublicEventsAsync([FromQuery] PublicEventQueryParams queryParams)
     {
@@ -141,6 +149,15 @@ public class EventController(IEventService eventService, IPhotoService photoServ
     public async Task<IActionResult> CancelEvent(Guid eventId, [FromBody] CancelEventRequest request)
     {
         var result = await lifecycleService.CancelEventAsync(eventId, GetCurrentUserId(), request.Reason);
+        return StatusCode(result.StatusCode, result);
+    }
+
+    [HttpPost("{eventId:guid}/postpone")]
+    [RequireEventOwner]
+    public async Task<IActionResult> PostponeEvent(Guid eventId, [FromBody] PostponeEventRequest request)
+    {
+        var result = await lifecycleService.PostponeEventAsync(
+            eventId, GetCurrentUserId(), request.NewStartTime, request.NewEndTime, request.Reason);
         return StatusCode(result.StatusCode, result);
     }
 

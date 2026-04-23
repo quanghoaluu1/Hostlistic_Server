@@ -1,3 +1,5 @@
+using BookingService_Domain.Enum;
+
 namespace BookingService_Application.DTOs;
 
 public class TicketDto
@@ -19,6 +21,9 @@ public class TicketDto
 
     // DTO-only enrichment (not persisted)
     public decimal Price { get; set; }
+
+    // Postponement lifecycle state
+    public PostponementStatus? PostponementStatus { get; set; }
 }
 
 public class CreateTicketRequest

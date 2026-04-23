@@ -1,10 +1,11 @@
-﻿using Common;
+using Common;
 using EventService_Application.IntegrationEvents;
 using EventService_Application.Interfaces;
 using EventService_Domain.Enums;
 using EventService_Domain.Interfaces;
 using MassTransit;
 using Microsoft.Extensions.Logging;
+using Common.Messages;
 
 namespace EventService_Application.Services;
 
@@ -109,4 +110,38 @@ public class EventLifecycleService(IEventRepository eventRepository, IBus bus, I
         return ApiResponse<bool>.Success(200, "Event cancelled successfully.", true);
     }
 
+    public async Task<ApiResponse<bool>> PostponeEventAsync(Guid eventId, Guid requesterId, DateTime? newStartTime, DateTime? newEndTime, string reason)
+    {
+        var eventEntity = await eventRepository.GetEventByIdAsync(eventId);
+        if (eventEntity is null)
+            return ApiResponse<bool>.Fail(404, "Event not found.");
+
+        if (eventEntity.OrganizerId != requesterId)
+            return ApiResponse<bool>.Fail(403, "Only the event organizer can postpone the event.");
+
+        if (newStartTime is null || newEndTime is null)
+            return ApiResponse<bool>.Fail(400, "NewStartTime and NewEndTime are required.");
+
+        var postponeResult = eventEntity.Postpone(DateTime.UtcNow, DateTime.SpecifyKind(newStartTime.Value, DateTimeKind.Utc), DateTime.SpecifyKind(newEndTime.Value, DateTimeKind.Utc), reason);
+        if (!postponeResult.IsSuccess)
+            return postponeResult;
+
+        eventRepository.UpdateEventAsync(eventEntity);
+        await eventRepository.SaveChangesAsync();
+
+        await bus.Publish(new EventPostponedIntegrationEvent(
+            EventId: eventEntity.Id,
+            OrganizerId: requesterId,
+            EventName: eventEntity.Title ?? string.Empty,
+            Reason: reason,
+            NewStartTime: newStartTime,
+            NewEndTime: newEndTime,
+            PostponedAt: DateTime.UtcNow
+        ));
+
+        logger.LogInformation("Event {EventId} postponed by organizer {OrganizerId}. New start time: {NewStartTime}. New end time: {NewEndTime}. Reason: {Reason}",
+            eventId, requesterId, newStartTime, newEndTime, reason);
+
+        return ApiResponse<bool>.Success(200, "Event postponed successfully.", true);
+    }
 }

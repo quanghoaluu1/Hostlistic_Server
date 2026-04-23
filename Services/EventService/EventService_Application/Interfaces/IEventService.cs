@@ -19,4 +19,5 @@ public interface IEventService
     Task<ApiResponse<StreamAuthResponseDto>> VerifyStreamAccessAsync(Guid eventId, Guid userId);
     Task<ApiResponse<object>> GetEventDashboardAsync(int? year, int? month);
     Task<ApiResponse<bool>> UpdateEventStatus(Guid eventId);
+    Task<ApiResponse<PagedResult<EventResponseDto>>> GetPostponedEventsAsync(BaseQueryParams request);
 }

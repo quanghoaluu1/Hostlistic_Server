@@ -6,13 +6,19 @@ public class TicketServiceTest
 {
     private readonly ITicketRepository _ticketRepository;
     private readonly IQrCodeService _qrCodeService;
+    private readonly IWalletRepository _walletRepository;
+    private readonly ITransactionRepository _transactionRepository;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly TicketService _sut;
 
     public TicketServiceTest()
     {
         _ticketRepository = Substitute.For<ITicketRepository>();
         _qrCodeService = Substitute.For<IQrCodeService>();
-        _sut = new TicketService(_ticketRepository, _qrCodeService);
+        _walletRepository = Substitute.For<IWalletRepository>();
+        _transactionRepository = Substitute.For<ITransactionRepository>();
+        _unitOfWork = Substitute.For<IUnitOfWork>();
+        _sut = new TicketService(_ticketRepository, _qrCodeService, _walletRepository, _transactionRepository, _unitOfWork);
     }
 
     [Fact]

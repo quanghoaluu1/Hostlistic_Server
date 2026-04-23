@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using BookingService_Application.DTOs;
 using BookingService_Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -79,5 +80,23 @@ public class TicketsController : ControllerBase
         var result = await _ticketService.DeleteTicketAsync(ticketId);
         if (!result.IsSuccess) return BadRequest(result);
         return Ok(result);
+    }
+
+    [HttpPost("{ticketId:guid}/postponement-decision")]
+    public async Task<IActionResult> PostponementDecision(Guid ticketId, [FromBody] PostponementDecisionRequest request)
+    {
+        var callerUserId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)
+            ?? throw new UnauthorizedAccessException("User ID not found in token."));
+
+        var result = await _ticketService.ProcessPostponementDecisionAsync(ticketId, request.Decision, callerUserId);
+        return StatusCode(result.StatusCode, result);
+    }
+
+    [HttpPost("admin/events/{eventId:guid}/process-refunds")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> ProcessRefundsForPostponedEvent(Guid eventId)
+    {
+        var result = await _ticketService.ProcessRefundsForPostponedEventAsync(eventId);
+        return StatusCode(result.StatusCode, result);
     }
 }
