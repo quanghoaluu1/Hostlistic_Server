@@ -29,5 +29,10 @@ public interface IAiContentService
         Guid organizerId,
         CancellationToken ct = default);
 
+    Task<ApiResponse<AiContentResponse>> GeneratePostEventReportAsync(
+        GeneratePostEventReportRequest request,
+        Guid organizerId,
+        CancellationToken ct = default);
+
     Task<ApiResponse<List<TokenChartDto>>> GetAIToken();
 }
