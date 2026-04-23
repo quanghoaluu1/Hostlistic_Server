@@ -14,17 +14,20 @@ public class TicketService : ITicketService
     private readonly IQrCodeService _qrCodeService;
     private readonly IWalletRepository _walletRepository;
     private readonly ITransactionRepository _transactionRepository;
+    private readonly IUnitOfWork _unitOfWork;
 
     public TicketService(
         ITicketRepository ticketRepository,
         IQrCodeService qrCodeService,
         IWalletRepository walletRepository,
-        ITransactionRepository transactionRepository)
+        ITransactionRepository transactionRepository,
+        IUnitOfWork unitOfWork)
     {
         _ticketRepository = ticketRepository;
         _qrCodeService = qrCodeService;
         _walletRepository = walletRepository;
         _transactionRepository = transactionRepository;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<ApiResponse<TicketDto>> GetTicketByIdAsync(Guid ticketId)
@@ -188,11 +191,21 @@ public class TicketService : ITicketService
 
             if (refundAmount <= 0m)
             {
-                // Ticket has no monetary value (free ticket); just mark as Refunded
-                ticket.PostponementStatus = PostponementStatus.Refunded;
-                await _ticketRepository.UpdateTicketAsync(ticket);
-                await _ticketRepository.SaveChangesAsync();
-                processedCount++;
+                // Free ticket fast-path: no wallet involved — safe to commit in isolation
+                await using var freeTx = await _unitOfWork.BeginTransactionAsync();
+                try
+                {
+                    ticket.PostponementStatus = PostponementStatus.Refunded;
+                    await _ticketRepository.UpdateTicketAsync(ticket);
+                    await _unitOfWork.SaveChangesAsync();
+                    await freeTx.CommitAsync();
+                    processedCount++;
+                }
+                catch
+                {
+                    await freeTx.RollbackAsync();
+                    skippedCount++;
+                }
                 continue;
             }
 
@@ -205,38 +218,52 @@ public class TicketService : ITicketService
                 continue;
             }
 
-            // ── Step b (continued): Increase wallet balance ─────────────────────
-            wallet.Balance += refundAmount;
-            await _walletRepository.UpdateWalletAsync(wallet);
-            await _walletRepository.SaveChangesAsync();
-
-            // ── Step c & d: Write Transaction ledger record ─────────────────────
-            var ledgerEntry = new Transaction
+            // ── Atomic block: wallet credit + ledger + ticket status ────────────
+            // All three mutations share one DB transaction. If any step throws,
+            // the entire transaction rolls back — ticket stays RefundRequested
+            // and will be retried on the next admin call (no double-credit risk).
+            await using var tx = await _unitOfWork.BeginTransactionAsync();
+            try
             {
-                WalletId      = wallet.Id,
-                Type          = TransactionType.Refund,
-                Amount        = refundAmount,
-                PlatformFee   = 0m,
-                NetAmount     = refundAmount,
-                BalanceAfter  = wallet.Balance,
-                ReferenceId   = ticket.OrderId,
-                ReferenceType = "Order",
-                Status        = TransactionStatus.Completed,
-                Description   = $"Refund for postponed event — ticket {ticket.TicketCode}",
-            };
-            await _transactionRepository.AddAsync(ledgerEntry);
-            await _transactionRepository.SaveChangesAsync();
+                // Step b: Increase wallet balance
+                wallet.Balance += refundAmount;
+                await _walletRepository.UpdateWalletAsync(wallet);
 
-            // ── Step e: Soft-mark ticket as Refunded (NO hard delete) ───────────
-            ticket.PostponementStatus = PostponementStatus.Refunded;
-            await _ticketRepository.UpdateTicketAsync(ticket);
-            await _ticketRepository.SaveChangesAsync();
+                // Step c & d: Write Transaction ledger record
+                var ledgerEntry = new Transaction
+                {
+                    WalletId      = wallet.Id,
+                    Type          = TransactionType.Refund,
+                    Amount        = refundAmount,
+                    PlatformFee   = 0m,
+                    NetAmount     = refundAmount,
+                    BalanceAfter  = wallet.Balance,
+                    ReferenceId   = ticket.OrderId,
+                    ReferenceType = "Order",
+                    Status        = TransactionStatus.Completed,
+                    Description   = $"Refund for postponed event — ticket {ticket.TicketCode}",
+                };
+                await _transactionRepository.AddAsync(ledgerEntry);
 
-            processedCount++;
+                // Step e: Soft-mark ticket as Refunded (NO hard delete)
+                ticket.PostponementStatus = PostponementStatus.Refunded;
+                await _ticketRepository.UpdateTicketAsync(ticket);
+
+                // Single atomic commit for wallet + ledger + ticket
+                await _unitOfWork.SaveChangesAsync();
+                await tx.CommitAsync();
+
+                processedCount++;
+            }
+            catch (Exception)
+            {
+                await tx.RollbackAsync();
+                skippedCount++;
+            }
         }
 
         var message = skippedCount > 0
-            ? $"Processed {processedCount} refund(s). Skipped {skippedCount} ticket(s) — wallet not found."
+            ? $"Processed {processedCount} refund(s). Skipped {skippedCount} ticket(s) — wallet not found or error during processing."
             : $"Successfully processed {processedCount} refund(s) and updated ticket statuses to Refunded.";
 
         return ApiResponse<int>.Success(200, message, processedCount);

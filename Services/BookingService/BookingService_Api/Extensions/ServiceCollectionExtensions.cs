@@ -3,6 +3,7 @@ using BookingService_Application.Services;
 using BookingService_Api.Hubs;
 using BookingService_Api.Services;
 using BookingService_Domain.Interfaces;
+using BookingService_Infrastructure.Data;
 using BookingService_Infrastructure.Repositories;
 using BookingService_Infrastructure.ServiceClients;
 using BookingService_Infrastructure.Services;
@@ -13,6 +14,9 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
+        // Unit of Work (transaction coordinator)
+        services.AddScoped<IUnitOfWork, EfUnitOfWork>();
+
         // Repositories
         services.AddScoped<ISessionSnapshotRepository, SessionSnapshotRepository>();
         services.AddScoped<IOrderRepository, OrderRepository>();

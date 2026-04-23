@@ -1,5 +1,6 @@
 using BookingService_Application.DTOs;
 using BookingService_Application.Interfaces;
+using BookingService_Domain.Enum;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -48,6 +49,24 @@ public class AttendeesController(IAttendeeService attendeeService) : ControllerB
         var result = await attendeeService.GetRecipientsAsync(
             eventId, request, cancellationToken);
 
+        return StatusCode(result.StatusCode, result);
+    }
+
+    /// <summary>
+    /// Returns all attendees for a postponed event who have submitted a refund request.
+    /// Restricted to Admin and Organizer roles. The PostponementStatus filter is forced
+    /// server-side and cannot be bypassed by the caller.
+    /// </summary>
+    [HttpGet("refund-requests")]
+    [Authorize(Roles = "Admin,Organizer")]
+    public async Task<IActionResult> GetRefundRequests(
+        Guid eventId,
+        [FromQuery] AttendeeListRequest request,
+        CancellationToken ct)
+    {
+        // Force the status filter — callers cannot override this
+        request.PostponementStatus = PostponementStatus.RefundRequested;
+        var result = await attendeeService.GetAttendeesAsync(eventId, request, ct);
         return StatusCode(result.StatusCode, result);
     }
 }

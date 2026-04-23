@@ -119,6 +119,9 @@ public class EventLifecycleService(IEventRepository eventRepository, IBus bus, I
         if (eventEntity.OrganizerId != requesterId)
             return ApiResponse<bool>.Fail(403, "Only the event organizer can postpone the event.");
 
+        if (newStartTime is null || newEndTime is null)
+            return ApiResponse<bool>.Fail(400, "NewStartTime and NewEndTime are required.");
+
         var postponeResult = eventEntity.Postpone(DateTime.UtcNow, DateTime.SpecifyKind(newStartTime.Value, DateTimeKind.Utc), DateTime.SpecifyKind(newEndTime.Value, DateTimeKind.Utc), reason);
         if (!postponeResult.IsSuccess)
             return postponeResult;
