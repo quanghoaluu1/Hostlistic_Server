@@ -49,6 +49,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IEventDayService, EventDayService>();
         services.AddScoped<IVenueService, VenueService>();
         services.AddScoped<IUserPlanServiceClient, UserPlanServiceClient>();
+        services.AddScoped<IBookingAccessClient, BookingAccessClient>();
         services.AddScoped<ITeamMemberService, TeamMemberService>();
         services.AddScoped<IEventLifecycleService, EventLifecycleService>();
         services.AddScoped<ISurveyFormService, SurveyFormService>();

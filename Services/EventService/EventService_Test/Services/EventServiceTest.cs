@@ -10,6 +10,7 @@ public class EventServiceTest
     private readonly ISessionService _sessionService;
     private readonly IEventTeamMemberRepository _eventTeamMemberRepository;
     private readonly IUserPlanServiceClient _userPlanServiceClient;
+    private readonly IBookingAccessClient _bookingAccessClient;
     private readonly IEventDayService _eventDayService;
     private readonly ILogger<EventService> _logger = Substitute.For<ILogger<EventService>>();
 
@@ -23,6 +24,7 @@ public class EventServiceTest
         _sessionService = Substitute.For<ISessionService>();
         _eventTeamMemberRepository = Substitute.For<IEventTeamMemberRepository>();
         _userPlanServiceClient = Substitute.For<IUserPlanServiceClient>();
+        _bookingAccessClient = Substitute.For<IBookingAccessClient>();
         _eventDayService = Substitute.For<IEventDayService>();
         
 
@@ -32,6 +34,7 @@ public class EventServiceTest
             _sessionService,
             _eventTeamMemberRepository,
             _userPlanServiceClient,
+            _bookingAccessClient,
             _eventDayService,
             _logger);
     }
@@ -414,6 +417,52 @@ public class EventServiceTest
         // Assert — Title changed, Location preserved
         existingEvent.Title.Should().Be("New Title");
         existingEvent.Location.Should().Be("Original Location");
+    }
+
+    #endregion
+
+    #region VerifyStreamAccessAsync
+
+    [Fact]
+    public async Task VerifyStreamAccessAsync_WhenUserHasConfirmedTicket_ReturnsAttendeeAccess()
+    {
+        var eventId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var eventEntity = EventBuilder.CreateEvent(id: eventId);
+        eventEntity.EventMode = EventMode.Online;
+        eventEntity.StartDate = DateTime.UtcNow.AddMinutes(-10);
+
+        _eventRepository.GetEventByIdAsync(eventId).Returns(eventEntity);
+        _eventTeamMemberRepository.GetQueryableByUserId(userId).Returns(new List<EventTeamMember>().AsQueryable());
+        _bookingAccessClient.HasStreamAccessAsync(eventId, userId).Returns(true);
+
+        var result = await _sut.VerifyStreamAccessAsync(eventId, userId);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Data.Should().NotBeNull();
+        result.Data!.IsAllowed.Should().BeTrue();
+        result.Data.Role.Should().Be("Attendee");
+    }
+
+    [Fact]
+    public async Task VerifyStreamAccessAsync_WhenUserHasNoConfirmedTicket_ReturnsDenied()
+    {
+        var eventId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var eventEntity = EventBuilder.CreateEvent(id: eventId);
+        eventEntity.EventMode = EventMode.Online;
+        eventEntity.StartDate = DateTime.UtcNow.AddMinutes(-10);
+
+        _eventRepository.GetEventByIdAsync(eventId).Returns(eventEntity);
+        _eventTeamMemberRepository.GetQueryableByUserId(userId).Returns(new List<EventTeamMember>().AsQueryable());
+        _bookingAccessClient.HasStreamAccessAsync(eventId, userId).Returns(false);
+
+        var result = await _sut.VerifyStreamAccessAsync(eventId, userId);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Data.Should().NotBeNull();
+        result.Data!.IsAllowed.Should().BeFalse();
+        result.Data.Role.Should().Be("None");
     }
 
     #endregion

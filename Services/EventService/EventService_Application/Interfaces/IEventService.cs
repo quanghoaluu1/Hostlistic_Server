@@ -20,3 +20,8 @@ public interface IEventService
     Task<ApiResponse<object>> GetEventDashboardAsync(int? year, int? month);
     Task<ApiResponse<bool>> UpdateEventStatus(Guid eventId);
 }
+
+public interface IBookingAccessClient
+{
+    Task<bool> HasStreamAccessAsync(Guid eventId, Guid userId);
+}

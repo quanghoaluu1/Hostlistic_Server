@@ -1,4 +1,5 @@
 using BookingService_Domain.Entities;
+using BookingService_Domain.Enum;
 using BookingService_Domain.Interfaces;
 using BookingService_Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -30,9 +31,22 @@ public class TicketRepository : ITicketRepository
     }
     public async Task<Ticket?> GetTicketByCodeAsync(string ticketCode)
     {
+        var normalizedTicketCode = NormalizeTicketCode(ticketCode);
         return await _context.Tickets
             .Include(t => t.Order)
-            .FirstOrDefaultAsync(t => t.TicketCode == ticketCode);
+            .FirstOrDefaultAsync(t =>
+                t.TicketCode.ToUpper().Replace("-", "").Replace(" ", "") == normalizedTicketCode);
+    }
+
+    public async Task<bool> HasConfirmedAccessToEventAsync(Guid eventId, Guid userId)
+    {
+        return await _context.Tickets
+            .AsNoTracking()
+            .AnyAsync(t =>
+                t.Order != null &&
+                t.Order.EventId == eventId &&
+                t.Order.UserId == userId &&
+                t.Order.Status == OrderStatus.Confirmed);
     }
 
     public async Task<IEnumerable<Ticket>> GetTicketsByOrderIdAsync(Guid orderId)
@@ -93,5 +107,14 @@ public class TicketRepository : ITicketRepository
     private string GenerateTicketCode()
     {
         return $"TKT-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString()[..8].ToUpper()}";
+    }
+
+    private static string NormalizeTicketCode(string? value)
+    {
+        return (value ?? string.Empty)
+            .Trim()
+            .ToUpperInvariant()
+            .Replace("-", "")
+            .Replace(" ", "");
     }
 }

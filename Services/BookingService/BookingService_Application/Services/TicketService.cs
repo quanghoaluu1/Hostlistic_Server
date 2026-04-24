@@ -39,6 +39,18 @@ public class TicketService : ITicketService
         return ApiResponse<TicketDto>.Success(200, "Ticket retrieved successfully", ticketDto);
     }
 
+    public async Task<ApiResponse<bool>> CheckStreamAccessAsync(Guid eventId, Guid userId)
+    {
+        if (eventId == Guid.Empty)
+            return ApiResponse<bool>.Fail(400, "Event id is required.");
+
+        if (userId == Guid.Empty)
+            return ApiResponse<bool>.Fail(400, "User id is required.");
+
+        var hasAccess = await _ticketRepository.HasConfirmedAccessToEventAsync(eventId, userId);
+        return ApiResponse<bool>.Success(200, "Stream access evaluated successfully.", hasAccess);
+    }
+
     public async Task<ApiResponse<GuestLiveAccessTicketDto>> ValidateGuestLiveAccessAsync(ValidateGuestLiveAccessRequest request)
     {
         if (request.EventId == Guid.Empty)
@@ -47,7 +59,7 @@ public class TicketService : ITicketService
         if (string.IsNullOrWhiteSpace(request.TicketCode))
             return ApiResponse<GuestLiveAccessTicketDto>.Fail(400, "Ticket code is required.");
 
-        var normalizedTicketCode = request.TicketCode.Trim().ToUpperInvariant();
+        var normalizedTicketCode = NormalizeTicketCode(request.TicketCode);
         var ticket = await _ticketRepository.GetTicketByCodeAsync(normalizedTicketCode);
         if (ticket == null)
             return ApiResponse<GuestLiveAccessTicketDto>.Fail(404, "Ticket not found.");
@@ -134,5 +146,14 @@ public class TicketService : ITicketService
 
         await _ticketRepository.SaveChangesAsync();
         return ApiResponse<bool>.Success(200, "Ticket deleted successfully", true);
+    }
+
+    private static string NormalizeTicketCode(string? value)
+    {
+        return (value ?? string.Empty)
+            .Trim()
+            .ToUpperInvariant()
+            .Replace("-", "")
+            .Replace(" ", "");
     }
 }

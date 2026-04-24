@@ -16,6 +16,7 @@ public class EventService(
     ISessionService sessionService,
     IEventTeamMemberRepository eventTeamMemberRepository,
     IUserPlanServiceClient userPlanServiceClient,
+    IBookingAccessClient bookingAccessClient,
     IEventDayService eventDayService,
     ILogger<EventService> logger) : IEventService
 {
@@ -474,33 +475,46 @@ public class EventService(
         }
 
         // Determine User Role
-        string role = "Attendee";
         if (eventEntity.OrganizerId == userId)
         {
-            role = "Organizer";
+            return ApiResponse<StreamAuthResponseDto>.Success(200, "Success", new StreamAuthResponseDto
+            {
+                IsAllowed = true,
+                Role = "Organizer",
+                ErrorMessage = null
+            });
         }
-        else
-        {
-            // Note: Since IQueryable might not support async without EF Core using, we evaluate synchronously or rely on existing repository methods if available.
-            // Using synchronous FirstOrDefault for safe IQueryable materialization if EF Core using is missing.
-            var teamMembers = eventTeamMemberRepository.GetQueryableByUserId(userId).Where(m => m.EventId == eventId).ToList();
-            var member = teamMembers.FirstOrDefault(m => m.Status == EventMemberStatus.Active);
 
-            if (member != null)
+        // Note: Since IQueryable might not support async without EF Core using, we evaluate synchronously or rely on existing repository methods if available.
+        // Using synchronous FirstOrDefault for safe IQueryable materialization if EF Core using is missing.
+        var teamMembers = eventTeamMemberRepository.GetQueryableByUserId(userId).Where(m => m.EventId == eventId).ToList();
+        var member = teamMembers.FirstOrDefault(m => m.Status == EventMemberStatus.Active);
+
+        if (member != null)
+        {
+            return ApiResponse<StreamAuthResponseDto>.Success(200, "Success", new StreamAuthResponseDto
             {
-                role = member.Role.ToString();
-            }
-            else
+                IsAllowed = true,
+                Role = member.Role.ToString(),
+                ErrorMessage = null
+            });
+        }
+
+        var hasTicketAccess = await bookingAccessClient.HasStreamAccessAsync(eventId, userId);
+        if (!hasTicketAccess)
+        {
+            return ApiResponse<StreamAuthResponseDto>.Success(200, "Access denied", new StreamAuthResponseDto
             {
-                // In a complete implementation, check EventRegistration/Ticket module here
-                role = "Attendee";
-            }
+                IsAllowed = false,
+                Role = "None",
+                ErrorMessage = "You need a confirmed ticket for this event before joining the livestream."
+            });
         }
 
         return ApiResponse<StreamAuthResponseDto>.Success(200, "Success", new StreamAuthResponseDto
         {
             IsAllowed = true,
-            Role = role,
+            Role = "Attendee",
             ErrorMessage = null
         });
     }
