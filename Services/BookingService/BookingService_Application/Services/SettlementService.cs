@@ -1,4 +1,4 @@
-﻿using BookingService_Application.DTOs;
+using BookingService_Application.DTOs;
 using BookingService_Application.Interfaces;
 using BookingService_Domain.Entities;
 using BookingService_Domain.Enum;
@@ -27,19 +27,33 @@ public class SettlementService(
     {
         var settleEventIds = await settlementRepository.GetEventIds();
         var orderQueryable = orderRepository.GetOrderQueryable();
-        var unsettleEvents = await orderQueryable.AsNoTracking()
+        var unsettleEventsData = await orderQueryable.AsNoTracking()
             .Where(o => o.Status == OrderStatus.Confirmed && !settleEventIds.Contains(o.EventId))
             .GroupBy(o => new {o.EventId})
-            .Select(g => new UnsettledEventDto
+            .Select(g => new 
             {
                 EventId = g.Key.EventId,
-                OrganizerId = eventServiceClient.GetEventSettlementInfoAsync(g.Key.EventId).Result.OrganizerId,
-                EventTitle = eventServiceClient.GetEventSettlementInfoAsync(g.Key.EventId).Result.Title,
-                GrossRevenue = g.SelectMany(o => o.OrderDetails).Sum(od => od.UnitPrice * od.Quantity),
+                GrossRevenue = g.SelectMany(o => o.OrderDetails).Sum(od => (decimal?)(od.UnitPrice * od.Quantity)) ?? 0,
                 TotalOrders = g.Count(),
-                TotalTicketsSold = g.SelectMany(o => o.OrderDetails).Sum(od => od.Quantity),
+                TotalTicketsSold = g.SelectMany(o => o.OrderDetails).Sum(od => (int?)od.Quantity) ?? 0,
             })
             .ToListAsync(ct);
+
+        var unsettleEvents = new List<UnsettledEventDto>();
+        foreach (var data in unsettleEventsData)
+        {
+            var eventInfo = await eventServiceClient.GetEventSettlementInfoAsync(data.EventId);
+            unsettleEvents.Add(new UnsettledEventDto
+            {
+                EventId = data.EventId,
+                OrganizerId = eventInfo?.OrganizerId ?? Guid.Empty,
+                EventTitle = eventInfo?.Title ?? string.Empty,
+                GrossRevenue = data.GrossRevenue,
+                TotalOrders = data.TotalOrders,
+                TotalTicketsSold = data.TotalTicketsSold,
+            });
+        }
+
         var pendingSettlement = await settlementRepository.GetByStatusAsync(SettlementStatus.Pending);
         var result = pendingSettlement.Select(s => s.Adapt<EventSettlementDto>()).ToList();
         return ApiResponse<List<UnsettledEventDto>>.Success(200, "Pending settlements retrieved successfully", unsettleEvents);
