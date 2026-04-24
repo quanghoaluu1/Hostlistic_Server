@@ -309,4 +309,37 @@ public class AiContentController(IAiContentService aiContentService, ILogger<AiC
             });
         }
     }
-}
+
+    [HttpGet("events/{eventId:guid}/report")]
+    [Authorize]
+    [ProducesResponseType(typeof(ApiResponse<AiContentResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetPostEventReport(
+        [FromRoute] Guid eventId,
+        CancellationToken ct)
+    {
+        try
+        {
+            var result = await aiContentService.GetPostEventReportAsync(eventId, ct);
+
+            if (!result.IsSuccess)
+                return StatusCode(result.StatusCode, result);
+
+            return Ok(result);
+        }
+        catch (OperationCanceledException)
+        {
+            return StatusCode(499, new { error = "Request cancelled by client." });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex,
+                "Unexpected error retrieving post-event report for event {EventId}", eventId);
+            return StatusCode(500, new
+            {
+                error = "An unexpected error occurred while retrieving the report."
+            });
+        }
+    }
+}

@@ -15,7 +15,8 @@ public class UsageTests
     private readonly IPromptTemplateEngine _promptTemplateEngine = Substitute.For<IPromptTemplateEngine>();
     private readonly IEventServiceClient _eventServiceClient = Substitute.For<IEventServiceClient>();
     private readonly ILogger<AiContentService> _logger = Substitute.For<ILogger<AiContentService>>();
-
+    private readonly IAiDataAggregationService _aiDataAggregationService = Substitute.For<IAiDataAggregationService>();
+    
     private readonly AiContentService _sut;
 
     public UsageTests()
@@ -27,6 +28,7 @@ public class UsageTests
             _promptTemplateRepository,
             _promptTemplateEngine,
             _eventServiceClient,
+            _aiDataAggregationService,
             _logger);
     }
 

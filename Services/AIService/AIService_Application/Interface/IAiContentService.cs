@@ -34,5 +34,13 @@ public interface IAiContentService
         Guid organizerId,
         CancellationToken ct = default);
 
+    /// <summary>
+    /// Returns the most recently generated post-event report for <paramref name="eventId"/>.
+    /// Returns 404 when no completed report exists yet.
+    /// </summary>
+    Task<ApiResponse<AiContentResponse>> GetPostEventReportAsync(
+        Guid eventId,
+        CancellationToken ct = default);
+
     Task<ApiResponse<List<TokenChartDto>>> GetAIToken();
 }
