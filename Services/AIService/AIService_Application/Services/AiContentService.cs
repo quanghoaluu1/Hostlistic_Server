@@ -817,6 +817,44 @@ public partial class AiContentService(
         }
     }
 
+    public async Task<ApiResponse<AiContentResponse>> GetPostEventReportAsync(
+        Guid eventId,
+        CancellationToken ct = default)
+    {
+        var aiRequest = await aiRequestRepository.GetLatestCompletedByTypeAsync(
+            eventId, AiRequestType.GeneratePostEventReport, ct);
+
+        if (aiRequest is null)
+            return ApiResponse<AiContentResponse>.Fail(404,
+                "No completed post-event report found for this event. Generate one first.");
+
+        var content = aiRequest.GeneratedContents?
+            .OrderByDescending(c => c.CreatedAt)
+            .FirstOrDefault();
+
+        if (content is null)
+            return ApiResponse<AiContentResponse>.Fail(404,
+                "Report request exists but no content was saved.");
+
+        var response = new AiContentResponse
+        {
+            RequestId  = aiRequest.Id,
+            ContentId  = content.Id,
+            HtmlContent  = content.HtmlContent,
+            PlainContent = content.PlainContent,
+            IsAiGenerated = true,
+            Metadata = new AiMetadataDto
+            {
+                Model            = content.Model,
+                PromptTokens     = content.PromptTokens,
+                CompletionTokens = content.CompletionTokens,
+                LatencyMs        = content.LatencyMs,
+            }
+        };
+
+        return ApiResponse<AiContentResponse>.Success(200, "Post-event report retrieved successfully", response);
+    }
+
     /// <summary>
     /// Flattens the complex <see cref="EventExecutiveSummaryDataDto"/> into a flat
     /// string dictionary that can be injected directly into a Handlebars-style prompt template.
@@ -888,6 +926,7 @@ public partial class AiContentService(
         };
     }
 
+    
     private static string StripHtmlTags(string html)
     {
         var text = Regex.Replace(html, @"<br\s*/?>", "\n");
