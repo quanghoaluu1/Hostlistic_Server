@@ -1,4 +1,4 @@
-﻿using System.Net.Http.Json;
+using System.Net.Http.Json;
 using Common;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -7,7 +7,7 @@ using NotificationService_Application.Interfaces;
 
 namespace NotificationService_Infrastructure.ServiceClients;
 
-public class BookingServiceClient(IHttpClientFactory httpClientFactory, ILogger<EventServiceClient> logger) : IBookingServiceClient
+public class BookingServiceClient(IHttpClientFactory httpClientFactory, IHttpContextAccessor httpContextAccessor, ILogger<EventServiceClient> logger) : IBookingServiceClient
 {
     public async Task<List<EmailRecipientDto>> GetEmailRecipientsAsync(
         Guid eventId,
@@ -20,6 +20,7 @@ public class BookingServiceClient(IHttpClientFactory httpClientFactory, ILogger<
         {
             var queryParams = new List<KeyValuePair<string, string?>>
             {
+                new("eventId", eventId.ToString()),
                 new("recipientGroup", recipientGroup.ToString())
             };
 
@@ -32,10 +33,11 @@ public class BookingServiceClient(IHttpClientFactory httpClientFactory, ILogger<
                     new KeyValuePair<string, string?>("specificUserIds", id.ToString())));
 
             var qs = QueryString.Create(queryParams);
-            var url = $"api/attendees/events/{eventId}/email-recipients{qs}";
+            var url = $"/email-recipients{qs}";
 
-            var response = await httpClientFactory.CreateClient("BookingService")
-                .GetFromJsonAsync<ApiResponse<List<EmailRecipientDto>>>(url, ct);
+            var client = httpClientFactory.CreateClient("BookingService");
+            ForwardAuthorizationHeader(client);
+            var response = await client.GetFromJsonAsync<ApiResponse<List<EmailRecipientDto>>>(url, ct);
 
             return response?.IsSuccess == true ? response.Data ?? [] : [];
         }
@@ -44,6 +46,16 @@ public class BookingServiceClient(IHttpClientFactory httpClientFactory, ILogger<
             logger.LogError(ex,
                 "Failed to get email recipients for event {EventId}", eventId);
             return [];
+        }
+    }
+    
+    private void ForwardAuthorizationHeader(HttpClient client)
+    {
+        var authHeader = httpContextAccessor.HttpContext?.Request.Headers.Authorization.ToString();
+        if (!string.IsNullOrWhiteSpace(authHeader))
+        {
+            client.DefaultRequestHeaders.Remove("Authorization");
+            client.DefaultRequestHeaders.Add("Authorization", authHeader);
         }
     }
 }

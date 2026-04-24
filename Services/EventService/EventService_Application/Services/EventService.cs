@@ -538,4 +538,17 @@ public class EventService(
         await eventRepository.UpdateEventStatus(eventEntity);
         return ApiResponse<bool>.Success(200, "Event status updated successfully", true);
     }
+    public async Task<ApiResponse<PagedResult<EventResponseDto>>> GetPostponedEventsAsync(BaseQueryParams request)
+    {
+        var query = eventRepository.GetQueryable()
+            .Where(e => e.EventStatus == EventStatus.Postponed);
+
+        query = query.ApplySorting(request.SortBy);
+
+        var paged = await query.ToPagedResultAsync(request.Page, request.PageSize);
+        var responseDtos = paged.Items.Adapt<List<EventResponseDto>>();
+        
+        var result = new PagedResult<EventResponseDto>(responseDtos, paged.TotalItems, paged.CurrentPage, paged.PageSize);
+        return ApiResponse<PagedResult<EventResponseDto>>.Success(200, "Postponed events retrieved successfully", result);
+    }
 }

@@ -3,6 +3,7 @@ using AIService_Api.Extensions;
 using AIService_Application.Interface;
 using AIService_Application.Services;
 using AIService_Infrastructure.Data;
+using AIService_Infrastructure.ServiceClients;
 using Common;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -45,6 +46,17 @@ builder.Services.AddHttpClient("IdentityService", client =>
     client.BaseAddress = new Uri(identityServiceUrl.TrimEnd('/'));
     client.Timeout = TimeSpan.FromSeconds(15);
 });
+
+var bookingServiceUrl = builder.Configuration["ServiceUrls:BookingService"];
+if (string.IsNullOrWhiteSpace(bookingServiceUrl))
+    bookingServiceUrl = "http://localhost:5077";
+
+builder.Services.AddHttpClient<IBookingServiceClient, BookingServiceClient>(client =>
+{
+    client.BaseAddress = new Uri(bookingServiceUrl.TrimEnd('/'));
+    client.Timeout = TimeSpan.FromSeconds(15);
+});
+
 
 builder.Services.AddCors(options =>
 {

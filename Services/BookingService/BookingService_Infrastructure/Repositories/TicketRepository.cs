@@ -99,6 +99,15 @@ public class TicketRepository : ITicketRepository
             .ToListAsync();
     }
 
+    public async Task<List<Ticket>> GetTicketsByEventAndPostponementStatusAsync(Guid eventId, BookingService_Domain.Enum.PostponementStatus status)
+    {
+        return await _context.Tickets
+            .Include(t => t.Order)
+            .Include(t => t.Order.OrderDetails) // need order details for unit price
+            .Where(t => t.Order.EventId == eventId && t.PostponementStatus == status)
+            .ToListAsync();
+    }
+
     public async Task SaveChangesAsync()
     {
         await _context.SaveChangesAsync();

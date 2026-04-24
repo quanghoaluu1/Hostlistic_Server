@@ -1,4 +1,5 @@
 using AIService_Domain.Entities;
+using AIService_Domain.Enum;
 using AIService_Domain.Interfaces;
 using AIService_Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -21,6 +22,20 @@ public class AiRequestRepository(AIServiceDbContext dbContext) : IAiRequestRepos
             .Include(r => r.GeneratedContents)
             .OrderByDescending(r => r.CreatedAt)
             .ToListAsync(ct);
+    }
+
+    public async Task<AiRequest?> GetLatestCompletedByTypeAsync(
+        Guid eventId,
+        AiRequestType requestType,
+        CancellationToken ct = default)
+    {
+        return await dbContext.AiRequests
+            .Where(r => r.EventId == eventId
+                     && r.RequestType == requestType
+                     && r.Status == AiRequestStatus.Completed)
+            .Include(r => r.GeneratedContents)
+            .OrderByDescending(r => r.CompletedAt)
+            .FirstOrDefaultAsync(ct);
     }
 
     public AiRequest Add(AiRequest request)

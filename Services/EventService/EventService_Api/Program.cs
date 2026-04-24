@@ -3,7 +3,10 @@ using EventService_Api;
 using EventService_Api.Consumers;
 using EventService_Api.Extensions;
 using EventService_Api.Hubs;
+using EventService_Api.Validator;
 using EventService_Infrastructure.Data;
+using FluentValidation;
+using FluentValidation.AspNetCore;
 using Mapster;
 using MassTransit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -50,8 +53,8 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
         return new BadRequestObjectResult(response);
     };
 });
-// builder.Services.AddValidatorsFromAssemblyContaining<CreateEventValidator>();
-// builder.Services.AddFluentValidationAutoValidation();   
+builder.Services.AddValidatorsFromAssemblyContaining<PostponeEventValidator>();
+// builder.Services.AddFluentValidationAutoValidation();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi(options =>
 {

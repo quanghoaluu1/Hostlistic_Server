@@ -390,6 +390,9 @@ namespace BookingService_Infrastructure.Migrations
                     b.Property<Guid>("OrderId")
                         .HasColumnType("uuid");
 
+                    b.Property<int?>("PostponementStatus")
+                        .HasColumnType("integer");
+
                     b.Property<string>("QrCodeUrl")
                         .IsRequired()
                         .HasColumnType("text");

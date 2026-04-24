@@ -10,6 +10,11 @@ public class AttendeeListRequest
     public bool? IsCheckedIn { get; set; }
     public string SortBy { get; set; } = "orderDate";
     public string SortOrder { get; set; } = "desc";
+    /// <summary>
+    /// Optional filter: only return attendees who have at least one ticket with this postponement status.
+    /// Example: PostponementStatus=RefundRequested returns only attendees who want a refund.
+    /// </summary>
+    public BookingService_Domain.Enum.PostponementStatus? PostponementStatus { get; set; }
 }
 
 // Individual attendee (one per Order, since one user = one order per purchase)
@@ -37,6 +42,7 @@ public class AttendeeTicketDto
     public string? HolderName { get; set; }
     public string? HolderEmail { get; set; }
     public string? HolderPhone { get; set; }
+    public BookingService_Domain.Enum.PostponementStatus? PostponementStatus { get; set; }
 }
 
 // Paged response

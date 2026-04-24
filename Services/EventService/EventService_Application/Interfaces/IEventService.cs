@@ -19,9 +19,5 @@ public interface IEventService
     Task<ApiResponse<StreamAuthResponseDto>> VerifyStreamAccessAsync(Guid eventId, Guid userId);
     Task<ApiResponse<object>> GetEventDashboardAsync(int? year, int? month);
     Task<ApiResponse<bool>> UpdateEventStatus(Guid eventId);
-}
-
-public interface IBookingAccessClient
-{
-    Task<bool> HasStreamAccessAsync(Guid eventId, Guid userId);
+    Task<ApiResponse<PagedResult<EventResponseDto>>> GetPostponedEventsAsync(BaseQueryParams request);
 }

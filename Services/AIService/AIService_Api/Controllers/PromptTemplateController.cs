@@ -13,7 +13,7 @@ namespace AIService_Api.Controllers;
 [Route("api/prompt-templates")]
 [Produces("application/json")]
 [Authorize]
-[ServiceFilter(typeof(RequireAiSubscriptionFilter))]
+// [ServiceFilter(typeof(RequireAiSubscriptionFilter))]
 public class PromptTemplateController(
     IPromptTemplateService promptTemplateService,
     ILogger<PromptTemplateController> logger) : ControllerBase

@@ -3,7 +3,7 @@ using AIService_Application.Services;
 using AIService_Api.Filters;
 using AIService_Domain.Interfaces;
 using AIService_Infrastructure.Repositories;
-using AIService_Infrastructure.ServiceClients; // UserPlanServiceClient
+using AIService_Infrastructure.ServiceClients; // UserPlanServiceClient, BookingServiceClient
 
 namespace AIService_Api.Extensions;
 
@@ -23,6 +23,12 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUserPlanServiceClient, UserPlanServiceClient>();
         services.AddScoped<IAiPlanEntitlementService, AiPlanEntitlementService>();
         services.AddScoped<RequireAiSubscriptionFilter>();
+
+        // Post-event summary: BookingService client (HttpClient registered in Program.cs)
+        services.AddScoped<IBookingServiceClient, BookingServiceClient>();
+
+        // Post-event summary: data aggregation (no LLM dependency)
+        services.AddScoped<IAiDataAggregationService, AiDataAggregationService>();
 
         return services;
     }

@@ -41,6 +41,12 @@ public class AttendeeService(BookingServiceDbContext dbContext) : IAttendeeServi
                 : query.Where(o => o.Tickets.All(t => !t.IsUsed));
         }
 
+        if (request.PostponementStatus.HasValue)
+        {
+            var status = request.PostponementStatus.Value;
+            query = query.Where(o => o.Tickets.Any(t => t.PostponementStatus == status));
+        }
+
         query = (request.SortBy.ToLower(), request.SortOrder.ToLower()) switch
         {
             ("buyername", "asc") => query.OrderBy(o => o.BuyerName),
@@ -73,7 +79,8 @@ public class AttendeeService(BookingServiceDbContext dbContext) : IAttendeeServi
                     IsUsed = t.IsUsed,
                     HolderName = t.HolderName,
                     HolderEmail = t.HolderEmail,
-                    HolderPhone = t.HolderPhone
+                    HolderPhone = t.HolderPhone,
+                    PostponementStatus = t.PostponementStatus
                 }).ToList()
             })
             .ToListAsync(ct);

@@ -245,9 +245,13 @@ public class EventServiceDbContext : DbContext
         modelBuilder.Entity<TicketType>(entity =>
         {
             entity.HasKey(e => e.Id);
-            
+
             entity.Property(e => e.Price)
                 .HasPrecision(18, 2);
+
+            entity.Property(e => e.AllowedTrackIds)
+                .HasColumnType("uuid[]")
+                .HasDefaultValueSql("'{}'::uuid[]");
         });
 
         // Sponsor configuration

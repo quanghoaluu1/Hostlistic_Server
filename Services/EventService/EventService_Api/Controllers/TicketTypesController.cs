@@ -4,6 +4,8 @@ using EventService_Application.Interfaces;
 using EventService_Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
+using Common;
 
 namespace EventService_Api.Controllers;
 
@@ -56,8 +58,12 @@ public class TicketTypesController(ITicketTypeService ticketTypeService) : Contr
     [RequireEventPermission(EventPermissions.ManageTickets)]
     public async Task<IActionResult> CreateTicketType(Guid eventId, [FromBody] CreateTicketTypeRequest request)
     {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!Guid.TryParse(userIdClaim, out var userId))
+            return Unauthorized(ApiResponse<TicketTypeDto>.Fail(401, "User ID not found"));
+
         request.EventId = eventId;
-        var result = await ticketTypeService.CreateTicketTypeAsync(request);
+        var result = await ticketTypeService.CreateTicketTypeAsync(request, userId);
         if (!result.IsSuccess) return BadRequest(result);
         return CreatedAtAction(
             nameof(GetTicketTypeById),

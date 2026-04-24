@@ -12,11 +12,22 @@ public class TicketService : ITicketService
 {
     private readonly ITicketRepository _ticketRepository;
     private readonly IQrCodeService _qrCodeService;
+    private readonly IWalletRepository _walletRepository;
+    private readonly ITransactionRepository _transactionRepository;
+    private readonly IUnitOfWork _unitOfWork;
 
-    public TicketService(ITicketRepository ticketRepository, IQrCodeService qrCodeService)
+    public TicketService(
+        ITicketRepository ticketRepository,
+        IQrCodeService qrCodeService,
+        IWalletRepository walletRepository,
+        ITransactionRepository transactionRepository,
+        IUnitOfWork unitOfWork)
     {
         _ticketRepository = ticketRepository;
         _qrCodeService = qrCodeService;
+        _walletRepository = walletRepository;
+        _transactionRepository = transactionRepository;
+        _unitOfWork = unitOfWork;
     }
 
     public async Task<ApiResponse<TicketDto>> GetTicketByIdAsync(Guid ticketId)
@@ -155,5 +166,127 @@ public class TicketService : ITicketService
             .ToUpperInvariant()
             .Replace("-", "")
             .Replace(" ", "");
+    }
+
+    public async Task<ApiResponse<TicketDto>> ProcessPostponementDecisionAsync(Guid ticketId, PostponementDecision decision, Guid callerUserId)
+    {
+        var existingTicket = await _ticketRepository.GetTicketByIdAsync(ticketId);
+        if (existingTicket == null)
+            return ApiResponse<TicketDto>.Fail(404, "Ticket not found");
+
+        // GAP-B4: Ownership check — only the ticket's buyer may submit a decision
+        if (existingTicket.Order.UserId != callerUserId)
+            return ApiResponse<TicketDto>.Fail(403, "You are not authorized to submit a decision for this ticket.");
+
+        if (existingTicket.PostponementStatus != PostponementStatus.PendingDecision)
+            return ApiResponse<TicketDto>.Fail(400, "Ticket is not pending a postponement decision");
+
+        existingTicket.PostponementStatus = decision == PostponementDecision.Accept
+            ? PostponementStatus.Accepted
+            : PostponementStatus.RefundRequested;
+
+        await _ticketRepository.UpdateTicketAsync(existingTicket);
+        await _ticketRepository.SaveChangesAsync();
+
+        var ticketDto = existingTicket.Adapt<TicketDto>();
+        return ApiResponse<TicketDto>.Success(200, "Postponement decision processed successfully", ticketDto);
+    }
+
+    public async Task<ApiResponse<int>> ProcessRefundsForPostponedEventAsync(Guid eventId)
+    {
+        var ticketsToRefund = await _ticketRepository
+            .GetTicketsByEventAndPostponementStatusAsync(eventId, PostponementStatus.RefundRequested);
+
+        if (!ticketsToRefund.Any())
+            return ApiResponse<int>.Success(200, "No refunds to process.", 0);
+
+        int processedCount = 0;
+        int skippedCount   = 0;
+
+        foreach (var ticket in ticketsToRefund)
+        {
+            // ── Step a: Resolve refund amount from OrderDetails ─────────────────
+            var orderDetail = ticket.Order.OrderDetails
+                .FirstOrDefault(od => od.TicketTypeId == ticket.TicketTypeId);
+            decimal refundAmount = orderDetail?.UnitPrice ?? 0m;
+
+            if (refundAmount <= 0m)
+            {
+                // Free ticket fast-path: no wallet involved — safe to commit in isolation
+                await using var freeTx = await _unitOfWork.BeginTransactionAsync();
+                try
+                {
+                    ticket.PostponementStatus = PostponementStatus.Refunded;
+                    await _ticketRepository.UpdateTicketAsync(ticket);
+                    await _unitOfWork.SaveChangesAsync();
+                    await freeTx.CommitAsync();
+                    processedCount++;
+                }
+                catch
+                {
+                    await freeTx.RollbackAsync();
+                    skippedCount++;
+                }
+                continue;
+            }
+
+            // ── Step b: Retrieve the user's wallet ──────────────────────────────
+            var wallet = await _walletRepository.GetWalletByUserIdAsync(ticket.Order.UserId);
+            if (wallet == null)
+            {
+                // Cannot refund — no wallet found. Skip and allow retry later.
+                skippedCount++;
+                continue;
+            }
+
+            // ── Atomic block: wallet credit + ledger + ticket status ────────────
+            // All three mutations share one DB transaction. If any step throws,
+            // the entire transaction rolls back — ticket stays RefundRequested
+            // and will be retried on the next admin call (no double-credit risk).
+            await using var tx = await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+                // Step b: Increase wallet balance
+                wallet.Balance += refundAmount;
+                await _walletRepository.UpdateWalletAsync(wallet);
+
+                // Step c & d: Write Transaction ledger record
+                var ledgerEntry = new Transaction
+                {
+                    WalletId      = wallet.Id,
+                    Type          = TransactionType.Refund,
+                    Amount        = refundAmount,
+                    PlatformFee   = 0m,
+                    NetAmount     = refundAmount,
+                    BalanceAfter  = wallet.Balance,
+                    ReferenceId   = ticket.OrderId,
+                    ReferenceType = "Order",
+                    Status        = TransactionStatus.Completed,
+                    Description   = $"Refund for postponed event — ticket {ticket.TicketCode}",
+                };
+                await _transactionRepository.AddAsync(ledgerEntry);
+
+                // Step e: Soft-mark ticket as Refunded (NO hard delete)
+                ticket.PostponementStatus = PostponementStatus.Refunded;
+                await _ticketRepository.UpdateTicketAsync(ticket);
+
+                // Single atomic commit for wallet + ledger + ticket
+                await _unitOfWork.SaveChangesAsync();
+                await tx.CommitAsync();
+
+                processedCount++;
+            }
+            catch (Exception)
+            {
+                await tx.RollbackAsync();
+                skippedCount++;
+            }
+        }
+
+        var message = skippedCount > 0
+            ? $"Processed {processedCount} refund(s). Skipped {skippedCount} ticket(s) — wallet not found or error during processing."
+            : $"Successfully processed {processedCount} refund(s) and updated ticket statuses to Refunded.";
+
+        return ApiResponse<int>.Success(200, message, processedCount);
     }
 }
