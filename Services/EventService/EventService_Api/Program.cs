@@ -162,6 +162,12 @@ builder.Services.AddHttpClient("IdentityService", client =>
     client.BaseAddress = new Uri(identityServiceUrl.TrimEnd('/'));
 });
 
+var bookingServiceUrl = builder.Configuration["ServiceUrls:BookingService"] ?? "http://localhost:5077";
+builder.Services.AddHttpClient("BookingService", client =>
+{
+    client.BaseAddress = new Uri(bookingServiceUrl.TrimEnd('/'));
+});
+
 builder.Services.AddHealthChecks();
 var app = builder.Build();
 

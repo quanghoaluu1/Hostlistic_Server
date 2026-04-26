@@ -83,6 +83,40 @@ public class TicketServiceTest
     }
 
     [Fact]
+    public async Task CheckStreamAccessAsync_WhenUserHasConfirmedTicket_ReturnsTrue()
+    {
+        var eventId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        _ticketRepository.HasConfirmedAccessToEventAsync(eventId, userId).Returns(true);
+
+        var result = await _sut.CheckStreamAccessAsync(eventId, userId);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Data.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task ValidateGuestLiveAccessAsync_NormalizesTicketCodeBeforeLookup()
+    {
+        var eventId = Guid.NewGuid();
+        var request = new ValidateGuestLiveAccessRequest
+        {
+            EventId = eventId,
+            TicketCode = " tkt-20260413-abcd1234 "
+        };
+
+        var ticket = TicketBuilder.CreateEntity(eventId: eventId, code: "TKT-20260413-ABCD1234");
+        ticket.Order.Status = OrderStatus.Confirmed;
+        _ticketRepository.GetTicketByCodeAsync("TKT20260413ABCD1234").Returns(ticket);
+
+        var result = await _sut.ValidateGuestLiveAccessAsync(request);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Data.Should().NotBeNull();
+        result.Data!.TicketCode.Should().Be("TKT-20260413-ABCD1234");
+    }
+
+    [Fact]
     public async Task GetTicketsByOrderIdAsync_ReturnsSuccess200WithCollection()
     {
         var orderId = Guid.NewGuid();
