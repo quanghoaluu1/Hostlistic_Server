@@ -17,6 +17,7 @@ public class Ticket
     public string? HolderEmail { get; set; }
     public string? HolderPhone { get; set; }
     public bool IsUsed { get; set; } = false;
+    public bool IsCancelled { get; set; } = false;
     public PostponementStatus? PostponementStatus { get; set; }
     
     // Navigation property to parent

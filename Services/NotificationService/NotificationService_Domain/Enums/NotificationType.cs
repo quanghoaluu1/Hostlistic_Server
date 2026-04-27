@@ -5,5 +5,6 @@ public enum NotificationType
     Email,
     PushNotification,
     TeamInvitation,
-    EventPostponement
+    EventPostponement,
+    EventCancellation
 }

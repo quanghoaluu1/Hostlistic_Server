@@ -1,4 +1,4 @@
-﻿namespace EventService_Application.IntegrationEvents;
+﻿namespace Common.Messages;
 
 
 public record EventCancelledIntegrationEvent(

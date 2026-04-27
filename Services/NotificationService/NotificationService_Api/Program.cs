@@ -148,6 +148,7 @@ builder.Services.AddMassTransit(x =>
     x.AddConsumer<BulkEmailConsumer>();
     x.AddConsumer<TeamMemberInvitedConsumer>();
     x.AddConsumer<EventPostponedConsumer>();
+    x.AddConsumer<EventCancelledConsumer>();
  
     x.UsingRabbitMq((context, cfg) =>
     {
