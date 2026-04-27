@@ -8,6 +8,7 @@ public interface ITicketService
 {
     Task<ApiResponse<TicketDto>> GetTicketByIdAsync(Guid ticketId);
     Task<ApiResponse<TicketDto>> GetTicketByCodeAsync(string ticketCode);
+    Task<ApiResponse<bool>> CheckStreamAccessAsync(Guid eventId, Guid userId);
     Task<ApiResponse<IEnumerable<TicketDto>>> GetTicketsByOrderIdAsync(Guid orderId);
     Task<ApiResponse<TicketDto>> CreateTicketAsync(CreateTicketRequest request);
     Task<ApiResponse<TicketDto>> UpdateTicketAsync(Guid ticketId, UpdateTicketRequest request);

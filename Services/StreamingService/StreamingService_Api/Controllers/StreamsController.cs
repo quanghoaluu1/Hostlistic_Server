@@ -340,104 +340,15 @@ public class StreamsController : ControllerBase
     }
 
     [HttpPost("rooms/{roomId}/recordings/upload")]
-    [RequestSizeLimit(long.MaxValue)]
-    [RequestFormLimits(MultipartBodyLengthLimit = long.MaxValue)]
-    public async Task<IActionResult> UploadRecording(
-        Guid roomId,
-        [FromServices] IRecordingStorageService recordingStorageService,
-        [FromForm] IFormFile file,
-        [FromForm] double? durationSeconds,
-        [FromForm] string? egressId,
-        CancellationToken cancellationToken
-    )
+    public IActionResult UploadRecording(Guid roomId)
     {
         if (!TryGetCurrentUserId(out _))
             return Unauthorized("Missing or invalid user claim.");
 
-        if (file == null || file.Length == 0)
-            return BadRequest(new { message = "Recording file is required." });
-
-        var room = await _dbContext.StreamRooms
-            .AsNoTracking()
-            .FirstOrDefaultAsync(r => r.Id == roomId, cancellationToken);
-
-        if (room == null)
-            return NotFound(new { message = "Stream room not found." });
-
-        if (!room.IsRecordEnabled)
-            return BadRequest(new { message = "Recording is disabled for this room." });
-
-        await using var fileStream = file.OpenReadStream();
-        var stored = await recordingStorageService.SaveAsync(
-            fileStream,
-            file.FileName,
-            room.EventId,
+        return StatusCode(StatusCodes.Status410Gone, new
+        {
             roomId,
-            cancellationToken
-        );
-
-        var recording = await _dbContext.StreamRecordings
-            .Where(r => r.StreamRoomId == roomId && r.Status == RecordingStatus.Processing)
-            .OrderByDescending(r => r.CreatedAt)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        if (recording == null)
-        {
-            // Idempotency: if uploader retries the same file for this room, update existing ready row.
-            recording = await _dbContext.StreamRecordings
-                .Where(r =>
-                    r.StreamRoomId == roomId &&
-                    r.Status == RecordingStatus.Ready &&
-                    r.FileSizeBytes == stored.FileSizeBytes &&
-                    r.FileName == stored.FileName)
-                .OrderByDescending(r => r.CreatedAt)
-                .FirstOrDefaultAsync(cancellationToken);
-        }
-
-        if (recording == null)
-        {
-            recording = new StreamRecording
-            {
-                Id = Guid.NewGuid(),
-                StreamRoomId = roomId,
-                CreatedAt = DateTime.UtcNow
-            };
-            _dbContext.StreamRecordings.Add(recording);
-        }
-
-        recording.FileName = stored.FileName;
-        recording.StorageUrl = BuildPublicRecordingUrl(stored.PlaybackUrl);
-        recording.FileSizeBytes = stored.FileSizeBytes;
-        recording.Duration = TimeSpan.FromSeconds(Math.Max(0, durationSeconds ?? 0));
-        recording.Status = RecordingStatus.Ready;
-        recording.EgressId = string.IsNullOrWhiteSpace(egressId) ? null : egressId;
-        recording.UpdatedAt = DateTime.UtcNow;
-
-        await _dbContext.SaveChangesAsync(cancellationToken);
-
-        await _hubContext.Clients
-            .Group(StreamingHub.BuildEventGroup(room.EventId.ToString()))
-            .SendAsync("RecordingUploaded", new
-            {
-                eventId = room.EventId,
-                roomId,
-                recordingId = recording.Id,
-                fileName = recording.FileName,
-                playbackUrl = BuildPublicRecordingUrl(recording.StorageUrl),
-                fileSizeBytes = recording.FileSizeBytes,
-                durationSeconds = recording.Duration.TotalSeconds,
-                createdAt = recording.CreatedAt
-            }, cancellationToken);
-
-        return Ok(new
-        {
-            id = recording.Id,
-            streamRoomId = recording.StreamRoomId,
-            fileName = recording.FileName,
-            playbackUrl = BuildPublicRecordingUrl(recording.StorageUrl),
-            fileSizeBytes = recording.FileSizeBytes,
-            durationSeconds = recording.Duration.TotalSeconds,
-            createdAt = recording.CreatedAt
+            message = "Browser-based recording upload is no longer supported. Recording files must be ingested by the configured server-side recording pipeline."
         });
     }
 

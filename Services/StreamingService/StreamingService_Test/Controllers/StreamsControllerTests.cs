@@ -139,38 +139,26 @@ public class StreamsControllerTests
     }
 
     [Fact]
-    public async Task UploadRecording_WhenRoomNotFound_ReturnsNotFound()
+    public async Task UploadRecording_WhenCalled_ReturnsGone()
     {
-        // Arrange
-        var file = Substitute.For<IFormFile>();
-        file.Length.Returns(100);
-
         // Act
-        var result = await _sut.UploadRecording(Guid.NewGuid(), Substitute.For<IRecordingStorageService>(), file, 10, null, CancellationToken.None);
+        var result = _sut.UploadRecording(Guid.NewGuid());
 
         // Assert
-        result.Should().BeOfType<NotFoundObjectResult>();
+        result.Should().BeOfType<ObjectResult>()
+            .Which.StatusCode.Should().Be(StatusCodes.Status410Gone);
     }
 
     [Fact]
-    public async Task UploadRecording_WhenDisabled_ReturnsBadRequest()
+    public void UploadRecording_WhenCalled_ReturnsMessageAboutServerSidePipeline()
     {
-        // Arrange
         var roomId = Guid.NewGuid();
-        var room = StreamRoomBuilder.CreateRoom(Guid.NewGuid(), "room-1");
-        room.Id = roomId;
-        room.IsRecordEnabled = false;
-
-        _dbContext.StreamRooms.Add(room);
-        await _dbContext.SaveChangesAsync(CancellationToken.None);
-        var file = Substitute.For<IFormFile>();
-        file.Length.Returns(100);
 
         // Act
-        var result = await _sut.UploadRecording(roomId, Substitute.For<IRecordingStorageService>(), file, 10, null, CancellationToken.None);
+        var result = _sut.UploadRecording(roomId);
 
         // Assert
-        result.Should().BeOfType<BadRequestObjectResult>()
-            .Which.Value.As<object>().ToString().Should().Contain("Recording is disabled");
+        result.Should().BeOfType<ObjectResult>()
+            .Which.Value.As<object>().ToString().Should().Contain("server-side recording pipeline");
     }
 }
