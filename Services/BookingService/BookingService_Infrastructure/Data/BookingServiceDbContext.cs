@@ -161,7 +161,7 @@ public class BookingServiceDbContext : DbContext
             entity.Property(e => e.Id).ValueGeneratedNever();
 
             entity.HasOne(e => e.Ticket)
-                .WithMany()
+                .WithMany(t => t.CheckIns)
                 .HasForeignKey(e => e.TicketId)
                 .OnDelete(DeleteBehavior.Restrict);
 
