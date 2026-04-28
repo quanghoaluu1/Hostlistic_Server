@@ -9,6 +9,7 @@ public class EventServiceTest
     private readonly ITrackService _trackService;
     private readonly ISessionService _sessionService;
     private readonly IEventTeamMemberRepository _eventTeamMemberRepository;
+    private readonly ITicketTypeRepository _ticketTypeRepository;
     private readonly IUserPlanServiceClient _userPlanServiceClient;
     private readonly IBookingAccessClient _bookingAccessClient;
     private readonly IEventDayService _eventDayService;
@@ -23,6 +24,7 @@ public class EventServiceTest
         _trackService = Substitute.For<ITrackService>();
         _sessionService = Substitute.For<ISessionService>();
         _eventTeamMemberRepository = Substitute.For<IEventTeamMemberRepository>();
+        _ticketTypeRepository = Substitute.For<ITicketTypeRepository>();
         _userPlanServiceClient = Substitute.For<IUserPlanServiceClient>();
         _bookingAccessClient = Substitute.For<IBookingAccessClient>();
         _eventDayService = Substitute.For<IEventDayService>();
@@ -33,6 +35,7 @@ public class EventServiceTest
             _trackService,
             _sessionService,
             _eventTeamMemberRepository,
+            _ticketTypeRepository,
             _userPlanServiceClient,
             _bookingAccessClient,
             _eventDayService,
@@ -434,7 +437,7 @@ public class EventServiceTest
 
         _eventRepository.GetEventByIdAsync(eventId).Returns(eventEntity);
         _eventTeamMemberRepository.GetQueryableByUserId(userId).Returns(new List<EventTeamMember>().AsQueryable());
-        _bookingAccessClient.HasStreamAccessAsync(eventId, userId).Returns(true);
+        _bookingAccessClient.GetStreamAccessAsync(eventId, userId).Returns(new BookingStreamAccessDto { HasAccess = true });
 
         var result = await _sut.VerifyStreamAccessAsync(eventId, userId);
 
@@ -455,7 +458,7 @@ public class EventServiceTest
 
         _eventRepository.GetEventByIdAsync(eventId).Returns(eventEntity);
         _eventTeamMemberRepository.GetQueryableByUserId(userId).Returns(new List<EventTeamMember>().AsQueryable());
-        _bookingAccessClient.HasStreamAccessAsync(eventId, userId).Returns(false);
+        _bookingAccessClient.GetStreamAccessAsync(eventId, userId).Returns(new BookingStreamAccessDto { HasAccess = false });
 
         var result = await _sut.VerifyStreamAccessAsync(eventId, userId);
 
@@ -463,6 +466,36 @@ public class EventServiceTest
         result.Data.Should().NotBeNull();
         result.Data!.IsAllowed.Should().BeFalse();
         result.Data.Role.Should().Be("None");
+    }
+
+    [Fact]
+    public async Task VerifyStreamAccessAsync_WhenTrackRestrictedAndTicketTypeNotAllowed_ReturnsDenied()
+    {
+        var eventId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var trackId = Guid.NewGuid();
+        var ticketTypeId = Guid.NewGuid();
+        var eventEntity = EventBuilder.CreateEvent(id: eventId);
+        eventEntity.EventMode = EventMode.Online;
+        eventEntity.StartDate = DateTime.UtcNow.AddMinutes(-10);
+
+        _eventRepository.GetEventByIdAsync(eventId).Returns(eventEntity);
+        _eventTeamMemberRepository.GetQueryableByUserId(userId).Returns(new List<EventTeamMember>().AsQueryable());
+        _bookingAccessClient.GetStreamAccessAsync(eventId, userId).Returns(new BookingStreamAccessDto
+        {
+            HasAccess = true,
+            TicketTypeIds = [ticketTypeId]
+        });
+        var restrictedTicketType = TicketTypeBuilder.CreateEntity(id: ticketTypeId, eventId: eventId, name: "VIP");
+        restrictedTicketType.UpdateStreamingBenefits(null, [Guid.NewGuid()]);
+        _ticketTypeRepository.GetTicketTypesByEventIdAsync(eventId).Returns(new List<TicketType> { restrictedTicketType });
+
+        var result = await _sut.VerifyStreamAccessAsync(eventId, userId, trackId);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Data.Should().NotBeNull();
+        result.Data!.IsAllowed.Should().BeFalse();
+        result.Data.ErrorMessage.Should().Be("Your ticket type is not allowed to access this track.");
     }
 
     #endregion

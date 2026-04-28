@@ -15,6 +15,7 @@ public class EventService(
     ITrackService trackService,
     ISessionService sessionService,
     IEventTeamMemberRepository eventTeamMemberRepository,
+    ITicketTypeRepository ticketTypeRepository,
     IUserPlanServiceClient userPlanServiceClient,
     IBookingAccessClient bookingAccessClient,
     IEventDayService eventDayService,
@@ -450,7 +451,7 @@ public class EventService(
 
         return (true, "OK", activePlan.SubscriptionPlan.MaxEvents, activePlan.SubscriptionPlan.MaxAttendeesPerEvent);
     }
-    public async Task<ApiResponse<StreamAuthResponseDto>> VerifyStreamAccessAsync(Guid eventId, Guid userId)
+    public async Task<ApiResponse<StreamAuthResponseDto>> VerifyStreamAccessAsync(Guid eventId, Guid userId, Guid? trackId = null)
     {
         var eventEntity = await eventRepository.GetEventByIdAsync(eventId);
         if (eventEntity == null)
@@ -500,20 +501,40 @@ public class EventService(
             });
         }
 
-        var hasTicketAccess = await bookingAccessClient.HasStreamAccessAsync(eventId, userId);
-        if (!hasTicketAccess)
-        {
-            return ApiResponse<StreamAuthResponseDto>.Success(200, "Access denied", new StreamAuthResponseDto
-            {
-                IsAllowed = false,
-                Role = "None",
-                ErrorMessage = "You need a confirmed ticket for this event before joining the livestream."
-            });
-        }
+          var access = await bookingAccessClient.GetStreamAccessAsync(eventId, userId);
+          if (!access.HasAccess)
+          {
+              return ApiResponse<StreamAuthResponseDto>.Success(200, "Access denied", new StreamAuthResponseDto
+              {
+                  IsAllowed = false,
+                  Role = "None",
+                  ErrorMessage = "You need a confirmed ticket for this event before joining the livestream."
+              });
+          }
 
-        return ApiResponse<StreamAuthResponseDto>.Success(200, "Success", new StreamAuthResponseDto
-        {
-            IsAllowed = true,
+          if (trackId.HasValue)
+          {
+              var ticketTypes = (await ticketTypeRepository.GetTicketTypesByEventIdAsync(eventId))
+                  .Where(ticketType => access.TicketTypeIds.Contains(ticketType.Id))
+                  .ToList();
+
+              var hasTrackAccess = ticketTypes.Any(ticketType =>
+                  ticketType.AllowedTrackIds.Count == 0 || ticketType.AllowedTrackIds.Contains(trackId.Value));
+
+              if (!hasTrackAccess)
+              {
+                  return ApiResponse<StreamAuthResponseDto>.Success(200, "Access denied", new StreamAuthResponseDto
+                  {
+                      IsAllowed = false,
+                      Role = "None",
+                      ErrorMessage = "Your ticket type is not allowed to access this track."
+                  });
+              }
+          }
+
+          return ApiResponse<StreamAuthResponseDto>.Success(200, "Success", new StreamAuthResponseDto
+          {
+              IsAllowed = true,
             Role = "Attendee",
             ErrorMessage = null
         });

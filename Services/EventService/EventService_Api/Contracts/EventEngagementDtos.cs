@@ -15,6 +15,7 @@ public class EventEngagementStateDto
     public DateTime? ChatBlockedUntil { get; set; }
     public DateTime? QaBlockedUntil { get; set; }
     public List<EventEngagementAttendeeDto> Attendees { get; set; } = [];
+    public List<EventEngagementAttendeeDto> BlockedUsers { get; set; } = [];
 }
 
 public class EventEngagementSessionDto

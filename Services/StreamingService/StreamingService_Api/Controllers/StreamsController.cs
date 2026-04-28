@@ -255,6 +255,18 @@ public class StreamsController : ControllerBase
             });
         }
 
+        var ticketTypeAccess = await _eventServiceClient.GetTicketTypeStreamingAccessAsync(ticket.TicketTypeId, HttpContext.RequestAborted);
+        if (ticketTypeAccess != null
+            && room.TrackId.HasValue
+            && ticketTypeAccess.AllowedTrackIds.Count > 0
+            && !ticketTypeAccess.AllowedTrackIds.Contains(room.TrackId.Value))
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new
+            {
+                message = "This ticket type is not allowed to access the selected track."
+            });
+        }
+
         if (_guestStreamAccessService.TryGetActiveSession(ticket.TicketId, out var activeSession) && activeSession != null)
         {
             return Conflict(new
@@ -313,7 +325,7 @@ public class StreamsController : ControllerBase
         if (!TryGetCurrentUserId(out var userId))
             return Unauthorized("Missing or invalid user claim.");
 
-        var access = await _eventServiceClient.VerifyStreamAccessAsync(eventId, userId, HttpContext.RequestAborted);
+        var access = await _eventServiceClient.VerifyStreamAccessAsync(eventId, userId, null, HttpContext.RequestAborted);
         if (!access.IsAllowed)
             return StatusCode(StatusCodes.Status403Forbidden, new { message = access.ErrorMessage ?? "You are not allowed to view recordings for this event." });
 

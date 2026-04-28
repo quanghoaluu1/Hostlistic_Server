@@ -113,7 +113,7 @@ public class SpecialGenerationTests
         var result = await _sut.GenerateSpeakerIntroAsync(request, Guid.NewGuid());
 
         // Assert
-        result.Data.Metadata.DataQuality.Should().Be("minimal");
+        result.Data!.Metadata.DataQuality.Should().Be("minimal");
         result.Data.Metadata.NeedsReview.Should().BeTrue();
     }
 

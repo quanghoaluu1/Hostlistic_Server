@@ -46,6 +46,6 @@ public class GuestStreamAccessTests
         session.Should().NotBeNull();
         session.HolderName.Should().Be("Custom Name");
         _sut.TryGetActiveSession(ticket.TicketId, out var active).Should().BeTrue();
-        active.SessionId.Should().Be(session.SessionId);
+        active!.SessionId.Should().Be(session.SessionId);
     }
 }

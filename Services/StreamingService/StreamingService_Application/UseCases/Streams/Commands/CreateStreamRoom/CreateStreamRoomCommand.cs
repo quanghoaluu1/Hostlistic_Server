@@ -36,7 +36,7 @@ public class CreateStreamRoomCommandHandler : IRequestHandler<CreateStreamRoomCo
     public async Task<Guid> Handle(CreateStreamRoomCommand request, CancellationToken cancellationToken)
     {
         // Ask EventService if user has right to create room
-        var authResult = await _eventServiceClient.VerifyStreamAccessAsync(request.EventId, request.CreatedBy, cancellationToken);
+        var authResult = await _eventServiceClient.VerifyStreamAccessAsync(request.EventId, request.CreatedBy, null, cancellationToken);
         if (!authResult.IsAllowed)
         {
             throw new UnauthorizedAccessException(authResult.ErrorMessage ?? "Not allowed to open Livestream right now.");

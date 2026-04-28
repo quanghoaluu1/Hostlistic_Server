@@ -5,6 +5,7 @@ public class GuestLiveTicketValidationDto
     public Guid TicketId { get; set; }
     public Guid EventId { get; set; }
     public Guid OrderId { get; set; }
+    public Guid TicketTypeId { get; set; }
     public string TicketCode { get; set; } = string.Empty;
     public string? HolderName { get; set; }
     public string? HolderEmail { get; set; }

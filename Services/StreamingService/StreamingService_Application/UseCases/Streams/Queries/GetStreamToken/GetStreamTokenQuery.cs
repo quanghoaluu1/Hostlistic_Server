@@ -33,7 +33,7 @@ public class GetStreamTokenQueryHandler : IRequestHandler<GetStreamTokenQuery, s
             throw new Exception("Stream room has already ended");
 
         // Request StreamAuth from EventService
-        var authResult = await _eventServiceClient.VerifyStreamAccessAsync(room.EventId, request.UserId, cancellationToken);
+        var authResult = await _eventServiceClient.VerifyStreamAccessAsync(room.EventId, request.UserId, room.TrackId, cancellationToken);
         if (!authResult.IsAllowed)
         {
             throw new UnauthorizedAccessException(authResult.ErrorMessage ?? "Access denied to stream room");

@@ -615,6 +615,9 @@ public class EventEngagementController : ControllerBase
             Attendees = CanModerate(role)
                 ? await BuildAttendeeStateAsync(eventId, session.Id, membershipNames, membershipEmails, restrictionLookup)
                 : [],
+            BlockedUsers = CanModerate(role)
+                ? BuildBlockedUsersState(eventId, restrictions, membershipNames, membershipEmails)
+                : [],
             RequestedSessionId = sessionId ?? session.Id
         };
     }
@@ -909,6 +912,7 @@ public class EventEngagementController : ControllerBase
         var users = attendeeUserIds
             .Concat(questionAuthors)
             .Concat(attendeeMembers)
+            .Concat(restrictionLookup.Keys.Select(key => key.UserId))
             .Distinct()
             .ToList();
 
@@ -936,6 +940,53 @@ public class EventEngagementController : ControllerBase
                     UserId = attendeeUserId,
                     Name = ResolveAuthorName(membershipNames, attendeeUserId),
                     Email = membershipEmails.GetValueOrDefault(attendeeUserId),
+                    IsChatBlocked = chatRestriction is not null,
+                    IsQaBlocked = qaRestriction is not null,
+                    ChatBlockedUntil = chatRestriction?.ExpiresAt,
+                    QaBlockedUntil = qaRestriction?.ExpiresAt
+                };
+            })
+            .OrderBy(item => item.Name)
+            .ToList();
+    }
+
+    private List<EventEngagementAttendeeDto> BuildBlockedUsersState(
+        Guid eventId,
+        IReadOnlyCollection<SessionEngagementRestriction> restrictions,
+        IReadOnlyDictionary<Guid, string?> membershipNames,
+        IReadOnlyDictionary<Guid, string?> membershipEmails)
+    {
+        var organizerId = _dbContext.Events
+            .Where(item => item.Id == eventId)
+            .Select(item => item.OrganizerId)
+            .FirstOrDefault();
+
+        var moderatorIds = _dbContext.EventTeamMembers
+            .Where(member => member.EventId == eventId
+                && member.Status == EventMemberStatus.Active
+                && (member.Role == EventRole.CoOrganizer || member.Role == EventRole.Staff))
+            .Select(member => member.UserId)
+            .ToHashSet();
+
+        return restrictions
+            .GroupBy(item => item.UserId)
+            .Where(group => group.Key != organizerId && !moderatorIds.Contains(group.Key))
+            .Select(group =>
+            {
+                var chatRestriction = group
+                    .Where(item => item.Scope == EngagementRestrictionScope.Chat)
+                    .OrderBy(item => item.ExpiresAt)
+                    .FirstOrDefault();
+                var qaRestriction = group
+                    .Where(item => item.Scope == EngagementRestrictionScope.Qa)
+                    .OrderBy(item => item.ExpiresAt)
+                    .FirstOrDefault();
+
+                return new EventEngagementAttendeeDto
+                {
+                    UserId = group.Key,
+                    Name = ResolveAuthorName(membershipNames, group.Key),
+                    Email = membershipEmails.GetValueOrDefault(group.Key),
                     IsChatBlocked = chatRestriction is not null,
                     IsQaBlocked = qaRestriction is not null,
                     ChatBlockedUntil = chatRestriction?.ExpiresAt,

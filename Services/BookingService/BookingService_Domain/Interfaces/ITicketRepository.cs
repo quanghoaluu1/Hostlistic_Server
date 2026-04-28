@@ -8,6 +8,7 @@ public interface ITicketRepository
     Task<List<Guid>> GetTicketIdsByEventIdAsync(Guid eventId);
     Task<Ticket?> GetTicketByCodeAsync(string ticketCode);
     Task<bool> HasConfirmedAccessToEventAsync(Guid eventId, Guid userId);
+    Task<List<Guid>> GetConfirmedTicketTypeIdsForEventAsync(Guid eventId, Guid userId);
     Task<IEnumerable<Ticket>> GetTicketsByOrderIdAsync(Guid orderId);
     Task<Ticket> AddTicketAsync(Ticket ticket);
     Task<Ticket> UpdateTicketAsync(Ticket ticket);

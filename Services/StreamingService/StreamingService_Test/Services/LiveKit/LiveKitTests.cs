@@ -38,7 +38,7 @@ public class LiveKitServiceTests
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        _msgHandler.LastRequest.RequestUri.ToString().Should().Contain("CreateRoom");
+        _msgHandler.LastRequest!.RequestUri!.ToString().Should().Contain("CreateRoom");
     }
 
     [Fact]
@@ -58,7 +58,7 @@ public class LiveKitServiceTests
     private class MockHttpMessageHandler : HttpMessageHandler
     {
         public HttpResponseMessage Response { get; set; } = new(HttpStatusCode.OK);
-        public HttpRequestMessage LastRequest { get; private set; }
+        public HttpRequestMessage? LastRequest { get; private set; }
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {

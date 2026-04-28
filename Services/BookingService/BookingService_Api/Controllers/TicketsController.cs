@@ -43,6 +43,15 @@ public class TicketsController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("events/{eventId:guid}/stream-access/{userId:guid}/details")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetStreamAccessDetails(Guid eventId, Guid userId)
+    {
+        var result = await _ticketService.GetConfirmedStreamAccessAsync(eventId, userId);
+        if (!result.IsSuccess) return StatusCode(result.StatusCode, result);
+        return Ok(result);
+    }
+
     [HttpPost("guest-live-access")]
     [AllowAnonymous]
     public async Task<IActionResult> ValidateGuestLiveAccess([FromBody] ValidateGuestLiveAccessRequest request)

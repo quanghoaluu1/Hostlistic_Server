@@ -16,7 +16,7 @@ public interface IEventService
     Task<ApiResponse<PagedResult<MyEventDto>>> GetMyEventAsync(Guid userId, MyEventQueryParams queryParams);
     Task<ApiResponse<PagedResult<PublicEventDto>>> GetPublicEventsAsync(PublicEventQueryParams queryParams);
     Task<ApiResponse<bool>> ToggleAgendaModeAsync(Guid eventId);
-    Task<ApiResponse<StreamAuthResponseDto>> VerifyStreamAccessAsync(Guid eventId, Guid userId);
+    Task<ApiResponse<StreamAuthResponseDto>> VerifyStreamAccessAsync(Guid eventId, Guid userId, Guid? trackId = null);
     Task<ApiResponse<object>> GetEventDashboardAsync(int? year, int? month);
     Task<ApiResponse<bool>> UpdateEventStatus(Guid eventId);
     Task<ApiResponse<PagedResult<EventResponseDto>>> GetPostponedEventsAsync(BaseQueryParams request);

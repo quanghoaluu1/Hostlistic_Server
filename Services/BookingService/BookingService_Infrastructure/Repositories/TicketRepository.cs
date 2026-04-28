@@ -49,6 +49,20 @@ public class TicketRepository : ITicketRepository
                 t.Order.Status == OrderStatus.Confirmed);
     }
 
+    public async Task<List<Guid>> GetConfirmedTicketTypeIdsForEventAsync(Guid eventId, Guid userId)
+    {
+        return await _context.Tickets
+            .AsNoTracking()
+            .Where(t =>
+                t.Order != null &&
+                t.Order.EventId == eventId &&
+                t.Order.UserId == userId &&
+                t.Order.Status == OrderStatus.Confirmed)
+            .Select(t => t.TicketTypeId)
+            .Distinct()
+            .ToListAsync();
+    }
+
     public async Task<IEnumerable<Ticket>> GetTicketsByOrderIdAsync(Guid orderId)
     {
         return await _context.Tickets
