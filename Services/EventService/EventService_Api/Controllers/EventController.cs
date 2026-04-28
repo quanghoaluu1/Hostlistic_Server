@@ -106,9 +106,9 @@ public class EventController(IEventService eventService, IPhotoService photoServ
 
     [HttpGet("{eventId:guid}/stream-auth")]
     [AllowAnonymous]
-    public async Task<IActionResult> VerifyStreamAccess(Guid eventId, [FromQuery] Guid userId)
+    public async Task<IActionResult> VerifyStreamAccess(Guid eventId, [FromQuery] Guid userId, [FromQuery] Guid? trackId = null)
     {
-        var result = await eventService.VerifyStreamAccessAsync(eventId, userId);
+        var result = await eventService.VerifyStreamAccessAsync(eventId, userId, trackId);
         return Ok(result);
     }
 

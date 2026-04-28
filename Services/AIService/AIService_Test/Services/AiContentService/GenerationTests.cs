@@ -62,7 +62,7 @@ public class GenerationTests
         // Assert
         result.IsSuccess.Should().BeTrue();
         result.StatusCode.Should().Be(200);
-        result.Data.HtmlContent.Should().Be("<p>Generated content</p>");
+        result.Data!.HtmlContent.Should().Be("<p>Generated content</p>");
         
         await _aiRequestRepository.Received(2).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
@@ -154,6 +154,6 @@ public class GenerationTests
         var result = await _sut.GenerateSocialPostAsync(request, Guid.NewGuid());
 
         // Assert
-        result.Data.ExceedsLimit.Should().BeTrue();
+        result.Data!.ExceedsLimit.Should().BeTrue();
     }
 }

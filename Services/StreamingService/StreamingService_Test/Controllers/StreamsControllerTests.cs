@@ -81,7 +81,9 @@ public class StreamsControllerTests
             .Returns(new GuestLiveAttemptStatus { IsBlocked = false });
         
         _bookingServiceClient.ValidateGuestLiveTicketAsync(eventId, Arg.Any<string>())
-            .Returns(new GuestLiveTicketValidationDto { TicketId = Guid.NewGuid(), TicketCode = "TC123" });
+            .Returns(new GuestLiveTicketValidationDto { TicketId = Guid.NewGuid(), TicketCode = "TC123", TicketTypeId = Guid.NewGuid() });
+        _eventServiceClient.GetTicketTypeStreamingAccessAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(new TicketTypeStreamingAccessDto());
 
         _guestStreamAccessService.CreateOrReplaceSession(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<GuestLiveTicketValidationDto>(), Arg.Any<string>())
             .Returns(new GuestLiveSession { SessionId = Guid.NewGuid(), Identity = "guest-123" });
@@ -126,7 +128,9 @@ public class StreamsControllerTests
         _dbContext.StreamRooms.Add(room);
         await _dbContext.SaveChangesAsync(CancellationToken.None);
         _bookingServiceClient.ValidateGuestLiveTicketAsync(eventId, Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(new GuestLiveTicketValidationDto { TicketId = Guid.NewGuid(), TicketCode = "T-USED" });
+            .Returns(new GuestLiveTicketValidationDto { TicketId = Guid.NewGuid(), TicketCode = "T-USED", TicketTypeId = Guid.NewGuid() });
+        _eventServiceClient.GetTicketTypeStreamingAccessAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(new TicketTypeStreamingAccessDto());
         
         _guestStreamAccessService.TryGetActiveSession(Arg.Any<Guid>(), out Arg.Any<GuestLiveSession?>())
             .Returns(x => { x[1] = new GuestLiveSession { SessionId = Guid.NewGuid() }; return true; });
@@ -136,6 +140,41 @@ public class StreamsControllerTests
 
         // Assert
         result.Should().BeOfType<ConflictObjectResult>();
+    }
+
+    [Fact]
+    public async Task CreateGuestAccess_WhenTrackNotAllowed_ReturnsForbidden()
+    {
+        var eventId = Guid.NewGuid();
+        var allowedTrackId = Guid.NewGuid();
+        var request = new GuestStreamAccessRequest { TicketCode = "TRACK-LOCKED" };
+        var room = StreamRoomBuilder.CreateRoom(eventId: eventId, status: StreamRoomStatus.Live);
+        room.TrackId = Guid.NewGuid();
+
+        _guestStreamAccessService.GetAttemptStatus(eventId, Arg.Any<string>())
+            .Returns(new GuestLiveAttemptStatus { IsBlocked = false });
+
+        _dbContext.StreamRooms.Add(room);
+        await _dbContext.SaveChangesAsync(CancellationToken.None);
+
+        _bookingServiceClient.ValidateGuestLiveTicketAsync(eventId, Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new GuestLiveTicketValidationDto
+            {
+                TicketId = Guid.NewGuid(),
+                TicketCode = "TRACK-LOCKED",
+                TicketTypeId = Guid.NewGuid()
+            });
+
+        _eventServiceClient.GetTicketTypeStreamingAccessAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(new TicketTypeStreamingAccessDto
+            {
+                AllowedTrackIds = [allowedTrackId]
+            });
+
+        var result = await _sut.CreateGuestAccess(eventId, request);
+
+        result.Should().BeOfType<ObjectResult>()
+            .Which.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
     }
 
     [Fact]

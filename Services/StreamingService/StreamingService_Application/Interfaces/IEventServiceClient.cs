@@ -7,6 +7,13 @@ public class StreamAuthResponseDto
     public string? ErrorMessage { get; set; }
 }
 
+public class TicketTypeStreamingAccessDto
+{
+    public Guid Id { get; set; }
+    public List<Guid> AllowedTrackIds { get; set; } = [];
+    public int? MaxQaQuestions { get; set; }
+}
+
 public class ApiResponse<T>
 {
     public bool IsSuccess { get; set; }
@@ -16,7 +23,8 @@ public class ApiResponse<T>
 
 public interface IEventServiceClient
 {
-    Task<StreamAuthResponseDto> VerifyStreamAccessAsync(Guid eventId, Guid userId, CancellationToken cancellationToken = default);
+    Task<StreamAuthResponseDto> VerifyStreamAccessAsync(Guid eventId, Guid userId, Guid? trackId = null, CancellationToken cancellationToken = default);
+    Task<TicketTypeStreamingAccessDto?> GetTicketTypeStreamingAccessAsync(Guid ticketTypeId, CancellationToken cancellationToken = default);
     Task<EventChatAccessResponseDto> GetEventChatAccessAsync(Guid eventId, Guid sessionId, Guid userId, CancellationToken cancellationToken = default);
 }
 

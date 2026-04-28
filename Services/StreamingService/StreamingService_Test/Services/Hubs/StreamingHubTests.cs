@@ -43,7 +43,7 @@ public class StreamingHubTests
     public async Task SendEventChatMessage_WhenUnauthenticated_ThrowsHubException()
     {
         // Arrange
-        _context.User.Returns((ClaimsPrincipal)null);
+        _context.User.Returns((ClaimsPrincipal?)null);
 
         // Act
         var act = () => _sut.SendEventChatMessage("ev1", "sess1", "user", "hi");

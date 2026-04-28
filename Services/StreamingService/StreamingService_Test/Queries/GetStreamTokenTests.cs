@@ -30,7 +30,7 @@ public class GetStreamTokenTests
         _dbContext.StreamRooms.Add(room);
         await _dbContext.SaveChangesAsync(CancellationToken.None);
 
-        _eventServiceClient.VerifyStreamAccessAsync(room.EventId, userId)
+        _eventServiceClient.VerifyStreamAccessAsync(room.EventId, userId, room.TrackId)
             .Returns(new StreamAuthResponseDto { IsAllowed = true, Role = "Attendee" });
             
         _tokenGenerator.GenerateLiveKitToken(room.LiveKitRoomName, query.Identity, ParticipantRole.Attendee)
@@ -80,7 +80,7 @@ public class GetStreamTokenTests
         _dbContext.StreamRooms.Add(room);
         await _dbContext.SaveChangesAsync(CancellationToken.None);
 
-        _eventServiceClient.VerifyStreamAccessAsync(room.EventId, query.UserId)
+        _eventServiceClient.VerifyStreamAccessAsync(room.EventId, query.UserId, room.TrackId)
             .Returns(new StreamAuthResponseDto { IsAllowed = false, ErrorMessage = "Access Denied" });
 
         // Act & Assert

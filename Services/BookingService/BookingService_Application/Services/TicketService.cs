@@ -52,14 +52,27 @@ public class TicketService : ITicketService
 
     public async Task<ApiResponse<bool>> CheckStreamAccessAsync(Guid eventId, Guid userId)
     {
+        var accessResult = await GetConfirmedStreamAccessAsync(eventId, userId);
+        if (!accessResult.IsSuccess || accessResult.Data is null)
+            return ApiResponse<bool>.Fail(accessResult.StatusCode, accessResult.Message);
+
+        return ApiResponse<bool>.Success(200, "Stream access evaluated successfully.", accessResult.Data.HasAccess);
+    }
+
+    public async Task<ApiResponse<ConfirmedStreamAccessDto>> GetConfirmedStreamAccessAsync(Guid eventId, Guid userId)
+    {
         if (eventId == Guid.Empty)
-            return ApiResponse<bool>.Fail(400, "Event id is required.");
+            return ApiResponse<ConfirmedStreamAccessDto>.Fail(400, "Event id is required.");
 
         if (userId == Guid.Empty)
-            return ApiResponse<bool>.Fail(400, "User id is required.");
+            return ApiResponse<ConfirmedStreamAccessDto>.Fail(400, "User id is required.");
 
-        var hasAccess = await _ticketRepository.HasConfirmedAccessToEventAsync(eventId, userId);
-        return ApiResponse<bool>.Success(200, "Stream access evaluated successfully.", hasAccess);
+        var ticketTypeIds = await _ticketRepository.GetConfirmedTicketTypeIdsForEventAsync(eventId, userId);
+        return ApiResponse<ConfirmedStreamAccessDto>.Success(200, "Stream access evaluated successfully.", new ConfirmedStreamAccessDto
+        {
+            HasAccess = ticketTypeIds.Count > 0,
+            TicketTypeIds = ticketTypeIds
+        });
     }
 
     public async Task<ApiResponse<GuestLiveAccessTicketDto>> ValidateGuestLiveAccessAsync(ValidateGuestLiveAccessRequest request)
@@ -86,6 +99,7 @@ public class TicketService : ITicketService
             TicketId = ticket.Id,
             EventId = ticket.Order.EventId,
             OrderId = ticket.OrderId,
+            TicketTypeId = ticket.TicketTypeId,
             TicketCode = ticket.TicketCode,
             HolderName = ticket.HolderName,
             HolderEmail = ticket.HolderEmail,
