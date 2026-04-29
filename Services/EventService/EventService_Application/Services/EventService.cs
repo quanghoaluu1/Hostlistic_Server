@@ -238,7 +238,9 @@ public class EventService(
                 EndDate = e.EndDate.Value,
                 EventModeValue = e.EventMode,
                 Status = e.EventStatus,
-                e.Location,
+                e.LocationAddress,
+                e.Latitude,
+                e.Longitude,
                 RoleValue = EventRole.Organizer,
                 JoinedAt = e.CreatedAt
             });
@@ -254,7 +256,9 @@ public class EventService(
                 EndDate = m.Event.EndDate.Value,
                 EventModeValue = m.Event.EventMode,
                 Status = m.Event.EventStatus,
-                m.Event.Location,
+                m.Event.LocationAddress,
+                m.Event.Latitude,
+                m.Event.Longitude,
                 RoleValue = m.Role,
                 JoinedAt = m.JoinedAt ?? m.InvitedAt
             });
@@ -277,7 +281,7 @@ public class EventService(
         {
             query = query.Where(e =>
                 e.Title.Contains(queryParams.Search) ||
-                e.Location.Contains(queryParams.Search));
+                (e.LocationAddress != null && e.LocationAddress.Contains(queryParams.Search)));
         }
 
         // SORT
@@ -297,7 +301,9 @@ public class EventService(
             e.EndDate,
             ((EventMode)e.EventModeValue).ToString(),
             e.Status.ToString(),
-            e.Location,
+            e.LocationAddress,
+            e.Latitude,
+            e.Longitude,
             ((EventRole)e.RoleValue).ToString(),
             e.JoinedAt
         )).ToList();
@@ -322,7 +328,7 @@ public class EventService(
             var search = queryParams.Search.Trim().ToLower();
             query = query.Where(e =>
                 e.Title!.ToLower().Contains(search) ||
-                e.Location!.ToLower().Contains(search));
+                (e.LocationAddress != null && e.LocationAddress.ToLower().Contains(search)));
         }
 
         // FILTER: event mode
@@ -352,7 +358,9 @@ public class EventService(
             e.CoverImageUrl,
             e.StartDate,
             e.EndDate,
-            e.Location,
+            e.LocationAddress,
+            e.Latitude,
+            e.Longitude,
             EventModeValue = e.EventMode,
             StatusValue = e.EventStatus,
             EventTypeName = e.EventType != null ? e.EventType.Name : null,
@@ -375,7 +383,9 @@ public class EventService(
             e.CoverImageUrl,
             e.StartDate,
             e.EndDate,
-            e.Location,
+            e.LocationAddress,
+            e.Latitude,
+            e.Longitude,
             e.EventModeValue.HasValue
                 ? e.EventModeValue.Value.ToString()
                 : "Offline",
@@ -408,7 +418,9 @@ public class EventService(
     {
         eventEntity.Title = request.Title ?? eventEntity.Title;
         eventEntity.Description = request.Description ?? eventEntity.Description;
-        eventEntity.Location = request.Location ?? eventEntity.Location;
+        eventEntity.LocationAddress = request.LocationAddress ?? eventEntity.LocationAddress;
+        eventEntity.Latitude = request.Latitude ?? eventEntity.Latitude;
+        eventEntity.Longitude = request.Longitude ?? eventEntity.Longitude;
         eventEntity.CoverImageUrl = request.CoverImageUrl ?? eventEntity.CoverImageUrl;
         eventEntity.EventStatus = request.EventStatus ?? eventEntity.EventStatus;
         eventEntity.EventMode = request.EventMode ?? eventEntity.EventMode;

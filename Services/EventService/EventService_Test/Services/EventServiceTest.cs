@@ -1,4 +1,4 @@
-﻿using EventService_Test.Helpers.TestDataBuilders;
+using EventService_Test.Helpers.TestDataBuilders;
 using Microsoft.Extensions.Logging;
 
 namespace EventService_Test;
@@ -404,7 +404,7 @@ public class EventServiceTest
         var eventId = Guid.NewGuid();
         var existingEvent = EventBuilder.CreateEvent(id: eventId);
         existingEvent.Title = "Original Title";
-        existingEvent.Location = "Original Location";
+        existingEvent.LocationAddress = "Original Location";
         existingEvent.EventType = EventTypeBuilder.CreateEventType();
 
         var updateRequest = new EventRequestDto(Title: "New Title");
@@ -419,7 +419,7 @@ public class EventServiceTest
 
         // Assert — Title changed, Location preserved
         existingEvent.Title.Should().Be("New Title");
-        existingEvent.Location.Should().Be("Original Location");
+        existingEvent.LocationAddress.Should().Be("Original Location");
     }
 
     #endregion

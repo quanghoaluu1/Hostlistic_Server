@@ -55,6 +55,7 @@ public class EventServiceDbContext : DbContext
                 .OnDelete(DeleteBehavior.SetNull);
             
             entity.Property(e => e.TimeZoneId).HasMaxLength(100);
+            entity.Property(e => e.LocationAddress).HasMaxLength(500);
 
             entity.Property(e => e.EventMode)
                 .HasConversion<string>()

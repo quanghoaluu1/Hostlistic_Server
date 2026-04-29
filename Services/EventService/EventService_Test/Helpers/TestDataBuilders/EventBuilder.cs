@@ -20,7 +20,9 @@ public class EventBuilder
             StartDate = DateTime.UtcNow.AddDays(7),
             EndDate = DateTime.UtcNow.AddDays(8),
             IsPublic = false,
-            Location = "HCMC",
+            LocationAddress = "HCMC",
+            Latitude = 10.762622,
+            Longitude = 106.660172,
             EventMode = EventMode.Offline,
             Tracks = new List<Track>(),
             EventTeamMembers = new List<EventTeamMember>(),
@@ -39,6 +41,8 @@ public class EventBuilder
             StartDate: startDate ?? DateTime.UtcNow.AddDays(7),
             EndDate: endDate ?? DateTime.UtcNow.AddDays(8),
             EventMode: EventMode.Offline,
-            Location: "HCMC"
+            LocationAddress: "HCMC",
+            Latitude: 10.762622,
+            Longitude: 106.660172
         );
     }}
