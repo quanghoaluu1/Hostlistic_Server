@@ -1,4 +1,5 @@
 using System.Text;
+using System.Threading.RateLimiting;
 using AIService_Api.Extensions;
 using AIService_Application.Interface;
 using AIService_Application.Services;
@@ -106,6 +107,39 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization();
 builder.Services.AddHealthChecks();
 
+builder.Services.AddRateLimiter(options =>
+{
+    // Bắt buộc cấu hình mã lỗi 429 thay vì 503 mặc định
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.OnRejected = async (context, token) =>
+    {
+        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        context.HttpContext.Response.ContentType = "application/json";
+        await context.HttpContext.Response.WriteAsync(
+            "{\"status\": 429, \"message\": \"Bạn đã đạt giới hạn sử dụng AI. Vui lòng thử lại sau vài phút để hệ thống cấp lại Token.\"}", token);
+    };
+
+    options.AddPolicy("AIGenerationPolicy", httpContext =>
+    {
+        // Lấy UserId từ JWT Token, nếu không có thì lấy IP từ YARP Gateway
+        var partitionKey = httpContext.User.Identity?.Name 
+                           ?? httpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault() 
+                           ?? httpContext.Connection.RemoteIpAddress?.ToString() 
+                           ?? "unknown";
+
+        return RateLimitPartition.GetTokenBucketLimiter(
+            partitionKey: partitionKey,
+            factory: _ => new TokenBucketRateLimiterOptions
+            {
+                TokenLimit = 5,           // Sức chứa tối đa của giỏ: 10 requests (Cho phép burst 10 phát liên tục)
+                TokensPerPeriod = 1,       // Tốc độ hồi phục: Cấp lại 2 token
+                ReplenishmentPeriod = TimeSpan.FromMinutes(1), // Mỗi 1 phút hồi 2 token
+                AutoReplenishment = true,
+                QueueLimit = 0             // Không cho xếp hàng, hết token là block ngay để đỡ nghẽn RAM
+            });
+    });
+});
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -153,6 +187,7 @@ if (app.Environment.IsDevelopment())
 }
 app.UseCors("Production");
 app.UseHttpsRedirection();
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 

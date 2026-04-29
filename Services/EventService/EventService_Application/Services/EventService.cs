@@ -32,7 +32,7 @@ public class EventService(
             return ApiResponse<EventResponseDto>.Fail(403, entitlement.Message);
 
         var currentEventCount = eventRepository.GetQueryable()
-            .Count(e => e.OrganizerId == organizerId && e.EventStatus != EventStatus.Cancelled && e.EventStatus != EventStatus.Completed );
+            .Count(e => e.OrganizerId == organizerId && e.EventStatus != EventStatus.Cancelled && e.EventStatus != EventStatus.Completed);
         if (currentEventCount >= entitlement.MaxEvents)
         {
             return ApiResponse<EventResponseDto>.Fail(403,
@@ -270,7 +270,7 @@ public class EventService(
 
         if (queryParams.Status is not null)
         {
-            query = query.Where(e => e.Status.Equals(queryParams.Status));
+            query = query.Where(e => e.Status.ToString().Equals(queryParams.Status));
         }
 
         if (!string.IsNullOrWhiteSpace(queryParams.Search))
@@ -314,7 +314,7 @@ public class EventService(
         // Start from AsNoTracking queryable (defined in repository)
         var query = eventRepository.GetQueryable()
             .Where(e => e.IsPublic == true
-                      && e.EventStatus != EventStatus.Draft);
+                      && e.EventStatus == EventStatus.Published && e.StartDate >= DateTime.UtcNow);
 
         // FILTER: search by title or location
         if (!string.IsNullOrWhiteSpace(queryParams.Search))

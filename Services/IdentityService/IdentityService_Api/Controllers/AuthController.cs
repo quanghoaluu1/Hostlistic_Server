@@ -2,6 +2,7 @@ using Common;
 using IdentityService_Application.DTOs;
 using IdentityService_Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace IdentityService_Api.Controllers;
 
@@ -10,6 +11,7 @@ namespace IdentityService_Api.Controllers;
 public class AuthController(IAuthService authService, IWebHostEnvironment env) : ControllerBase
 {
     [HttpPost("register")]
+    [EnableRateLimiting("AuthPolicy")]
     public async Task<IActionResult> Register([FromBody]RegisterRequest request)
     {
         var result = await authService.RegisterAsync(request);
@@ -18,6 +20,7 @@ public class AuthController(IAuthService authService, IWebHostEnvironment env) :
     }
 
     [HttpPost("login")]
+    [EnableRateLimiting("AuthPolicy")]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
         var result = await authService.LoginAsync(request);

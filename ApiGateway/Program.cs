@@ -64,14 +64,47 @@ builder.Services.AddHealthChecks();
 builder.Services.AddRateLimiter(options =>
 {
     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
-        RateLimitPartition.GetFixedWindowLimiter(
-            partitionKey: httpContext.User.Identity?.Name ?? httpContext.Request.Headers.Host.ToString(),
+    {
+        if (httpContext.User.Identity?.IsAuthenticated == true && !string.IsNullOrEmpty(httpContext.User.Identity.Name))
+        {
+            return RateLimitPartition.GetFixedWindowLimiter(
+                partitionKey: httpContext.User.Identity.Name,
+                factory: partition => new FixedWindowRateLimiterOptions
+                {
+                    AutoReplenishment = true,
+                    PermitLimit = 100, // 100 req/min cho mỗi User
+                    Window = TimeSpan.FromMinutes(1)
+                });
+        }
+
+        // 2. Xác định IP của Client nếu chưa đăng nhập (Fallback)
+        // Ưu tiên lấy từ X-Forwarded-For (nếu chạy qua Nginx/Proxy/Gateway)
+        var clientIp = httpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault();
+        
+        // Nếu không có proxy, lấy IP trực tiếp
+        if (string.IsNullOrEmpty(clientIp))
+        {
+            clientIp = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown_ip";
+        }
+
+        return RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: clientIp, // ĐÚNG: Dùng IP của Client thay vì Host header
             factory: partition => new FixedWindowRateLimiterOptions
             {
                 AutoReplenishment = true,
-                PermitLimit = 100,
+                PermitLimit = 60, // Có thể siết chặt hơn cho Anonymous User (VD: 60 req/min)
                 Window = TimeSpan.FromMinutes(1)
-            }));
+            });
+    });
+
+    // Custom response khi người dùng bị chặn bởi Rate Limit (Trả về JSON thay vì plain text)
+    options.OnRejected = async (context, token) =>
+    {
+        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        context.HttpContext.Response.ContentType = "application/json";
+        await context.HttpContext.Response.WriteAsync(
+            "{\"status\": 429, \"message\": \"Quá nhiều yêu cầu. Vui lòng thử lại sau chút nữa.\"}", token);
+    };
 });
 
 var app = builder.Build();

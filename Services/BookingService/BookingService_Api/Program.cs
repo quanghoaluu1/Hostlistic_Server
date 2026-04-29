@@ -11,6 +11,7 @@ using PayOS;
 using Scalar.AspNetCore;
 using System.Reflection;
 using System.Text;
+using System.Threading.RateLimiting;
 using BookingService_Application.Consumers;
 using BookingService_Application.Services;
 using MassTransit;
@@ -155,6 +156,35 @@ builder.Services.AddKeyedSingleton<PayOSClient>("Payout", (sp, _) =>
 });
 builder.Services.AddHealthChecks();
 
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.OnRejected = async (context, token) =>
+    {
+        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        context.HttpContext.Response.ContentType = "application/json";
+        await context.HttpContext.Response.WriteAsync(
+            "{\"status\": 429, \"message\": \"Hệ thống đang xử lý một giao dịch khác của bạn. Vui lòng không spam click.\"}", token);
+    };
+
+    options.AddPolicy("CheckoutConcurrencyPolicy", httpContext =>
+    {
+        var partitionKey = httpContext.User.Identity?.Name 
+                           ?? httpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault() 
+                           ?? httpContext.Connection.RemoteIpAddress?.ToString() 
+                           ?? "unknown";
+
+        return RateLimitPartition.GetConcurrencyLimiter(
+            partitionKey: partitionKey,
+            factory: _ => new ConcurrencyLimiterOptions
+            {
+                PermitLimit = 1, // CHỈ CHO PHÉP 1 luồng xử lý đồng thời cho mỗi user
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 2   // Cho phép 2 request xếp hàng chờ luồng kia chạy xong. Cái thứ 3 bị đá văng ngay.
+            });
+    });
+});
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -171,6 +201,7 @@ if (app.Environment.IsDevelopment())
 app.UseCors("Production");
 app.UseHttpsRedirection();
 
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 

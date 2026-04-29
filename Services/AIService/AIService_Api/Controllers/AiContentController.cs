@@ -6,12 +6,14 @@ using Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace AIService_Api.Controllers;
 
 [ApiController]
 [Route("api/ai")]
 [Produces("application/json")]
+[EnableRateLimiting("AIGenerationPolicy")]
 //[Authorize]
 //[ServiceFilter(typeof(RequireAiSubscriptionFilter))]
 public class AiContentController(IAiContentService aiContentService, ILogger<AiContentController> logger) : ControllerBase

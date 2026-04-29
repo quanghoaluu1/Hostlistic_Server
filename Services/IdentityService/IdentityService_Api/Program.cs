@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Security.Authentication;
 using System.Text;
+using System.Threading.RateLimiting;
 using Common;
 using IdentityService_Api.Extensions;
 using IdentityService_Application.Services;
@@ -87,7 +88,41 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
     
     return ConnectionMultiplexer.Connect(config);
 });
+builder.Services.AddRateLimiter(options =>
+{
+    // 1. [QUAN TRỌNG] Ghi đè mã lỗi mặc định từ 503 thành 429
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
+    // 2. [TUỲ CHỌN] Trả về một chuỗi JSON đẹp mắt để Frontend dễ bề hiển thị thông báo
+    options.OnRejected = async (context, token) =>
+    {
+        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        context.HttpContext.Response.ContentType = "application/json";
+        var responseInfo = new 
+        { 
+            status = 429, 
+            message = "Bạn đã nhập sai quá nhiều lần. Vui lòng thử lại sau 1 phút." 
+        };
+        await context.HttpContext.Response.WriteAsJsonAsync(responseInfo, token);
+    };
+
+    options.AddPolicy("AuthPolicy", httpContext =>
+    {
+        // 3. [QUAN TRỌNG] Lấy IP thật của client bằng header X-Forwarded-For do Gateway truyền xuống
+        var clientIp = httpContext.Request.Headers["X-Forwarded-For"].FirstOrDefault() 
+                       ?? httpContext.Connection.RemoteIpAddress?.ToString() 
+                       ?? "unknown_ip";
+
+        return RateLimitPartition.GetSlidingWindowLimiter(clientIp, 
+            _ => new SlidingWindowRateLimiterOptions 
+            { 
+                PermitLimit = 5, 
+                Window = TimeSpan.FromMinutes(1), 
+                SegmentsPerWindow = 3,
+                QueueLimit = 0 // KHÔNG xếp hàng. Quá 5 phát là reject ngay lập tức.
+            });
+    });
+});
 // Configure Cloudinary
 builder.Services.Configure<CloudinarySettings>(builder.Configuration.GetSection("CloudinarySettings"));
 
@@ -157,6 +192,8 @@ if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }
+app.UseRateLimiter();
+
 app.UseAuthentication();
 app.UseAuthorization();
 
