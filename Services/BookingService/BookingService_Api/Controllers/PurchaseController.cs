@@ -2,6 +2,7 @@
 using BookingService_Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace BookingService_Api.Controllers
 {
@@ -27,8 +28,9 @@ namespace BookingService_Api.Controllers
                 return BadRequest(result);
             return Ok(result);
         }
-
+        
         [HttpPost("tickets")]
+        [EnableRateLimiting("CheckoutConcurrencyPolicy")]
         public async Task<IActionResult> PurchaseTickets([FromBody] PurchaseTicketRequest request)
         {
             var result = await _purchaseService.PurchaseTicketsAsync(request);
@@ -38,6 +40,7 @@ namespace BookingService_Api.Controllers
         }
 
         [HttpPost("payos")]
+        [EnableRateLimiting("CheckoutConcurrencyPolicy")]
         public async Task<IActionResult> PurchasePayOs([FromBody] PurchaseTicketRequest request)
         {
             var result = await _purchaseService.InitiatePayOsPurchaseAsync(request);
