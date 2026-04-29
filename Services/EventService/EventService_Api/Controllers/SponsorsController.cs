@@ -16,6 +16,7 @@ public class SponsorsController(ISponsorService service) : ControllerBase
     /// List all sponsors for the event.
     /// </summary>
     [HttpGet]
+    [AllowAnonymous]
     public async Task<IActionResult> GetByEvent(Guid eventId)
     {
         var result = await service.GetByEventIdAsync(eventId);
