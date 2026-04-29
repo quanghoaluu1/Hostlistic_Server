@@ -32,4 +32,16 @@ public record PublicEventQueryParams : BaseQueryParams
 
     /// <summary>Filter by event status (default: only Published)</summary>
     public EventStatus? Status { get; init; }
+
+    /// <summary>Filter by city name substring match on LocationAddress</summary>
+    public string? City { get; init; }
+
+    /// <summary>Latitude of the center point for radius-based filtering</summary>
+    public double? Lat { get; init; }
+
+    /// <summary>Longitude of the center point for radius-based filtering</summary>
+    public double? Lng { get; init; }
+
+    /// <summary>Search radius in kilometers (requires Lat and Lng)</summary>
+    public double? RadiusInKm { get; init; }
 }
