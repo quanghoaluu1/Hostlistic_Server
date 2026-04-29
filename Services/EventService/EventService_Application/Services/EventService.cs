@@ -317,7 +317,7 @@ public class EventService(
     public async Task<ApiResponse<PagedResult<PublicEventDto>>> GetPublicEventsAsync(
     PublicEventQueryParams queryParams)
     {
-        // Start from AsNoTracking queryable (defined in repository)
+        // GetQueryable() already applies AsNoTracking() at the repository layer.
         var query = eventRepository.GetQueryable()
             .Where(e => e.IsPublic == true
                       && e.EventStatus == EventStatus.Published && e.StartDate >= DateTime.UtcNow);
@@ -329,6 +329,13 @@ public class EventService(
             query = query.Where(e =>
                 e.Title!.ToLower().Contains(search) ||
                 (e.LocationAddress != null && e.LocationAddress.ToLower().Contains(search)));
+        }
+
+        // FILTER: city substring match on LocationAddress
+        if (!string.IsNullOrWhiteSpace(queryParams.City))
+        {
+            var city = queryParams.City.Trim();
+            query = query.Where(e => e.LocationAddress != null && e.LocationAddress.Contains(city));
         }
 
         // FILTER: event mode
@@ -347,6 +354,29 @@ public class EventService(
         if (queryParams.Status.HasValue)
         {
             query = query.Where(e => e.EventStatus == queryParams.Status.Value);
+        }
+
+        // FILTER: geospatial radius — apply a coarse lat/lng bounding-box in SQL to limit
+        // the result set, then apply the precise Haversine check in memory after projection.
+        bool applyRadiusFilter = queryParams.Lat.HasValue
+            && queryParams.Lng.HasValue
+            && queryParams.RadiusInKm.HasValue
+            && queryParams.RadiusInKm.Value > 0;
+
+        if (applyRadiusFilter)
+        {
+            // 1 degree of latitude ~ 111 km; compute a conservative bounding box in SQL.
+            double radiusKm   = queryParams.RadiusInKm!.Value;
+            double latDelta   = radiusKm / 111.0;
+            double lngDelta   = radiusKm / (111.0 * Math.Cos(queryParams.Lat!.Value * Math.PI / 180.0));
+            double minLat     = queryParams.Lat.Value - latDelta;
+            double maxLat     = queryParams.Lat.Value + latDelta;
+            double minLng     = queryParams.Lng!.Value - lngDelta;
+            double maxLng     = queryParams.Lng.Value + lngDelta;
+
+            query = query.Where(e =>
+                e.Latitude  >= minLat && e.Latitude  <= maxLat &&
+                e.Longitude >= minLng && e.Longitude <= maxLng);
         }
 
         // PROJECT to lightweight DTO before sorting/paging
@@ -377,7 +407,7 @@ public class EventService(
             queryParams.PageSize);
 
         // Map to DTO after materialization (enum .ToString() safe in memory)
-        var items = paged.Items.Select(e => new PublicEventDto(
+        IEnumerable<PublicEventDto> mappedItems = paged.Items.Select(e => new PublicEventDto(
             e.Id,
             e.Title ?? string.Empty,
             e.CoverImageUrl,
@@ -393,7 +423,21 @@ public class EventService(
             e.EventTypeName,
             e.TotalCapacity,
             e.IsPublic ?? false
-        )).ToList();
+        ));
+
+        // FILTER: precise Haversine check in memory after SQL bounding-box pre-filter
+        if (applyRadiusFilter)
+        {
+            double centerLat = queryParams.Lat!.Value;
+            double centerLng = queryParams.Lng!.Value;
+            double radiusKm  = queryParams.RadiusInKm!.Value;
+
+            mappedItems = mappedItems.Where(e =>
+                e.Latitude.HasValue && e.Longitude.HasValue &&
+                HaversineDistanceKm(centerLat, centerLng, e.Latitude.Value, e.Longitude.Value) <= radiusKm);
+        }
+
+        var items = mappedItems.ToList();
 
         var result = new PagedResult<PublicEventDto>(
             items, paged.TotalItems, paged.CurrentPage, paged.PageSize);
@@ -439,6 +483,26 @@ public class EventService(
 
         if (request.TimeZoneId != null)
             eventEntity.TimeZoneId = request.TimeZoneId;
+    }
+
+    /// <summary>
+    /// Calculates the great-circle distance in kilometres between two WGS-84 coordinates
+    /// using the Haversine formula. Accurate to within 0.3% for all terrestrial distances.
+    /// </summary>
+    private static double HaversineDistanceKm(double lat1, double lng1, double lat2, double lng2)
+    {
+        const double earthRadiusKm = 6371.0;
+
+        double dLat = (lat2 - lat1) * Math.PI / 180.0;
+        double dLng = (lng2 - lng1) * Math.PI / 180.0;
+
+        double a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2)
+                 + Math.Cos(lat1 * Math.PI / 180.0)
+                 * Math.Cos(lat2 * Math.PI / 180.0)
+                 * Math.Sin(dLng / 2) * Math.Sin(dLng / 2);
+
+        double c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+        return earthRadiusKm * c;
     }
 
     private async Task<(bool IsSuccess, string Message, int MaxEvents, int MaxAttendeesPerEvent)> GetActiveEntitlementAsync(
