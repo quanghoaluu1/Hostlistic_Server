@@ -1,4 +1,4 @@
-﻿using Common;
+using Common;
 using EventService_Domain.Enums;
 
 namespace EventService_Application.DTOs;
@@ -10,7 +10,9 @@ public record PublicEventDto
     string? CoverImageUrl,
     DateTime? StartDate,
     DateTime? EndDate,
-    string? Location,
+    string? LocationAddress,
+    double? Latitude,
+    double? Longitude,
     string EventMode,          // "Online" | "Offline" | "Hybrid"
     string EventStatus,        // "Published" | "OnGoing" | ...
     string? EventTypeName,

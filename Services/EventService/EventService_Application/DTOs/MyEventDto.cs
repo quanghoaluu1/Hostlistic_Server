@@ -12,7 +12,9 @@ public record MyEventDto
     DateTime EndDate,
     string EventMode,
     string Status,
-    string? Location,
+    string? LocationAddress,
+    double? Latitude,
+    double? Longitude,
     string MyRole,       // "Organizer", "CoOrganizer", "Staff", "Attendee"
     DateTime JoinedAt
 );

@@ -8,9 +8,18 @@ public class MappingConfig : IRegister
 {
     public void Register(TypeAdapterConfig config)
     {
+        TypeAdapterConfig<EventRequestDto, Event>
+            .NewConfig()
+            .Map(dest => dest.LocationAddress, src => src.LocationAddress)
+            .Map(dest => dest.Latitude, src => src.Latitude)
+            .Map(dest => dest.Longitude, src => src.Longitude);
+
         TypeAdapterConfig<Event, EventResponseDto>
             .NewConfig()
-            .Map(dest => dest.EventTypeName, src => src.EventType.Name);
+            .Map(dest => dest.EventTypeName, src => src.EventType.Name)
+            .Map(dest => dest.LocationAddress, src => src.LocationAddress)
+            .Map(dest => dest.Latitude, src => src.Latitude)
+            .Map(dest => dest.Longitude, src => src.Longitude);
 
         TypeAdapterConfig<Session, SessionResponseDto>
             .NewConfig()

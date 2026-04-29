@@ -13,7 +13,9 @@ public class Event : BaseClass
     public EventMode? EventMode { get; set; }
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
-    public string? Location { get; set; } = string.Empty;
+    public string LocationAddress { get; set; } = default!;
+    public double Latitude { get; set; }
+    public double Longitude { get; set; }
     public Guid? EventTypeId { get; set; }
     public string? CoverImageUrl { get; set; } = string.Empty;
     public string? CoverImagePublicId { get; set; } = string.Empty;
