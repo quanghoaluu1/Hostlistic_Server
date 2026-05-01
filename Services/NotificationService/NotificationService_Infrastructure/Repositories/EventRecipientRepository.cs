@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using NotificationService_Domain.Entities;
 using NotificationService_Domain.Enums;
 using NotificationService_Domain.Interfaces;
@@ -54,13 +54,17 @@ public class EventRecipientRepository(NotificationServiceDbContext dbContext) : 
 
         switch (group)
         {
-            case RecipientGroup.SpecificTicketType:
-                if (filter?.TicketTypeIds is { Count: > 0 })
-                    query = query.Where(r => filter.TicketTypeIds.Contains(r.TicketTypeId!.Value));
+            case RecipientGroup.CheckedIn:
+                query = query.Where(r => r.IsCheckedIn);
                 break;
 
             case RecipientGroup.NotCheckedIn:
                 query = query.Where(r => !r.IsCheckedIn);
+                break;
+
+            case RecipientGroup.SpecificTicketType:
+                if (filter?.TicketTypeIds is { Count: > 0 })
+                    query = query.Where(r => filter.TicketTypeIds.Contains(r.TicketTypeId!.Value));
                 break;
 
             case RecipientGroup.ManualList:
@@ -101,14 +105,18 @@ public class EventRecipientRepository(NotificationServiceDbContext dbContext) : 
             case RecipientGroup.AllTicketHolders:
                 // No additional filter — all confirmed bookings for this event
                 break;
- 
-            case RecipientGroup.SpecificTicketType:
-                if (filter?.TicketTypeIds is { Count: > 0 })
-                    query = query.Where(r => filter.TicketTypeIds.Contains(r.TicketTypeId!.Value));
+
+            case RecipientGroup.CheckedIn:
+                query = query.Where(r => r.IsCheckedIn);
                 break;
  
             case RecipientGroup.NotCheckedIn:
                 query = query.Where(r => !r.IsCheckedIn);
+                break;
+
+            case RecipientGroup.SpecificTicketType:
+                if (filter?.TicketTypeIds is { Count: > 0 })
+                    query = query.Where(r => filter.TicketTypeIds.Contains(r.TicketTypeId!.Value));
                 break;
  
             case RecipientGroup.ManualList:
@@ -129,4 +137,4 @@ public class EventRecipientRepository(NotificationServiceDbContext dbContext) : 
  
         return query;
     }
-}
+}

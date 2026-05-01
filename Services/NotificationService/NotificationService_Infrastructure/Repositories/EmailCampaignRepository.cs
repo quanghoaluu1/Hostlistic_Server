@@ -46,4 +46,10 @@ public class EmailCampaignRepository(NotificationServiceDbContext dbContext) : I
     {
         await dbContext.SaveChangesAsync();
     }
+
+    public async Task<bool> ExistsAutoReminderAsync(Guid eventId, CancellationToken ct = default)
+    {
+        return await dbContext.EmailCampaigns
+            .AnyAsync(c => c.EventId == eventId && c.IsAutoReminder, ct);
+    }
 }

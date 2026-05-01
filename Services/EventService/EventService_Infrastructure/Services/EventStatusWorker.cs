@@ -87,19 +87,6 @@ public class EventStatusWorker : BackgroundService
             .Select(e => new { e.Id, e.Title, e.OrganizerId })
             .ToListAsync(ct);
 
-        // foreach (var @event in eventsToCompleted)
-        // {
-        //     @event.EventStatus = EventStatus.Completed;
-        //     _logger.LogInformation("Event {EventId} transitioned to Completed.", @event.Id);
-        //
-        //     await publishEndpoint.Publish(new EventCompletedMessage
-        //     {
-        //         EventId = @event.Id,
-        //         OrganizerId = @event.OrganizerId,
-        //         EventTitle = @event.Title ?? string.Empty,
-        //         CompletedAt = now
-        //     }, ct);
-        // }
         if (eventsToCompleted.Count > 0)
         {
             await dbContext.Events
@@ -114,6 +101,18 @@ public class EventStatusWorker : BackgroundService
             foreach (var e in eventsToCompleted)
             {
                 _logger.LogInformation("Event {EventId} transitioned to Completed.", e.Id);
+
+                // Publish shared contract — consumed by NotificationService (Thank-You email)
+                // and BookingService (settlement).
+                await publishEndpoint.Publish(new EventCompletedMessage
+                {
+                    EventId = e.Id,
+                    OrganizerId = e.OrganizerId,
+                    EventTitle = e.Title ?? string.Empty,
+                    CompletedAt = now
+                }, ct);
+
+                // Publish local integration event — consumed by StreamingService.
                 await publishEndpoint.Publish(new EventCompletedIntegrationEvent(
                     EventId: e.Id,
                     Title: e.Title ?? string.Empty,
