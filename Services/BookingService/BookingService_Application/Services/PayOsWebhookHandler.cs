@@ -57,6 +57,8 @@ public class PayOsWebhookHandler(
                 transaction.Status = TransactionStatus.Completed;
                 transaction.BalanceAfter = wallet.Balance + transaction.Amount;
                 
+                wallet.Balance += transaction.Amount;
+                wallet.UpdatedAt = DateTime.UtcNow;
                 await transactionRepository.UpdateAsync(transaction);
                 await walletRepository.UpdateWalletAsync(wallet);
                 await transactionRepository.SaveChangesAsync();
