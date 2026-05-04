@@ -5,6 +5,7 @@ namespace BookingService_Domain.Interfaces;
 
 public interface ITransactionRepository
 {
+    IQueryable<Transaction> GetQueryable();
     Task<Transaction?> GetByIdAsync(Guid id);
     Task<IEnumerable<Transaction>> GetByWalletIdAsync(Guid walletId);
     Task<Transaction?> GetByReferenceAsync(Guid referenceId, string referenceType);
