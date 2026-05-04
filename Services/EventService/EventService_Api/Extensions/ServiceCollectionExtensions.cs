@@ -54,6 +54,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IEventLifecycleService, EventLifecycleService>();
         services.AddScoped<ISurveyFormService, SurveyFormService>();
         services.AddScoped<IEventAuthorizationService, EventAuthorizationService>();
+        services.AddScoped<IEventDashboardService, EventDashboardService>();
 
         
         return services;
