@@ -54,15 +54,16 @@ public class PayOsWebhookHandler(
 
             if (transaction.Type == TransactionType.WalletTopUp)
             {
-                wallet.Balance += transaction.Amount;
-                transaction.BalanceAfter = wallet.Balance;
                 transaction.Status = TransactionStatus.Completed;
-
-                await walletRepository.UpdateWalletAsync(wallet);
+                transaction.BalanceAfter = wallet.Balance + transaction.Amount;
+                
                 await transactionRepository.UpdateAsync(transaction);
-                await walletRepository.SaveChangesAsync();
+                await walletRepository.UpdateWalletAsync(wallet);
+                await transactionRepository.SaveChangesAsync();
+                
+                await paymentNotifier.NotifyTransactionCompletedAsync(transaction.Id);
 
-                logger.LogInformation("Wallet top-up successful for wallet {WalletId}", wallet.Id);
+                logger.LogInformation("Wallet top-up processed successfully for wallet {WalletId}", wallet.Id);
                 return ApiResponse<bool>.Success(200, "Wallet top-up processed", true);
             }
             
@@ -101,6 +102,8 @@ public class PayOsWebhookHandler(
                 await transactionRepository.UpdateAsync(transaction);
                 await transactionRepository.SaveChangesAsync();
                 
+                await paymentNotifier.NotifyTransactionCompletedAsync(transaction.Id);
+
                 logger.LogInformation("Subscription purchase successful for wallet {WalletId}", wallet.Id);
                 return ApiResponse<bool>.Success(200, "Subscription purchase processed", true);
             }

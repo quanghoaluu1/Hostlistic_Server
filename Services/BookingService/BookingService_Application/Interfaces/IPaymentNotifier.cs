@@ -6,4 +6,5 @@ public interface IPaymentNotifier
 {
     Task NotifyPaymentConfirmedAsync(Guid orderId, PaymentConfirmedPayload payload);
     Task NotifyPaymentFailedAsync(Guid orderId, string reason);
+    Task NotifyTransactionCompletedAsync(Guid transactionId);
 }

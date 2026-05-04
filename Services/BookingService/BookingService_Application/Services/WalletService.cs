@@ -278,19 +278,19 @@ public class WalletService : IWalletService
         return date.Date.AddDays(-diff);
     }
 
-    public async Task<ApiResponse<PayOsCheckoutResult>> CreateWalletTopUpRequestAsync(CreateWalletTopUpRequest request)
+    public async Task<ApiResponse<PayOsCheckoutResponse>> CreateWalletTopUpRequestAsync(CreateWalletTopUpRequest request)
     {
         try
         {
             if (request.UserId == Guid.Empty || request.Amount <= 0)
-                return ApiResponse<PayOsCheckoutResult>.Fail(400, "Invalid user ID or amount.");
+                return ApiResponse<PayOsCheckoutResponse>.Fail(400, "Top up amount must be at least 10,000 VND.");
 
             var wallet = await _walletRepository.GetWalletByUserIdAsync(request.UserId);
             if (wallet == null)
-                return ApiResponse<PayOsCheckoutResult>.Fail(404, "Wallet not found.");
+                return ApiResponse<PayOsCheckoutResponse>.Fail(400, "Wallet not found. Create a wallet first.");
 
             if (wallet.Status != WalletStatus.Active)
-                return ApiResponse<PayOsCheckoutResult>.Fail(400, "Wallet is not active.");
+                return ApiResponse<PayOsCheckoutResponse>.Fail(400, "Wallet is not active.");
 
             long orderCode = long.Parse(DateTimeOffset.UtcNow.ToString("yyMMddHHmmssfff"));
 
@@ -325,15 +325,22 @@ public class WalletService : IWalletService
 
             if (paymentLinkResult == null)
             {
-                return ApiResponse<PayOsCheckoutResult>.Fail(500, "Failed to create PayOS payment link.");
+                return ApiResponse<PayOsCheckoutResponse>.Fail(500, "Failed to create PayOS payment link.");
             }
 
-            return ApiResponse<PayOsCheckoutResult>.Success(200, "Payment link created successfully.", paymentLinkResult);
+            return ApiResponse<PayOsCheckoutResponse>.Success(201, "Wallet top-up initiated", new PayOsCheckoutResponse
+            {
+                CheckoutUrl = paymentLinkResult.CheckoutUrl,
+                QrCode = paymentLinkResult.QrCode,
+                OrderId = transaction.Id,
+                OrderCode = orderCode,
+                ExpiresInMinutes = 15
+            });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error creating wallet top-up request for user {userId}", request.UserId);
-            return ApiResponse<PayOsCheckoutResult>.Fail(500, "An error occurred while creating the top-up request.");
+            return ApiResponse<PayOsCheckoutResponse>.Fail(500, "An error occurred while creating the top-up request.");
         }
     }
 }

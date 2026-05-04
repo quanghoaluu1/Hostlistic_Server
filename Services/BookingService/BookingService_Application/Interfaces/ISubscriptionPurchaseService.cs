@@ -7,5 +7,5 @@ namespace BookingService_Application.Interfaces;
 public interface ISubscriptionPurchaseService
 {
     Task<ApiResponse<PurchaseSubscriptionWithWalletResponse>> PurchaseWithWalletAsync(PurchaseSubscriptionWithWalletRequest request);
-    Task<ApiResponse<PayOsCheckoutResult>> PurchaseWithPayOsAsync(PurchaseSubscriptionWithPayOsRequest request);
+    Task<ApiResponse<PayOsCheckoutResponse>> PurchaseWithPayOsAsync(PurchaseSubscriptionWithPayOsRequest request);
 }
