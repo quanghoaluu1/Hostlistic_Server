@@ -8,5 +8,6 @@ public enum TransactionType
     Adjustment,      // Admin điều chỉnh thủ công
     PaymentReceived,    // Tiền attendee thanh toán qua PayOS (ghi nhận vào system)
     PlatformFee,        // Phí platform trừ khi settlement
-    SubscriptionPurchase // Mua gói subscription bằng ví
+    SubscriptionPurchase, // Mua gói subscription bằng ví
+    WalletTopUp         // Nạp tiền vào ví qua PayOS
 }

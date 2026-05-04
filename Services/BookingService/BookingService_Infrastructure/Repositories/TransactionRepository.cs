@@ -36,6 +36,12 @@ public class TransactionRepository : ITransactionRepository
             .FirstOrDefaultAsync(t => t.ReferenceId == referenceId && t.ReferenceType == referenceType);
     }
 
+    public async Task<Transaction?> GetByOrderCodeAsync(long orderCode)
+    {
+        return await _context.Transactions
+            .FirstOrDefaultAsync(t => t.OrderCode == orderCode);
+    }
+
     public async Task<IEnumerable<Transaction>> GetByStatusAsync(TransactionStatus status)
     {
         return await _context.Transactions

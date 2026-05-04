@@ -16,6 +16,9 @@ public class PayOsWebhookHandlerTest
     private readonly INotificationServiceClient _notificationServiceClient;
     private readonly IPaymentNotifier _paymentNotifier;
     private readonly IPublishEndpoint _publishEndpoint;
+    private readonly ITransactionRepository _transactionRepository;
+    private readonly IWalletRepository _walletRepository;
+    private readonly IUserPlanServiceClient _userPlanServiceClient; // Fixed duplicate name
     private readonly ILogger<PayOsWebhookHandler> _logger;
     private readonly PayOsWebhookHandler _sut;
 
@@ -31,6 +34,9 @@ public class PayOsWebhookHandlerTest
         _notificationServiceClient = Substitute.For<INotificationServiceClient>();
         _paymentNotifier = Substitute.For<IPaymentNotifier>();
         _publishEndpoint = Substitute.For<IPublishEndpoint>();
+        _transactionRepository = Substitute.For<ITransactionRepository>();
+        _walletRepository = Substitute.For<IWalletRepository>();
+        _userPlanServiceClient = Substitute.For<IUserPlanServiceClient>();
         _logger = Substitute.For<ILogger<PayOsWebhookHandler>>();
 
         _sut = new PayOsWebhookHandler(
@@ -44,6 +50,9 @@ public class PayOsWebhookHandlerTest
             _notificationServiceClient,
             _paymentNotifier,
             _publishEndpoint,
+            _transactionRepository,
+            _walletRepository,
+            _userPlanServiceClient,
             _logger);
     }
 

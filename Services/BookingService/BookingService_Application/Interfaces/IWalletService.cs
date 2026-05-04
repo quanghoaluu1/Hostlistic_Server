@@ -1,4 +1,5 @@
 using BookingService_Application.DTOs;
+using BookingService_Application.DTOs.PayOs;
 using Common;
 
 namespace BookingService_Application.Interfaces;
@@ -12,4 +13,5 @@ public interface IWalletService
     Task<ApiResponse<bool>> DeleteWalletAsync(Guid walletId);
     Task<object> GetAdminWeeklyCashflowAsync();
     Task<object> GetOrganizerWeeklyCashflowAsync(Guid walletId);
+    Task<ApiResponse<PayOsCheckoutResult>> CreateWalletTopUpRequestAsync(CreateWalletTopUpRequest request);
 }

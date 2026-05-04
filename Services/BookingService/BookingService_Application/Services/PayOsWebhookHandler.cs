@@ -1,6 +1,7 @@
-﻿using BookingService_Application.DTOs;
+using BookingService_Application.DTOs;
 using BookingService_Application.Interfaces;
 using BookingService_Domain.Enum;
+using BookingService_Domain.Interfaces;
 using Common;
 using Common.Messages;
 using MassTransit;
@@ -19,6 +20,9 @@ public class PayOsWebhookHandler(
     INotificationServiceClient notificationServiceClient,
     IPaymentNotifier paymentNotifier,
     IPublishEndpoint publishEndpoint,
+    ITransactionRepository transactionRepository,
+    IWalletRepository walletRepository,
+    IUserPlanServiceClient userPlanServiceClient,
     ILogger<PayOsWebhookHandler> logger
     ) : IPayOsWebhookHandler
 {
@@ -28,8 +32,80 @@ public class PayOsWebhookHandler(
         var order = orderResponse.Data;
         if (order is null)
         {
-            logger.LogError("Order not found for PayOS orderCode {OrderCode}", data.OrderCode);
-            return ApiResponse<bool>.Fail(404, "Order not found");
+            var transaction = await transactionRepository.GetByOrderCodeAsync(data.OrderCode);
+            if (transaction is null)
+            {
+                logger.LogError("Order and Transaction not found for PayOS orderCode {OrderCode}", data.OrderCode);
+                return ApiResponse<bool>.Fail(404, "Order and Transaction not found");
+            }
+
+            if (transaction.Status == TransactionStatus.Completed)
+            {
+                logger.LogInformation("Transaction {TransactionId} already confirmed, skipping", transaction.Id);
+                return ApiResponse<bool>.Success(200, "Already processed", true);
+            }
+
+            var wallet = await walletRepository.GetWalletByIdAsync(transaction.WalletId);
+            if (wallet == null)
+            {
+                logger.LogError("Wallet {WalletId} not found for transaction {TransactionId}", transaction.WalletId, transaction.Id);
+                return ApiResponse<bool>.Fail(404, "Wallet not found");
+            }
+
+            if (transaction.Type == TransactionType.WalletTopUp)
+            {
+                wallet.Balance += transaction.Amount;
+                transaction.BalanceAfter = wallet.Balance;
+                transaction.Status = TransactionStatus.Completed;
+
+                await walletRepository.UpdateWalletAsync(wallet);
+                await transactionRepository.UpdateAsync(transaction);
+                await walletRepository.SaveChangesAsync();
+
+                logger.LogInformation("Wallet top-up successful for wallet {WalletId}", wallet.Id);
+                return ApiResponse<bool>.Success(200, "Wallet top-up processed", true);
+            }
+            
+            if (transaction.Type == TransactionType.SubscriptionPurchase)
+            {
+                if (transaction.ReferenceId.HasValue)
+                {
+                    var planId = transaction.ReferenceId.Value;
+                    var plan = await userPlanServiceClient.GetSubscriptionPlanByIdAsync(planId);
+                    if (plan != null)
+                    {
+                        var now = DateTime.UtcNow;
+                        var endDate = now.AddDays(Math.Max(1, plan.DurationInDays));
+                        
+                        var createdPlan = await userPlanServiceClient.CreateUserPlanAsync(new CreateUserPlanRequest
+                        {
+                            UserId = wallet.UserId,
+                            SubscriptionPlanId = plan.Id,
+                            StartDate = now,
+                            EndDate = endDate
+                        });
+
+                        if (createdPlan != null)
+                        {
+                            var currentActivePlans = (await userPlanServiceClient.GetByUserIdAsync(wallet.UserId, true)).ToList();
+                            foreach (var active in currentActivePlans.Where(x => x.Id != createdPlan.Id))
+                            {
+                                await userPlanServiceClient.CancelUserPlanAsync(active.Id);
+                            }
+                        }
+                    }
+                }
+
+                transaction.Status = TransactionStatus.Completed;
+                transaction.BalanceAfter = wallet.Balance; // balance unchanged for subscription payos
+                await transactionRepository.UpdateAsync(transaction);
+                await transactionRepository.SaveChangesAsync();
+                
+                logger.LogInformation("Subscription purchase successful for wallet {WalletId}", wallet.Id);
+                return ApiResponse<bool>.Success(200, "Subscription purchase processed", true);
+            }
+            
+            return ApiResponse<bool>.Fail(400, "Unsupported transaction type for PayOS webhook");
         }
 
         if (order.Status == OrderStatus.Confirmed)

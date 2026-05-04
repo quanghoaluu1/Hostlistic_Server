@@ -7,6 +7,7 @@ public class SubscriptionPurchaseServiceTest
     private readonly IWalletRepository _walletRepository;
     private readonly ITransactionRepository _transactionRepository;
     private readonly IUserPlanServiceClient _userPlanServiceClient;
+    private readonly IPayOsService _payOsService;
     private readonly ILogger<SubscriptionPurchaseService> _logger;
     private readonly SubscriptionPurchaseService _sut;
 
@@ -15,12 +16,14 @@ public class SubscriptionPurchaseServiceTest
         _walletRepository = Substitute.For<IWalletRepository>();
         _transactionRepository = Substitute.For<ITransactionRepository>();
         _userPlanServiceClient = Substitute.For<IUserPlanServiceClient>();
+        _payOsService = Substitute.For<IPayOsService>();
         _logger = Substitute.For<ILogger<SubscriptionPurchaseService>>();
 
         _sut = new SubscriptionPurchaseService(
             _walletRepository,
             _transactionRepository,
             _userPlanServiceClient,
+            _payOsService,
             _logger);
     }
 

@@ -7,6 +7,7 @@ public class WalletServiceTest
 {
     private readonly IWalletRepository _walletRepository;
     private readonly ITransactionRepository _transactionRepository;
+    private readonly IPayOsService _payOsService;
     private readonly ILogger<WalletService> _logger;
     private readonly WalletService _sut;
 
@@ -14,8 +15,9 @@ public class WalletServiceTest
     {
         _walletRepository = Substitute.For<IWalletRepository>();
         _transactionRepository = Substitute.For<ITransactionRepository>();
+        _payOsService = Substitute.For<IPayOsService>();
         _logger = Substitute.For<ILogger<WalletService>>();
-        _sut = new WalletService(_walletRepository, _logger, _transactionRepository);
+        _sut = new WalletService(_walletRepository, _logger, _transactionRepository, _payOsService);
     }
 
     [Fact]
