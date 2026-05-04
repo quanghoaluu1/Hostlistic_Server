@@ -11,7 +11,11 @@ namespace EventService_Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class EventController(IEventService eventService, IPhotoService photoService, IEventLifecycleService lifecycleService) : ControllerBase
+public class EventController(
+    IEventService eventService,
+    IPhotoService photoService,
+    IEventLifecycleService lifecycleService,
+    IEventDashboardService dashboardService) : ControllerBase
 {
     [HttpPost]
     [Authorize]
@@ -158,6 +162,19 @@ public class EventController(IEventService eventService, IPhotoService photoServ
     {
         var result = await lifecycleService.PostponeEventAsync(
             eventId, GetCurrentUserId(), request.NewStartTime, request.NewEndTime, request.Reason);
+        return StatusCode(result.StatusCode, result);
+    }
+
+
+    /// <summary>
+    /// Returns lightweight aggregated statistics for the event organizer dashboard.
+    /// Only the event owner (OrganizerId) may call this endpoint.
+    /// </summary>
+    [HttpGet("{eventId:guid}/dashboard-summary")]
+    [RequireEventOwner]
+    public async Task<IActionResult> GetEventDashboardSummary(Guid eventId, CancellationToken ct)
+    {
+        var result = await dashboardService.GetEventDashboardSummaryAsync(eventId, ct);
         return StatusCode(result.StatusCode, result);
     }
 
