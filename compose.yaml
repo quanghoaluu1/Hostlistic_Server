@@ -208,6 +208,8 @@ services:
       - ASPNETCORE_HTTP_PORTS=8080
       - Kestrel__Endpoints__Http__Url=http://+:8080
       - ConnectionStrings__StreamingDbConnection=${STREAM_DB_CONNECTION}
+      - ServiceUrls__EventService=http://eventservice:8080
+      - ServiceUrls__BookingService=http://bookingservice:8080
       - Jwt__Key=${JWT_SECRET_KEY}
       - Jwt__Issuer=hostlistic
       - Jwt__Audience=hostlistic

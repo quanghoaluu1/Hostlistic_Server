@@ -75,11 +75,18 @@ public class PayOsWebhookHandler(
                 {
                     var planId = transaction.ReferenceId.Value;
                     var plan = await userPlanServiceClient.GetSubscriptionPlanByIdAsync(planId);
-                    if (plan != null)
+                    if (plan == null)
+                    {
+                        logger.LogError(
+                            "SubscriptionPurchase webhook: SubscriptionPlan {PlanId} not found for transaction {TransactionId}. " +
+                            "Transaction will be marked Completed but user plan was NOT activated.",
+                            planId, transaction.Id);
+                    }
+                    else
                     {
                         var now = DateTime.UtcNow;
                         var endDate = now.AddDays(Math.Max(1, plan.DurationInDays));
-                        
+
                         var createdPlan = await userPlanServiceClient.CreateUserPlanAsync(new CreateUserPlanRequest
                         {
                             UserId = wallet.UserId,
@@ -88,8 +95,19 @@ public class PayOsWebhookHandler(
                             EndDate = endDate
                         });
 
-                        if (createdPlan != null)
+                        if (createdPlan == null)
                         {
+                            logger.LogError(
+                                "SubscriptionPurchase webhook: Failed to create UserPlan for user {UserId}, plan {PlanId}, transaction {TransactionId}. " +
+                                "Transaction will be marked Completed but user plan was NOT activated.",
+                                wallet.UserId, plan.Id, transaction.Id);
+                        }
+                        else
+                        {
+                            logger.LogInformation(
+                                "UserPlan {UserPlanId} created for user {UserId}, plan {PlanId}",
+                                createdPlan.Id, wallet.UserId, plan.Id);
+
                             var currentActivePlans = (await userPlanServiceClient.GetByUserIdAsync(wallet.UserId, true)).ToList();
                             foreach (var active in currentActivePlans.Where(x => x.Id != createdPlan.Id))
                             {
@@ -98,17 +116,24 @@ public class PayOsWebhookHandler(
                         }
                     }
                 }
+                else
+                {
+                    logger.LogError(
+                        "SubscriptionPurchase webhook: Transaction {TransactionId} has no ReferenceId (SubscriptionPlanId). User plan NOT activated.",
+                        transaction.Id);
+                }
 
                 transaction.Status = TransactionStatus.Completed;
-                transaction.BalanceAfter = wallet.Balance; // balance unchanged for subscription payos
+                transaction.BalanceAfter = wallet.Balance;
                 await transactionRepository.UpdateAsync(transaction);
                 await transactionRepository.SaveChangesAsync();
-                
+
                 await paymentNotifier.NotifyTransactionCompletedAsync(transaction.Id);
 
-                logger.LogInformation("Subscription purchase successful for wallet {WalletId}", wallet.Id);
+                logger.LogInformation("Subscription purchase webhook completed for wallet {WalletId}, transaction {TransactionId}", wallet.Id, transaction.Id);
                 return ApiResponse<bool>.Success(200, "Subscription purchase processed", true);
             }
+
             
             return ApiResponse<bool>.Fail(400, "Unsupported transaction type for PayOS webhook");
         }

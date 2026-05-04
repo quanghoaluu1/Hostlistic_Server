@@ -11,6 +11,7 @@ namespace IdentityService_Api.Controllers;
 public class UserPlansController(IUserPlanService service) : ControllerBase
 {
     [HttpPost]
+    [AllowAnonymous]
     public async Task<IActionResult> Create([FromBody] CreateUserPlanDto dto)
     {
         var result = await service.CreateAsync(dto);
@@ -27,6 +28,7 @@ public class UserPlansController(IUserPlanService service) : ControllerBase
     }
 
     [HttpGet("by-user/{userId:guid}")]
+    [AllowAnonymous]
     public async Task<IActionResult> GetByUser(Guid userId, [FromQuery] bool onlyActive = true)
     {
         var result = await service.GetByUserIdAsync(userId, onlyActive);
@@ -42,6 +44,7 @@ public class UserPlansController(IUserPlanService service) : ControllerBase
     }
 
     [HttpPost("{id:guid}/cancel")]
+    [AllowAnonymous]
     public async Task<IActionResult> Cancel(Guid id)
     {
         var result = await service.CancelAsync(id);
