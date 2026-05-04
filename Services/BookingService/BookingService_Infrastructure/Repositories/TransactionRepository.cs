@@ -6,25 +6,23 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BookingService_Infrastructure.Repositories;
 
-public class TransactionRepository : ITransactionRepository
+public class TransactionRepository(BookingServiceDbContext context) : ITransactionRepository
 {
-    private readonly BookingServiceDbContext _context;
-
-    public TransactionRepository(BookingServiceDbContext context)
+    public IQueryable<Transaction> GetQueryable()
     {
-        _context = context;
+        return context.Transactions;
     }
 
     public async Task<Transaction?> GetByIdAsync(Guid id)
     {
-        return await _context.Transactions
+        return await context.Transactions
             .Include(t => t.Wallet)
             .FirstOrDefaultAsync(t => t.Id == id);
     }
 
     public async Task<IEnumerable<Transaction>> GetByWalletIdAsync(Guid walletId)
     {
-        return await _context.Transactions
+        return await context.Transactions
             .Where(t => t.WalletId == walletId)
             .OrderByDescending(t => t.CreatedAt)
             .ToListAsync();
@@ -32,19 +30,19 @@ public class TransactionRepository : ITransactionRepository
 
     public async Task<Transaction?> GetByReferenceAsync(Guid referenceId, string referenceType)
     {
-        return await _context.Transactions
+        return await context.Transactions
             .FirstOrDefaultAsync(t => t.ReferenceId == referenceId && t.ReferenceType == referenceType);
     }
 
     public async Task<Transaction?> GetByOrderCodeAsync(long orderCode)
     {
-        return await _context.Transactions
+        return await context.Transactions
             .FirstOrDefaultAsync(t => t.OrderCode == orderCode);
     }
 
     public async Task<IEnumerable<Transaction>> GetByStatusAsync(TransactionStatus status)
     {
-        return await _context.Transactions
+        return await context.Transactions
             .Where(t => t.Status == status)
             .ToListAsync();
     }
@@ -53,18 +51,18 @@ public class TransactionRepository : ITransactionRepository
     {
         transaction.Id = Guid.NewGuid();
         transaction.CreatedAt = DateTime.UtcNow;
-        await _context.Transactions.AddAsync(transaction);
+        await context.Transactions.AddAsync(transaction);
         return transaction;
     }
 
     public Task<Transaction> UpdateAsync(Transaction transaction)
     {
-        _context.Transactions.Update(transaction);
+        context.Transactions.Update(transaction);
         return Task.FromResult(transaction);
     }
     public async Task SaveChangesAsync()
     {
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
     }
 
     public async Task<List<Transaction>> GetTransactionsAsync(
@@ -72,7 +70,7 @@ public class TransactionRepository : ITransactionRepository
     DateTime? end = null,
     Guid? walletId = null)
     {
-        var query = _context.Transactions
+        var query = context.Transactions
             .Where(t => t.Status == TransactionStatus.Completed);
 
         if (start.HasValue)

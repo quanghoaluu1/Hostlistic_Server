@@ -7,6 +7,9 @@ using BookingService_Infrastructure.Data;
 using BookingService_Infrastructure.Repositories;
 using BookingService_Infrastructure.ServiceClients;
 using BookingService_Infrastructure.Services;
+using BookingService_Application.DTOs;
+using BookingService_Application.Validators;
+using FluentValidation;
 
 namespace BookingService_Api.Extensions;
 
@@ -59,6 +62,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IEventPermissionClient, EventPermissionClient>();
         services.AddScoped<IExportService, ExportService>();
         services.AddScoped<IExcelGenerator, ExcelGenerator>();
+        services.AddScoped<IAdminTransactionService, AdminTransactionService>();
+        services.AddScoped<IValidator<AdminTransactionQueryRequest>, AdminTransactionQueryRequestValidator>();
 
         return services;
     }
