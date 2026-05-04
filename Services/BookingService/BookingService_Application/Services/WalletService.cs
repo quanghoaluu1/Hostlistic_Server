@@ -6,6 +6,7 @@ using BookingService_Domain.Interfaces;
 using Common;
 using Mapster;
 using Microsoft.Extensions.Logging;
+using BookingService_Application.DTOs.PayOs;
 
 namespace BookingService_Application.Services;
 
@@ -13,19 +14,27 @@ public class WalletService : IWalletService
 {
     private readonly IWalletRepository _walletRepository;
     private readonly ITransactionRepository _transactionRepository;
+    private readonly IPayOsService _payOsService;
     private readonly ILogger<WalletService> _logger;
 
-    public WalletService(IWalletRepository walletRepository, ILogger<WalletService> logger, ITransactionRepository transactionRepository)
+    public WalletService(
+        IWalletRepository walletRepository, 
+        ILogger<WalletService> logger, 
+        ITransactionRepository transactionRepository,
+        IPayOsService payOsService)
     {
         _walletRepository = walletRepository;
         _logger = logger;
         _transactionRepository = transactionRepository;
+        _payOsService = payOsService;
     }
 
     public WalletService(IWalletRepository walletRepository, ILogger<WalletService> logger)
     {
         _walletRepository = walletRepository;
         _logger = logger;
+        _transactionRepository = null!;
+        _payOsService = null!;
     }
 
     public async Task<ApiResponse<WalletDto>> GetWalletByIdAsync(Guid walletId)
@@ -267,5 +276,64 @@ public class WalletService : IWalletService
     {
         var diff = (7 + (date.DayOfWeek - DayOfWeek.Monday)) % 7;
         return date.Date.AddDays(-diff);
+    }
+
+    public async Task<ApiResponse<PayOsCheckoutResult>> CreateWalletTopUpRequestAsync(CreateWalletTopUpRequest request)
+    {
+        try
+        {
+            if (request.UserId == Guid.Empty || request.Amount <= 0)
+                return ApiResponse<PayOsCheckoutResult>.Fail(400, "Invalid user ID or amount.");
+
+            var wallet = await _walletRepository.GetWalletByUserIdAsync(request.UserId);
+            if (wallet == null)
+                return ApiResponse<PayOsCheckoutResult>.Fail(404, "Wallet not found.");
+
+            if (wallet.Status != WalletStatus.Active)
+                return ApiResponse<PayOsCheckoutResult>.Fail(400, "Wallet is not active.");
+
+            long orderCode = long.Parse(DateTimeOffset.UtcNow.ToString("yyMMddHHmmssfff"));
+
+            var transaction = new Transaction
+            {
+                Id = Guid.CreateVersion7(),
+                WalletId = wallet.Id,
+                Type = TransactionType.WalletTopUp,
+                Amount = request.Amount,
+                PlatformFee = 0,
+                NetAmount = request.Amount,
+                BalanceAfter = wallet.Balance, // pending, not applied yet
+                OrderCode = orderCode,
+                Status = TransactionStatus.Pending,
+                Description = $"Wallet top-up for {request.Amount} VND"
+            };
+
+            await _transactionRepository.AddAsync(transaction);
+            await _transactionRepository.SaveChangesAsync();
+
+            var paymentLinkResult = await _payOsService.CreatePaymentLinkAsync(new CreatePayOsPaymentRequest
+            {
+                OrderCode = orderCode,
+                Amount = request.Amount,
+                Description = "Wallet Top Up",
+                OrderId = transaction.Id,
+                Items = new List<PayOsItemDto> 
+                { 
+                    new PayOsItemDto { Name = "Wallet Top-up", Price = request.Amount, Quantity = 1 } 
+                }
+            });
+
+            if (paymentLinkResult == null)
+            {
+                return ApiResponse<PayOsCheckoutResult>.Fail(500, "Failed to create PayOS payment link.");
+            }
+
+            return ApiResponse<PayOsCheckoutResult>.Success(200, "Payment link created successfully.", paymentLinkResult);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating wallet top-up request for user {userId}", request.UserId);
+            return ApiResponse<PayOsCheckoutResult>.Fail(500, "An error occurred while creating the top-up request.");
+        }
     }
 }

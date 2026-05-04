@@ -42,6 +42,14 @@ public class WalletsController : ControllerBase
         return Ok(result);
     }
 
+    [HttpPost("top-up")]
+    public async Task<IActionResult> TopUpWallet([FromBody] CreateWalletTopUpRequest request)
+    {
+        var result = await _walletService.CreateWalletTopUpRequestAsync(request);
+        if (!result.IsSuccess) return BadRequest(result);
+        return Ok(result);
+    }
+
     [HttpPut("{walletId:guid}/balance")]
     public async Task<IActionResult> UpdateWalletBalance(Guid walletId, [FromBody] UpdateWalletBalanceRequest request)
     {

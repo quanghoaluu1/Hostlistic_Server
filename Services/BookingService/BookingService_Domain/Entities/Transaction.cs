@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+using System.ComponentModel.DataAnnotations.Schema;
 using BookingService_Domain.Enum;
 
 namespace BookingService_Domain.Entities;
@@ -16,6 +16,9 @@ public class Transaction
     //Truy vet nguon goc
     public Guid? ReferenceId { get; set; } //OrderId, PayoutRequestId, PaymentId,...
     public string? ReferenceType { get; set; }
+    
+    // PayOS Order Code for tracking via webhook
+    public long? OrderCode { get; set; }
     
     public TransactionStatus Status { get; set; }
     public string? Description { get; set; }

@@ -19,4 +19,14 @@ public class SubscriptionsController(ISubscriptionPurchaseService subscriptionPu
 
         return Ok(result);
     }
+
+    [HttpPost("purchase-with-payos")]
+    public async Task<IActionResult> PurchaseWithPayOs([FromBody] PurchaseSubscriptionWithPayOsRequest request)
+    {
+        var result = await subscriptionPurchaseService.PurchaseWithPayOsAsync(request);
+        if (!result.IsSuccess)
+            return BadRequest(result);
+
+        return Ok(result);
+    }
 }

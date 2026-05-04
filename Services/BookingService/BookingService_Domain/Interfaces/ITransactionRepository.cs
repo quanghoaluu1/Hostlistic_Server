@@ -8,6 +8,7 @@ public interface ITransactionRepository
     Task<Transaction?> GetByIdAsync(Guid id);
     Task<IEnumerable<Transaction>> GetByWalletIdAsync(Guid walletId);
     Task<Transaction?> GetByReferenceAsync(Guid referenceId, string referenceType);
+    Task<Transaction?> GetByOrderCodeAsync(long orderCode);
     Task<IEnumerable<Transaction>> GetByStatusAsync(TransactionStatus status);
     Task<Transaction> AddAsync(Transaction transaction);
     Task<Transaction> UpdateAsync(Transaction transaction);

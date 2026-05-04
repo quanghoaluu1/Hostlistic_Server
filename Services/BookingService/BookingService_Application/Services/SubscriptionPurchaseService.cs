@@ -1,5 +1,6 @@
 using BookingService_Application.DTOs;
 using BookingService_Application.Interfaces;
+using BookingService_Application.DTOs.PayOs;
 using BookingService_Domain.Entities;
 using BookingService_Domain.Enum;
 using BookingService_Domain.Interfaces;
@@ -12,6 +13,7 @@ public class SubscriptionPurchaseService(
     IWalletRepository walletRepository,
     ITransactionRepository transactionRepository,
     IUserPlanServiceClient userPlanServiceClient,
+    IPayOsService payOsService,
     ILogger<SubscriptionPurchaseService> logger
 ) : ISubscriptionPurchaseService
 {
@@ -122,5 +124,63 @@ public class SubscriptionPurchaseService(
 
         return ApiResponse<PurchaseSubscriptionWithWalletResponse>.Success(200,
             "Subscription purchased successfully with wallet balance.", response);
+    }
+
+    public async Task<ApiResponse<PayOsCheckoutResult>> PurchaseWithPayOsAsync(PurchaseSubscriptionWithPayOsRequest request)
+    {
+        if (request.UserId == Guid.Empty || request.SubscriptionPlanId == Guid.Empty)
+            return ApiResponse<PayOsCheckoutResult>.Fail(400, "UserId and SubscriptionPlanId are required.");
+
+        var plan = await userPlanServiceClient.GetSubscriptionPlanByIdAsync(request.SubscriptionPlanId);
+        if (plan is null || !plan.IsActive)
+            return ApiResponse<PayOsCheckoutResult>.Fail(404, "Subscription plan not found or inactive.");
+
+        var currentActivePlans = (await userPlanServiceClient.GetByUserIdAsync(request.UserId, true)).ToList();
+        if (currentActivePlans.Any(x => x.SubscriptionPlanId == request.SubscriptionPlanId))
+            return ApiResponse<PayOsCheckoutResult>.Fail(400, "User already has this plan active.");
+
+        var wallet = await walletRepository.GetWalletByUserIdAsync(request.UserId);
+        if (wallet is null)
+            return ApiResponse<PayOsCheckoutResult>.Fail(404, "Wallet not found for this user. Cannot purchase subscription.");
+
+        long orderCode = long.Parse(DateTimeOffset.UtcNow.ToString("yyMMddHHmmssfff"));
+
+        var transaction = new Transaction
+        {
+            Id = Guid.CreateVersion7(),
+            WalletId = wallet.Id,
+            Type = TransactionType.SubscriptionPurchase,
+            Amount = plan.Price,
+            PlatformFee = 0,
+            NetAmount = plan.Price,
+            BalanceAfter = wallet.Balance, // not affected by this direct purchase immediately in wallet, but we track the transaction
+            OrderCode = orderCode,
+            ReferenceId = plan.Id,
+            ReferenceType = "SubscriptionPlan",
+            Status = TransactionStatus.Pending,
+            Description = $"Subscription charge via PayOS for plan {plan.Name}"
+        };
+
+        await transactionRepository.AddAsync(transaction);
+        await transactionRepository.SaveChangesAsync();
+
+        var paymentLinkResult = await payOsService.CreatePaymentLinkAsync(new CreatePayOsPaymentRequest
+        {
+            OrderCode = orderCode,
+            Amount = plan.Price,
+            Description = $"Sub: {plan.Name}",
+            OrderId = transaction.Id,
+            Items = new List<PayOsItemDto> 
+            { 
+                new PayOsItemDto { Name = $"Subscription {plan.Name}", Price = plan.Price, Quantity = 1 } 
+            }
+        });
+
+        if (paymentLinkResult == null)
+        {
+            return ApiResponse<PayOsCheckoutResult>.Fail(500, "Failed to create PayOS payment link for subscription purchase.");
+        }
+
+        return ApiResponse<PayOsCheckoutResult>.Success(200, "Subscription payment link created successfully.", paymentLinkResult);
     }
 }
