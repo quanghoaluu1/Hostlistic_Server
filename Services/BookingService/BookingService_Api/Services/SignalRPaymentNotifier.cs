@@ -39,4 +39,17 @@ public class SignalRPaymentNotifier(
                 Reason = reason
             });
     }
+
+    public async Task NotifyTransactionCompletedAsync(Guid transactionId)
+    {
+        var groupName = transactionId.ToString();
+ 
+        logger.LogInformation(
+            "Pushing TransactionCompleted to group {TransactionId}",
+            groupName);
+ 
+        await hubContext.Clients
+            .Group(groupName)
+            .SendAsync("TransactionCompleted", new { TransactionId = transactionId });
+    }
 }

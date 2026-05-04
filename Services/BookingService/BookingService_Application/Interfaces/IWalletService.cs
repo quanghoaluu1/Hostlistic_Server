@@ -13,5 +13,5 @@ public interface IWalletService
     Task<ApiResponse<bool>> DeleteWalletAsync(Guid walletId);
     Task<object> GetAdminWeeklyCashflowAsync();
     Task<object> GetOrganizerWeeklyCashflowAsync(Guid walletId);
-    Task<ApiResponse<PayOsCheckoutResult>> CreateWalletTopUpRequestAsync(CreateWalletTopUpRequest request);
+    Task<ApiResponse<PayOsCheckoutResponse>> CreateWalletTopUpRequestAsync(CreateWalletTopUpRequest request);
 }

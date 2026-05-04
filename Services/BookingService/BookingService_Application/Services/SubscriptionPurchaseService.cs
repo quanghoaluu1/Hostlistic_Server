@@ -126,22 +126,22 @@ public class SubscriptionPurchaseService(
             "Subscription purchased successfully with wallet balance.", response);
     }
 
-    public async Task<ApiResponse<PayOsCheckoutResult>> PurchaseWithPayOsAsync(PurchaseSubscriptionWithPayOsRequest request)
+    public async Task<ApiResponse<PayOsCheckoutResponse>> PurchaseWithPayOsAsync(PurchaseSubscriptionWithPayOsRequest request)
     {
         if (request.UserId == Guid.Empty || request.SubscriptionPlanId == Guid.Empty)
-            return ApiResponse<PayOsCheckoutResult>.Fail(400, "UserId and SubscriptionPlanId are required.");
+            return ApiResponse<PayOsCheckoutResponse>.Fail(400, "UserId and SubscriptionPlanId are required.");
 
         var plan = await userPlanServiceClient.GetSubscriptionPlanByIdAsync(request.SubscriptionPlanId);
         if (plan is null || !plan.IsActive)
-            return ApiResponse<PayOsCheckoutResult>.Fail(404, "Subscription plan not found or inactive.");
+            return ApiResponse<PayOsCheckoutResponse>.Fail(404, "Subscription plan not found or inactive.");
 
         var currentActivePlans = (await userPlanServiceClient.GetByUserIdAsync(request.UserId, true)).ToList();
         if (currentActivePlans.Any(x => x.SubscriptionPlanId == request.SubscriptionPlanId))
-            return ApiResponse<PayOsCheckoutResult>.Fail(400, "User already has this plan active.");
+            return ApiResponse<PayOsCheckoutResponse>.Fail(400, "User already has this plan active.");
 
         var wallet = await walletRepository.GetWalletByUserIdAsync(request.UserId);
         if (wallet is null)
-            return ApiResponse<PayOsCheckoutResult>.Fail(404, "Wallet not found for this user. Cannot purchase subscription.");
+            return ApiResponse<PayOsCheckoutResponse>.Fail(404, "Wallet not found for this user. Cannot purchase subscription.");
 
         long orderCode = long.Parse(DateTimeOffset.UtcNow.ToString("yyMMddHHmmssfff"));
 
@@ -178,9 +178,16 @@ public class SubscriptionPurchaseService(
 
         if (paymentLinkResult == null)
         {
-            return ApiResponse<PayOsCheckoutResult>.Fail(500, "Failed to create PayOS payment link for subscription purchase.");
+            return ApiResponse<PayOsCheckoutResponse>.Fail(500, "Failed to create PayOS payment link for subscription purchase.");
         }
 
-        return ApiResponse<PayOsCheckoutResult>.Success(200, "Subscription payment link created successfully.", paymentLinkResult);
+        return ApiResponse<PayOsCheckoutResponse>.Success(201, "Subscription purchase initiated", new PayOsCheckoutResponse
+        {
+            CheckoutUrl = paymentLinkResult.CheckoutUrl,
+            QrCode = paymentLinkResult.QrCode,
+            OrderId = transaction.Id,
+            OrderCode = orderCode,
+            ExpiresInMinutes = 15
+        });
     }
 }
