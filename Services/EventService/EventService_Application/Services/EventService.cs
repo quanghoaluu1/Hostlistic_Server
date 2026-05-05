@@ -320,7 +320,7 @@ public class EventService(
         // GetQueryable() already applies AsNoTracking() at the repository layer.
         var query = eventRepository.GetQueryable()
             .Where(e => e.IsPublic == true
-                      && e.EventStatus == EventStatus.Published && e.StartDate >= DateTime.UtcNow);
+                      && e.EventStatus == EventStatus.Published || e.EventStatus == EventStatus.OnGoing);
 
         // FILTER: search by title or location
         if (!string.IsNullOrWhiteSpace(queryParams.Search))
