@@ -299,6 +299,8 @@ public class CheckInService(
                     EventId: request.EventId,
                     CheckInId: checkIn.Id,
                     TicketId: ticketId,
+                    UserId: ticketInfo.Order.UserId,
+                    AttendeeEmail: attendeeEmail,
                     SessionId: request.SessionId,
                     AttendeeName: attendeeName,
                     TicketCode: ticket.TicketCode,

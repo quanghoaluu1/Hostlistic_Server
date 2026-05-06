@@ -84,6 +84,15 @@ public class EventRecipientRepository(NotificationServiceDbContext dbContext) : 
         await dbContext.SaveChangesAsync();
     }
  
+    public async Task MarkCheckedInAsync(Guid eventId, Guid userId)
+    {
+        await dbContext.EventRecipients
+            .Where(r => r.EventId == eventId && r.UserId == userId)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(r => r.IsCheckedIn, true)
+                .SetProperty(r => r.SyncedAt, DateTime.UtcNow));
+    }
+ 
     /// <summary>
     /// Builds the recipient query based on RecipientGroup + EmailTargetFilter.
     /// All filtering happens at database level via IQueryable → SQL translation.

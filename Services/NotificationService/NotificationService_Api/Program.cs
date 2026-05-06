@@ -146,6 +146,7 @@ builder.Services.AddMassTransit(x =>
     // Register all consumers in this assembly
     x.AddConsumer<BookingConfirmedConsumer>();
     x.AddConsumer<BulkEmailConsumer>();
+    x.AddConsumer<CheckInSyncConsumer>();
     x.AddConsumer<EventCompletedConsumer>();
     x.AddConsumer<TeamMemberInvitedConsumer>();
     x.AddConsumer<EventPostponedConsumer>();
