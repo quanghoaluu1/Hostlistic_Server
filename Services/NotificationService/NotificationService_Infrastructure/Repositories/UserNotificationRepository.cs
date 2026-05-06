@@ -59,6 +59,15 @@ public class UserNotificationRepository(NotificationServiceDbContext dbContext) 
         return Task.CompletedTask;
     }
 
+    public async Task MarkAllAsReadByUserIdAsync(Guid userId)
+    {
+        await dbContext.UserNotifications
+            .Where(un => un.UserId == userId && !un.IsRead)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(un => un.IsRead, true)
+                .SetProperty(un => un.ReadAt, DateTime.UtcNow));
+    }
+
     public async Task SaveChangesAsync()
     {
         await dbContext.SaveChangesAsync();

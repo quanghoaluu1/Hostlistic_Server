@@ -12,5 +12,6 @@ public interface IUserNotificationRepository
     Task AddAsync(UserNotification userNotification);
     Task UpdateAsync(UserNotification userNotification);
     Task DeleteAsync(UserNotification userNotification);
+    Task MarkAllAsReadByUserIdAsync(Guid userId);
     Task SaveChangesAsync();
 }

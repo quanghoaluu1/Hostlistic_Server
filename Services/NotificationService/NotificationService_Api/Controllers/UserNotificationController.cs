@@ -52,6 +52,15 @@ public class UserNotificationController(IUserNotificationService userNotificatio
         return StatusCode(result.StatusCode, result);
     }
 
+    [Authorize]
+    [HttpPatch("read-all")]
+    public async Task<IActionResult> MarkAllAsRead()
+    {
+        var userId = GetCurrentUserId();
+        var result = await userNotificationService.MarkAllAsReadAsync(userId);
+        return StatusCode(result.StatusCode, result);
+    }
+
     [HttpGet("notification/{notificationId:guid}")]
     public async Task<IActionResult> GetByNotificationId(Guid notificationId)
     {

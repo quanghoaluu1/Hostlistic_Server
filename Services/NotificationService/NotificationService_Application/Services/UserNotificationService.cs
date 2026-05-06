@@ -58,6 +58,12 @@ public class UserNotificationService(IUserNotificationRepository userNotificatio
         return ApiResponse<UserNotificationDto>.Success(200, "Notification marked as read", dto);
     }
 
+    public async Task<ApiResponse<bool>> MarkAllAsReadAsync(Guid userId)
+    {
+        await userNotificationRepository.MarkAllAsReadByUserIdAsync(userId);
+        return ApiResponse<bool>.Success(200, "All notifications marked as read", true);
+    }
+
     public async Task<ApiResponse<List<UserNotificationDto>>> GetByNotificationIdAsync(Guid notificationId)
     {
         var userNotifications = await userNotificationRepository.GetByNotificationIdAsync(notificationId);

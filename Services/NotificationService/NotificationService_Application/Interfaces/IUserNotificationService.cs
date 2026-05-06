@@ -10,6 +10,7 @@ public interface IUserNotificationService
     Task<ApiResponse<List<NotificationFeedDto>>> GetByUserIdAsync(Guid userId);
     Task<ApiResponse<List<NotificationFeedDto>>> GetUnreadByUserIdAsync(Guid userId);
     Task<ApiResponse<UserNotificationDto>> MarkAsReadAsync(Guid id, Guid userId);
+    Task<ApiResponse<bool>> MarkAllAsReadAsync(Guid userId);
     Task<ApiResponse<List<UserNotificationDto>>> GetByNotificationIdAsync(Guid notificationId);
     Task<ApiResponse<UserNotificationDto>> CreateAsync(CreateUserNotificationRequest request);
     Task<ApiResponse<UserNotificationDto>> UpdateAsync(Guid id, UpdateUserNotificationRequest request);
