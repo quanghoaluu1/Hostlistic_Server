@@ -64,6 +64,16 @@ public class EventLifecycleService(IEventRepository eventRepository, IBus bus, I
         eventRepository.UpdateEventAsync(eventEntity);
         await eventRepository.SaveChangesAsync();
 
+        // Shared contract → consumed by NotificationService (Thank-You email) and BookingService.
+        await bus.Publish(new EventCompletedMessage
+        {
+            EventId = eventEntity.Id,
+            OrganizerId = requesterId,
+            EventTitle = eventEntity.Title ?? string.Empty,
+            CompletedAt = DateTime.UtcNow
+        });
+
+        // Local integration event → consumed by StreamingService.
         await bus.Publish(new EventCompletedIntegrationEvent(
             EventId: eventEntity.Id,
             Title: eventEntity.Title ?? string.Empty,

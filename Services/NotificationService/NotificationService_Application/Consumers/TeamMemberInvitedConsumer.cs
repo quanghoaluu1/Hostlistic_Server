@@ -84,7 +84,9 @@ public class TeamMemberInvitedConsumer(
         await userNotificationRepository.AddAsync(userNotification);
         await notificationRepository.SaveChangesAsync();
 
-        return notification.Id;
+        // Return UserNotification.Id — this is the ID the frontend must pass to
+        // PATCH /usernotification/{id}/read (MarkAsReadAsync looks up by UserNotification.Id).
+        return userNotification.Id;
     }
 
     private async Task PushRealTimeNotificationAsync(TeamMemberInvitedEvent msg, Guid notificationId)
