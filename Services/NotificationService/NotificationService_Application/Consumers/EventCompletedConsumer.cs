@@ -34,9 +34,12 @@ public class EventCompletedConsumer(
         var message = context.Message;
 
         logger.LogInformation(
-            "EventCompletedConsumer: processing Event {EventId} '{EventTitle}' completed at {CompletedAt}.",
-            message.EventId, message.EventTitle, message.CompletedAt);
+            "EventCompletedConsumer: received EventCompletedMessage — Event {EventId} '{EventTitle}', " +
+            "Organizer {OrganizerId}, CompletedAt {CompletedAt}.",
+            message.EventId, message.EventTitle, message.OrganizerId, message.CompletedAt);
 
+        try
+        {
         // ── Idempotency guard ────────────────────────────────────────────────
         // Prevent duplicate campaigns if the message is redelivered by MassTransit.
         var alreadyExists = await campaignRepository.ExistsAutoReminderAsync(
@@ -52,6 +55,17 @@ public class EventCompletedConsumer(
         }
 
         // ── 1. Resolve checked-in attendees ──────────────────────────────────
+        // Diagnostic: also count ALL recipients (regardless of IsCheckedIn) so we can
+        // distinguish "nobody booked" from "nobody was marked as checked-in".
+        var allRecipients = await recipientRepository.GetRecipientsAsync(
+            message.EventId,
+            RecipientGroup.AllTicketHolders,
+            filter: null);
+
+        logger.LogInformation(
+            "EventCompletedConsumer: Event {EventId} has {TotalCount} total ticket holders in EventRecipient table.",
+            message.EventId, allRecipients.Count);
+
         var recipients = await recipientRepository.GetRecipientsAsync(
             message.EventId,
             RecipientGroup.CheckedIn,
@@ -59,9 +73,12 @@ public class EventCompletedConsumer(
 
         if (recipients.Count == 0)
         {
-            logger.LogInformation(
-                "EventCompletedConsumer: No checked-in attendees found for Event {EventId}. Skipping Thank-You campaign.",
-                message.EventId);
+            logger.LogWarning(
+                "EventCompletedConsumer: No checked-in attendees found for Event {EventId} " +
+                "(total recipients in DB: {TotalCount}). " +
+                "This means either no attendees have IsCheckedIn=true yet (CheckInSyncConsumer may not have run), " +
+                "or the event truly had zero check-ins. Skipping Thank-You campaign.",
+                message.EventId, allRecipients.Count);
             return;
         }
 
@@ -122,6 +139,14 @@ public class EventCompletedConsumer(
             "EventCompletedConsumer: SendBulkEmailCommand published for Campaign {CampaignId} " +
             "targeting {Count} checked-in attendee(s).",
             campaign.Id, recipients.Count);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex,
+                "EventCompletedConsumer: unhandled exception processing EventCompletedMessage for Event {EventId}.",
+                message.EventId);
+            throw; // rethrow so MassTransit retries
+        }
     }
 
     // ── Private helpers ──────────────────────────────────────────────────────

@@ -29,6 +29,13 @@ public class CheckInSyncConsumer(
     {
         var msg = context.Message;
 
+        // ── Entry-point diagnostic log (visible at Information level) ─────────
+        logger.LogInformation(
+            "CheckInSyncConsumer: received CheckInCompletedEvent — " +
+            "CheckIn {CheckInId}, Ticket {TicketId}, Event {EventId}, " +
+            "User {UserId}, CheckInType {CheckInType}.",
+            msg.CheckInId, msg.TicketId, msg.EventId, msg.UserId, msg.CheckInType);
+
         // Only event-level check-ins mark an attendee as "attended"
         if (msg.CheckInType != EventLevel)
         {
@@ -42,10 +49,25 @@ public class CheckInSyncConsumer(
             "CheckInSyncConsumer: marking UserId {UserId} as checked-in for Event {EventId}.",
             msg.UserId, msg.EventId);
 
-        await recipientRepository.MarkCheckedInAsync(msg.EventId, msg.UserId);
+        try
+        {
+            await recipientRepository.MarkCheckedInAsync(msg.EventId, msg.UserId);
 
-        logger.LogInformation(
-            "CheckInSyncConsumer: IsCheckedIn updated for UserId {UserId}, Event {EventId}.",
-            msg.UserId, msg.EventId);
+            logger.LogInformation(
+                "CheckInSyncConsumer: IsCheckedIn successfully updated for UserId {UserId}, Event {EventId}.",
+                msg.UserId, msg.EventId);
+        }
+        catch (Exception ex)
+        {
+            // Re-throw so MassTransit's retry policy retries the message.
+            // Without this, a DB failure would silently drop the update — the
+            // attendee's IsCheckedIn flag would stay false and they would NOT
+            // receive the Thank-You email after event completion.
+            logger.LogError(ex,
+                "CheckInSyncConsumer: FAILED to mark UserId {UserId} as checked-in for Event {EventId}. " +
+                "MassTransit will retry. CheckInId: {CheckInId}.",
+                msg.UserId, msg.EventId, msg.CheckInId);
+            throw;
+        }
     }
 }

@@ -24,14 +24,30 @@ public class EventStatusWorker : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("EventStatusWorker is starting.");
+        _logger.LogInformation("EventStatusWorker is starting. Polling interval: {Interval}s.",
+            _pollingInterval.TotalSeconds);
+
+        // Initial delay so the service fully starts before first poll
+        await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
 
         while (!stoppingToken.IsCancellationRequested)
         {
-            using var timer = new PeriodicTimer(_pollingInterval);
-            while (await timer.WaitForNextTickAsync(stoppingToken))
+            try
             {
                 await ProcessStatusTransitionsAsync(stoppingToken);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _logger.LogError(ex, "EventStatusWorker: unhandled exception during status transition poll.");
+            }
+
+            try
+            {
+                await Task.Delay(_pollingInterval, stoppingToken);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
             }
         }
 
@@ -82,47 +98,73 @@ public class EventStatusWorker : BackgroundService
 
         // OnGoing -> Completed (End + 15m)
         var eventsToCompleted = await dbContext.Events
-            .Where(e => e.EventStatus == EventStatus.OnGoing && e.EndDate != null && e.EndDate.Value.AddMinutes(15) <= now)
+            .Where(e => e.EventStatus == EventStatus.OnGoing
+                        && e.EndDate != null
+                        && e.EndDate.Value.AddMinutes(15) <= now)
             .AsNoTracking()
             .Select(e => new { e.Id, e.Title, e.OrganizerId })
             .ToListAsync(ct);
 
+        _logger.LogDebug("EventStatusWorker: found {Count} OnGoing event(s) past end+15m threshold.",
+            eventsToCompleted.Count);
+
         if (eventsToCompleted.Count > 0)
         {
-            await dbContext.Events
+            // ── BUG FIX: Use the SAME filter as the SELECT above (EndDate + 15m <= now)
+            // The previous UPDATE used EndDate <= now (missing +15m), so events found by the
+            // SELECT were NOT updated — causing the EventCompletedMessage to be published
+            // but the event remaining OnGoing, triggering the message again on every poll.
+            var updatedCount = await dbContext.Events
                 .Where(e => e.EventStatus == EventStatus.OnGoing
                             && e.EndDate.HasValue
-                            && e.EndDate.Value <= now)
+                            && e.EndDate.Value.AddMinutes(15) <= now)   // ← must match SELECT
                 .ExecuteUpdateAsync(s => s
                         .SetProperty(e => e.EventStatus, EventStatus.Completed)
                         .SetProperty(e => e.UpdatedAt, now),
                     ct);
 
+            _logger.LogInformation(
+                "EventStatusWorker: {UpdatedCount} event(s) marked Completed in DB (selected {SelectedCount}).",
+                updatedCount, eventsToCompleted.Count);
+
             foreach (var e in eventsToCompleted)
             {
-                _logger.LogInformation("Event {EventId} transitioned to Completed.", e.Id);
+                _logger.LogInformation(
+                    "EventStatusWorker: publishing EventCompletedMessage for Event {EventId} '{Title}' (Organizer {OrganizerId}).",
+                    e.Id, e.Title, e.OrganizerId);
 
-                // Publish shared contract — consumed by NotificationService (Thank-You email)
-                // and BookingService (settlement).
-                await publishEndpoint.Publish(new EventCompletedMessage
+                try
                 {
-                    EventId = e.Id,
-                    OrganizerId = e.OrganizerId,
-                    EventTitle = e.Title ?? string.Empty,
-                    CompletedAt = now
-                }, ct);
+                    // Publish shared contract — consumed by NotificationService (Thank-You email)
+                    // and BookingService (settlement).
+                    await publishEndpoint.Publish(new EventCompletedMessage
+                    {
+                        EventId = e.Id,
+                        OrganizerId = e.OrganizerId,
+                        EventTitle = e.Title ?? string.Empty,
+                        CompletedAt = now
+                    }, ct);
 
-                // Publish local integration event — consumed by StreamingService.
-                await publishEndpoint.Publish(new EventCompletedIntegrationEvent(
-                    EventId: e.Id,
-                    Title: e.Title ?? string.Empty,
-                    OrganizerId: e.OrganizerId,
-                    CompletedAt: now
-                ), ct);
+                    _logger.LogInformation(
+                        "EventStatusWorker: EventCompletedMessage published for Event {EventId}.", e.Id);
+
+                    // Publish local integration event — consumed by StreamingService.
+                    await publishEndpoint.Publish(new EventCompletedIntegrationEvent(
+                        EventId: e.Id,
+                        Title: e.Title ?? string.Empty,
+                        OrganizerId: e.OrganizerId,
+                        CompletedAt: now
+                    ), ct);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex,
+                        "EventStatusWorker: failed to publish completion messages for Event {EventId}.", e.Id);
+                }
             }
 
             _logger.LogInformation(
-                "EventStatusSyncJob: {Count} event(s) transitioned OnGoing → Completed.",
+                "EventStatusWorker: {Count} event(s) transitioned OnGoing → Completed.",
                 eventsToCompleted.Count);
         }
 

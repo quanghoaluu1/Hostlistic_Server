@@ -64,22 +64,46 @@ public class EventLifecycleService(IEventRepository eventRepository, IBus bus, I
         eventRepository.UpdateEventAsync(eventEntity);
         await eventRepository.SaveChangesAsync();
 
-        // Shared contract → consumed by NotificationService (Thank-You email) and BookingService.
-        await bus.Publish(new EventCompletedMessage
-        {
-            EventId = eventEntity.Id,
-            OrganizerId = requesterId,
-            EventTitle = eventEntity.Title ?? string.Empty,
-            CompletedAt = DateTime.UtcNow
-        });
+        logger.LogInformation(
+            "Event {EventId} '{Title}' marked Completed in DB by organizer {OrganizerId}.",
+            eventId, eventEntity.Title, requesterId);
 
-        // Local integration event → consumed by StreamingService.
-        await bus.Publish(new EventCompletedIntegrationEvent(
-            EventId: eventEntity.Id,
-            Title: eventEntity.Title ?? string.Empty,
-            OrganizerId: requesterId,
-            CompletedAt: DateTime.UtcNow
-        ));
+        // Shared contract → consumed by NotificationService (Thank-You email) and BookingService.
+        try
+        {
+            logger.LogInformation(
+                "Event {EventId}: publishing EventCompletedMessage to RabbitMQ.", eventId);
+
+            await bus.Publish(new EventCompletedMessage
+            {
+                EventId = eventEntity.Id,
+                OrganizerId = requesterId,
+                EventTitle = eventEntity.Title ?? string.Empty,
+                CompletedAt = DateTime.UtcNow
+            });
+
+            logger.LogInformation(
+                "Event {EventId}: EventCompletedMessage published successfully.", eventId);
+
+            // Local integration event → consumed by StreamingService.
+            await bus.Publish(new EventCompletedIntegrationEvent(
+                EventId: eventEntity.Id,
+                Title: eventEntity.Title ?? string.Empty,
+                OrganizerId: requesterId,
+                CompletedAt: DateTime.UtcNow
+            ));
+        }
+        catch (Exception ex)
+        {
+            // Log but don't fail the API — the DB commit already succeeded.
+            // The background EventStatusWorker will NOT re-publish because the event
+            // is already Completed, so a RabbitMQ failure here means the Thank-You
+            // email campaign will be skipped. Alerting is critical.
+            logger.LogError(ex,
+                "Event {EventId}: CRITICAL — failed to publish EventCompletedMessage. " +
+                "The Thank-You email campaign will NOT be triggered automatically. " +
+                "Manual intervention may be required.", eventId);
+        }
 
         logger.LogInformation("Event {EventId} manually completed by organizer {OrganizerId}.",
             eventId, requesterId);
