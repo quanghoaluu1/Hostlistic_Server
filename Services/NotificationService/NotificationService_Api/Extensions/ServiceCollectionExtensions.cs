@@ -39,6 +39,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IEventServiceClient, EventServiceClient>();
         services.AddScoped<IBookingServiceClient, BookingServiceClient>();
         services.AddTransient<IExcelInviteParser, ExcelInviteParser>();
+        services.AddScoped<IThankYouEmailService, ThankYouEmailService>();
         return services;
     }
 }

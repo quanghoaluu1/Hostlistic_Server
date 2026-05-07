@@ -168,6 +168,13 @@ builder.Services.AddHttpClient("BookingService", client =>
     client.BaseAddress = new Uri(bookingServiceUrl.TrimEnd('/'));
 });
 
+var notificationServiceUrl = builder.Configuration["ServiceUrls:NotificationService"] ?? "http://localhost:5097";
+builder.Services.AddHttpClient("NotificationService", client =>
+{
+    client.BaseAddress = new Uri(notificationServiceUrl.TrimEnd('/'));
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
+
 builder.Services.AddHealthChecks();
 var app = builder.Build();
 
