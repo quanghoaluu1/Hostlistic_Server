@@ -1,4 +1,5 @@
 using Common.Messages;
+using EventService_Application.Interfaces;
 using EventService_Application.IntegrationEvents;
 using EventService_Domain.Enums;
 using EventService_Infrastructure.Data;
@@ -59,6 +60,7 @@ public class EventStatusWorker : BackgroundService
         using var scope = _scopeFactory.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<EventServiceDbContext>();
         var publishEndpoint = scope.ServiceProvider.GetRequiredService<IPublishEndpoint>();
+        var notificationClient = scope.ServiceProvider.GetRequiredService<INotificationServiceClient>();
         var now = DateTime.UtcNow;
 
         // 1. Process Events
@@ -135,8 +137,15 @@ public class EventStatusWorker : BackgroundService
 
                 try
                 {
-                    // Publish shared contract — consumed by NotificationService (Thank-You email)
-                    // and BookingService (settlement).
+                    // Direct HTTP call to NotificationService — bypasses RabbitMQ for Thank-You email.
+                    await notificationClient.TriggerThankYouEmailAsync(
+                        e.Id,
+                        e.Title ?? string.Empty,
+                        e.OrganizerId,
+                        now,
+                        ct);
+
+                    // Also publish RabbitMQ messages (best-effort, for other consumers).
                     await publishEndpoint.Publish(new EventCompletedMessage
                     {
                         EventId = e.Id,
