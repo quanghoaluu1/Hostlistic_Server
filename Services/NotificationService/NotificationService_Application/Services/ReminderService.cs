@@ -1,4 +1,4 @@
-﻿using Common;
+using Common;
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -17,13 +17,17 @@ public class ReminderService(IEmailCampaignRepository campaignRepository,
     IBackgroundJobClient backgroundJobClient,
     ILogger<ReminderService> logger) : IReminderService
 {
-    private static readonly Dictionary<string, (int DaysOffset, int SendHour)> ReminderSchedule =
+    /// <summary>
+    /// For day-based reminders: scheduled = eventStartUtc - Days.
+    /// For sameday: scheduled = eventStartUtc - Hours (Days=0, Hours=2).
+    /// </summary>
+    private static readonly Dictionary<string, (int Days, int Hours)> ReminderSchedule =
         new()
         {
-            ["reminder_7day"]    = (7, 9),
-            ["reminder_3day"]    = (3, 9),
-            ["reminder_1day"]    = (1, 9),
-            ["reminder_sameday"] = (0, 8),
+            ["reminder_7day"]    = (7, 0),
+            ["reminder_3day"]    = (3, 0),
+            ["reminder_1day"]    = (1, 0),
+            ["reminder_sameday"] = (0, 2),  // 2 hours before event start
         };
 
     public async Task<ApiResponse<SetupRemindersResult>> SetupAutoRemindersAsync(
@@ -55,8 +59,7 @@ public class ReminderService(IEmailCampaignRepository campaignRepository,
                 continue;
             }
 
-            var scheduledUtc =
-                ComputeScheduledUtc(eventDetail.StartDate.Value, eventDetail.TimeZoneId, schedule.DaysOffset, schedule.SendHour);
+            var scheduledUtc = ComputeScheduledUtc(eventDetail.StartDate.Value, schedule.Days, schedule.Hours);
             // Skip — scheduled time already passed (allow 5 min buffer)
             if (scheduledUtc <= now.AddMinutes(5))
             {
@@ -144,28 +147,12 @@ public class ReminderService(IEmailCampaignRepository campaignRepository,
         return pending.Count;
     }
 
-    private static DateTime ComputeScheduledUtc(
-        DateTime eventStartUtc, string? timeZoneId, int daysOffset, int sendHourLocal)
-    {
-        TimeZoneInfo tz;
-        try
-        {
-            tz = TimeZoneInfo.FindSystemTimeZoneById(timeZoneId ?? "UTC");
-        }
-        catch
-        {
-            // Fallback to UTC nếu timezone ID không hợp lệ (Windows vs IANA mismatch)
-            tz = TimeZoneInfo.Utc;
-        }
-
-        var localStart = TimeZoneInfo.ConvertTimeFromUtc(eventStartUtc, tz);
-
-        // Ví dụ: event ngày 15, reminder_3day → gửi lúc 9:00 ngày 12
-        var scheduledLocal = localStart.Date
-            .AddDays(-daysOffset)
-            .AddHours(sendHourLocal);
-
-        return TimeZoneInfo.ConvertTimeToUtc(
-            DateTime.SpecifyKind(scheduledLocal, DateTimeKind.Unspecified), tz);
-    }
+    /// <summary>
+    /// Returns eventStartUtc minus the specified days and hours offset.
+    /// No timezone conversion needed — arithmetic on UTC gives the correct absolute instant.
+    /// Example: event at 2025-05-10 08:00 UTC, reminder_7day → 2025-05-03 08:00 UTC.
+    ///          reminder_sameday (2 h before)   → 2025-05-10 06:00 UTC.
+    /// </summary>
+    private static DateTime ComputeScheduledUtc(DateTime eventStartUtc, int days, int hours)
+        => eventStartUtc.AddDays(-days).AddHours(-hours);
 }
