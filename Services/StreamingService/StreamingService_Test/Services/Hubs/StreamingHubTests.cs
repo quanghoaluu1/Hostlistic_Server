@@ -10,6 +10,7 @@ namespace StreamingService_Test.Services.Hubs;
 public class StreamingHubTests
 {
     private readonly IEventServiceClient _eventServiceClient = Substitute.For<IEventServiceClient>();
+    private readonly IGuestStreamAccessService _guestStreamAccessService = Substitute.For<IGuestStreamAccessService>();
     private readonly StreamingHub _sut;
     private readonly IHubCallerClients _clients = Substitute.For<IHubCallerClients>();
     private readonly IGroupManager _groups = Substitute.For<IGroupManager>();
@@ -17,7 +18,7 @@ public class StreamingHubTests
 
     public StreamingHubTests()
     {
-        _sut = new StreamingHub(_eventServiceClient)
+        _sut = new StreamingHub(_eventServiceClient, _guestStreamAccessService)
         {
             Clients = _clients,
             Groups = _groups,
@@ -44,9 +45,11 @@ public class StreamingHubTests
     {
         // Arrange
         _context.User.Returns((ClaimsPrincipal?)null);
+        var eventId = Guid.NewGuid().ToString();
+        var sessionId = Guid.NewGuid().ToString();
 
         // Act
-        var act = () => _sut.SendEventChatMessage("ev1", "sess1", "user", "hi");
+        var act = () => _sut.SendEventChatMessage(eventId, sessionId, "user", "hi");
 
         // Assert
         await act.Should().ThrowAsync<HubException>().WithMessage("You must be authenticated*");

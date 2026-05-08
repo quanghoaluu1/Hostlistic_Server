@@ -1,9 +1,7 @@
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 
 namespace EventService_Api.Hubs;
 
-[Authorize]
 public class EventEngagementHub : Hub
 {
     public Task JoinEventGroup(string eventId)

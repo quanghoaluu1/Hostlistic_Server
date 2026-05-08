@@ -326,6 +326,28 @@ public class StreamsController : ControllerBase
         });
     }
 
+    [HttpGet("guest-sessions/{sessionId:guid}")]
+    [AllowAnonymous]
+    public IActionResult GetGuestSession(Guid sessionId)
+    {
+        if (!_guestStreamAccessService.TryGetSession(sessionId, out var session) || session == null)
+            return NotFound(new { message = "Guest live session not found or expired." });
+
+        return Ok(new
+        {
+            sessionId = session.SessionId,
+            session.EventId,
+            session.RoomId,
+            session.TicketId,
+            session.TicketCode,
+            session.Identity,
+            session.HolderName,
+            session.CreatedAtUtc,
+            session.LastSeenAtUtc,
+            session.ExpiresAtUtc
+        });
+    }
+
     [HttpPost("guest-sessions/{sessionId:guid}/release")]
     [AllowAnonymous]
     public IActionResult ReleaseGuestSession(Guid sessionId)

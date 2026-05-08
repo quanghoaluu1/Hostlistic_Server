@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using System.Net.Http.Json;
 
 namespace EventService_Api.Controllers;
 
@@ -18,28 +19,41 @@ namespace EventService_Api.Controllers;
 [Authorize]
 public class EventEngagementController : ControllerBase
 {
+    private const string GuestSessionHeader = "X-Guest-Session-Id";
+    private const string GuestIdentityHeader = "X-Guest-Identity";
+    private const string GuestNameHeader = "X-Guest-Name";
+
     private readonly EventServiceDbContext _dbContext;
     private readonly IHubContext<EventEngagementHub> _hubContext;
+    private readonly IHttpClientFactory _httpClientFactory;
 
     public EventEngagementController(
         EventServiceDbContext dbContext,
-        IHubContext<EventEngagementHub> hubContext)
+        IHubContext<EventEngagementHub> hubContext,
+        IHttpClientFactory httpClientFactory)
     {
         _dbContext = dbContext;
         _hubContext = hubContext;
+        _httpClientFactory = httpClientFactory;
     }
 
     [HttpGet]
+    [AllowAnonymous]
     public async Task<IActionResult> GetState(Guid eventId, [FromQuery] Guid? sessionId = null)
     {
-        var userId = GetCurrentUserId();
-        var access = await ResolveAccessAsync(eventId, userId);
+        var actor = await ResolveActorAsync(eventId);
+        if (actor is null)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, ApiResponse<object>.Fail(403, "You do not have access to this event."));
+        }
+
+        var access = await ResolveAccessAsync(eventId, actor.UserId);
         if (access is null)
         {
             return StatusCode(StatusCodes.Status403Forbidden, ApiResponse<object>.Fail(403, "You do not have access to this event."));
         }
 
-        var state = await BuildStateAsync(eventId, userId, access.Role, sessionId);
+        var state = await BuildStateAsync(eventId, actor.UserId, access.Role, sessionId, actor.DisplayName);
         return Ok(ApiResponse<EventEngagementStateDto>.Success(200, "Engagement state retrieved successfully.", state));
     }
 
@@ -90,10 +104,16 @@ public class EventEngagementController : ControllerBase
     }
 
     [HttpPost("questions")]
+    [AllowAnonymous]
     public async Task<IActionResult> SubmitQuestion(Guid eventId, [FromBody] SubmitEventQuestionRequest request)
     {
-        var userId = GetCurrentUserId();
-        var access = await ResolveAccessAsync(eventId, userId);
+        var actor = await ResolveActorAsync(eventId);
+        if (actor is null)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, ApiResponse<object>.Fail(403, "You do not have access to this event."));
+        }
+
+        var access = await ResolveAccessAsync(eventId, actor.UserId);
         if (access is null)
         {
             return StatusCode(StatusCodes.Status403Forbidden, ApiResponse<object>.Fail(403, "You do not have access to this event."));
@@ -110,7 +130,7 @@ public class EventEngagementController : ControllerBase
             return NotFound(ApiResponse<object>.Fail(404, "No session is available for engagement right now."));
         }
 
-        var qaRestriction = await GetActiveRestrictionAsync(session.Id, userId, EngagementRestrictionScope.Qa);
+        var qaRestriction = await GetActiveRestrictionAsync(session.Id, actor.UserId, EngagementRestrictionScope.Qa);
         if (qaRestriction is not null)
         {
             return StatusCode(StatusCodes.Status403Forbidden, ApiResponse<object>.Fail(403,
@@ -123,7 +143,7 @@ public class EventEngagementController : ControllerBase
         {
             Id = Guid.NewGuid(),
             SessionId = session.Id,
-            UserId = userId,
+            UserId = actor.UserId,
             QuestionText = request.QuestionText.Trim(),
             Status = CanModerate(access.Role) ? QaStatus.Approved : QaStatus.Pending,
             UpVotes = 0,
@@ -140,10 +160,16 @@ public class EventEngagementController : ControllerBase
     }
 
     [HttpPost("questions/{questionId:guid}/vote")]
+    [AllowAnonymous]
     public async Task<IActionResult> ToggleQuestionVote(Guid eventId, Guid questionId)
     {
-        var userId = GetCurrentUserId();
-        var access = await ResolveAccessAsync(eventId, userId);
+        var actor = await ResolveActorAsync(eventId);
+        if (actor is null)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, ApiResponse<object>.Fail(403, "You do not have access to this event."));
+        }
+
+        var access = await ResolveAccessAsync(eventId, actor.UserId);
         if (access is null)
         {
             return StatusCode(StatusCodes.Status403Forbidden, ApiResponse<object>.Fail(403, "You do not have access to this event."));
@@ -158,7 +184,7 @@ public class EventEngagementController : ControllerBase
             return NotFound(ApiResponse<object>.Fail(404, "Question not found."));
         }
 
-        var qaRestriction = await GetActiveRestrictionAsync(question.SessionId, userId, EngagementRestrictionScope.Qa);
+        var qaRestriction = await GetActiveRestrictionAsync(question.SessionId, actor.UserId, EngagementRestrictionScope.Qa);
         if (qaRestriction is not null)
         {
             return StatusCode(StatusCodes.Status403Forbidden, ApiResponse<object>.Fail(403,
@@ -168,7 +194,7 @@ public class EventEngagementController : ControllerBase
         }
 
         var existingVote = await _dbContext.QaVotes
-            .FirstOrDefaultAsync(v => v.QaQuestionId == questionId && v.UserId == userId);
+            .FirstOrDefaultAsync(v => v.QaQuestionId == questionId && v.UserId == actor.UserId);
 
         var hasVoted = false;
         if (existingVote is null)
@@ -176,7 +202,7 @@ public class EventEngagementController : ControllerBase
             _dbContext.QaVotes.Add(new QaVote
             {
                 QaQuestionId = questionId,
-                UserId = userId,
+                UserId = actor.UserId,
                 VotedAt = DateTime.UtcNow
             });
             question.UpVotes += 1;
@@ -332,10 +358,16 @@ public class EventEngagementController : ControllerBase
     }
 
     [HttpPost("polls/{pollId:guid}/responses")]
+    [AllowAnonymous]
     public async Task<IActionResult> SubmitPollResponse(Guid eventId, Guid pollId, [FromBody] SubmitEventPollResponseRequest request)
     {
-        var userId = GetCurrentUserId();
-        var access = await ResolveAccessAsync(eventId, userId);
+        var actor = await ResolveActorAsync(eventId);
+        if (actor is null)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, ApiResponse<object>.Fail(403, "You do not have access to this event."));
+        }
+
+        var access = await ResolveAccessAsync(eventId, actor.UserId);
         if (access is null)
         {
             return StatusCode(StatusCodes.Status403Forbidden, ApiResponse<object>.Fail(403, "You do not have access to this event."));
@@ -373,7 +405,7 @@ public class EventEngagementController : ControllerBase
         }
 
         var existingResponse = await _dbContext.PollResponses
-            .FirstOrDefaultAsync(response => response.PollId == pollId && response.UserId == userId);
+            .FirstOrDefaultAsync(response => response.PollId == pollId && response.UserId == actor.UserId);
 
         if (existingResponse is null)
         {
@@ -381,7 +413,7 @@ public class EventEngagementController : ControllerBase
             {
                 Id = Guid.NewGuid(),
                 PollId = pollId,
-                UserId = userId,
+                UserId = actor.UserId,
                 SelectedOptionId = selectedOptionIds,
                 RespondedAt = DateTime.UtcNow
             });
@@ -514,7 +546,7 @@ public class EventEngagementController : ControllerBase
         }));
     }
 
-    private async Task<EventEngagementStateDto> BuildStateAsync(Guid eventId, Guid userId, EventRole role, Guid? sessionId)
+    private async Task<EventEngagementStateDto> BuildStateAsync(Guid eventId, Guid userId, EventRole role, Guid? sessionId, string? currentDisplayName = null)
     {
         var session = await ResolveSessionAsync(eventId, sessionId);
         if (session is null)
@@ -598,7 +630,7 @@ public class EventEngagementController : ControllerBase
                 Id = question.Id,
                 SessionId = question.SessionId,
                 UserId = question.UserId,
-                AuthorName = ResolveAuthorName(membershipNames, question.UserId),
+                AuthorName = ResolveAuthorName(membershipNames, question.UserId, currentDisplayName, userId),
                 QuestionText = question.QuestionText,
                 Status = question.Status,
                 UpVotes = question.UpVotes,
@@ -1003,14 +1035,75 @@ public class EventEngagementController : ControllerBase
         return session.StartTime.HasValue && session.EndTime.HasValue && session.StartTime <= now && session.EndTime >= now;
     }
 
-    private static string ResolveAuthorName(IReadOnlyDictionary<Guid, string?> membershipNames, Guid userId)
+    private static string ResolveAuthorName(
+        IReadOnlyDictionary<Guid, string?> membershipNames,
+        Guid authorUserId,
+        string? currentDisplayName = null,
+        Guid? currentUserId = null)
     {
-        if (membershipNames.TryGetValue(userId, out var displayName) && !string.IsNullOrWhiteSpace(displayName))
+        if (currentUserId.HasValue
+            && currentUserId.Value == authorUserId
+            && !string.IsNullOrWhiteSpace(currentDisplayName))
+        {
+            return currentDisplayName.Trim();
+        }
+
+        if (membershipNames.TryGetValue(authorUserId, out var displayName) && !string.IsNullOrWhiteSpace(displayName))
         {
             return displayName;
         }
 
-        return $"User {userId.ToString()[..8]}";
+        return $"User {authorUserId.ToString()[..8]}";
+    }
+
+    private async Task<RequestActor?> ResolveActorAsync(Guid eventId)
+    {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (Guid.TryParse(userIdClaim, out var authenticatedUserId))
+        {
+            return new RequestActor(authenticatedUserId, null, false);
+        }
+
+        return await ResolveGuestActorAsync(eventId);
+    }
+
+    private async Task<RequestActor?> ResolveGuestActorAsync(Guid eventId)
+    {
+        var rawGuestSessionId = Request.Headers[GuestSessionHeader].ToString();
+        var guestIdentity = Request.Headers[GuestIdentityHeader].ToString();
+        var guestName = Request.Headers[GuestNameHeader].ToString();
+
+        if (!Guid.TryParse(rawGuestSessionId, out var guestSessionId))
+            return null;
+
+        GuestSessionLookupDto? session;
+        try
+        {
+            var client = _httpClientFactory.CreateClient("StreamingService");
+            var response = await client.GetAsync($"/api/streams/guest-sessions/{guestSessionId}", HttpContext.RequestAborted);
+            if (!response.IsSuccessStatusCode)
+                return null;
+
+            session = await response.Content.ReadFromJsonAsync<GuestSessionLookupDto>(cancellationToken: HttpContext.RequestAborted);
+            if (session is null || session.EventId != eventId)
+                return null;
+        }
+        catch
+        {
+            return null;
+        }
+
+        if (!string.IsNullOrWhiteSpace(guestIdentity)
+            && !string.Equals(session.Identity, guestIdentity, StringComparison.Ordinal))
+            return null;
+
+        var displayName = !string.IsNullOrWhiteSpace(guestName)
+            ? guestName.Trim()
+            : !string.IsNullOrWhiteSpace(session.HolderName)
+                ? session.HolderName.Trim()
+                : session.Identity;
+
+        return new RequestActor(session.TicketId, displayName, true);
     }
 
     private Guid GetCurrentUserId()
@@ -1033,4 +1126,19 @@ public class EventEngagementController : ControllerBase
     }
 
     private sealed record ResolvedEventAccess(Event Event, EventRole Role);
+    private sealed record RequestActor(Guid UserId, string? DisplayName, bool IsGuest);
+
+    private sealed class GuestSessionLookupDto
+    {
+        public Guid SessionId { get; set; }
+        public Guid EventId { get; set; }
+        public Guid RoomId { get; set; }
+        public Guid TicketId { get; set; }
+        public string TicketCode { get; set; } = string.Empty;
+        public string Identity { get; set; } = string.Empty;
+        public string? HolderName { get; set; }
+        public DateTime CreatedAtUtc { get; set; }
+        public DateTime LastSeenAtUtc { get; set; }
+        public DateTime ExpiresAtUtc { get; set; }
+    }
 }

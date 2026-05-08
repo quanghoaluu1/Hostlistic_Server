@@ -1,18 +1,18 @@
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using StreamingService_Application.Interfaces;
 using System.Security.Claims;
 
 namespace StreamingService_Api.Hubs;
 
-[Authorize]
 public class StreamingHub : Hub
 {
     private readonly IEventServiceClient _eventServiceClient;
+    private readonly IGuestStreamAccessService _guestStreamAccessService;
 
-    public StreamingHub(IEventServiceClient eventServiceClient)
+    public StreamingHub(IEventServiceClient eventServiceClient, IGuestStreamAccessService guestStreamAccessService)
     {
         _eventServiceClient = eventServiceClient;
+        _guestStreamAccessService = guestStreamAccessService;
     }
 
     public Task JoinEventGroup(string eventId)
@@ -32,18 +32,25 @@ public class StreamingHub : Hub
             return;
         }
 
-        var userIdClaim = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? Context.User?.FindFirstValue("sub");
-        if (!Guid.TryParse(userIdClaim, out var userId))
-        {
-            throw new HubException("You must be authenticated to send chat messages.");
-        }
-
         if (!Guid.TryParse(eventId, out var parsedEventId) || !Guid.TryParse(sessionId, out var parsedSessionId))
         {
             throw new HubException("Invalid event or session id.");
         }
 
-        var chatAccess = await _eventServiceClient.GetEventChatAccessAsync(parsedEventId, parsedSessionId, userId);
+        var userIdClaim = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? Context.User?.FindFirstValue("sub");
+        var isAuthenticatedUser = Guid.TryParse(userIdClaim, out var userId);
+        var guestContext = !isAuthenticatedUser
+            ? ResolveGuestContext(parsedEventId)
+            : null;
+
+        if (!isAuthenticatedUser && guestContext is null)
+        {
+            throw new HubException("You must be authenticated to send chat messages.");
+        }
+
+        var actorUserId = isAuthenticatedUser ? userId : guestContext!.TicketId;
+
+        var chatAccess = await _eventServiceClient.GetEventChatAccessAsync(parsedEventId, parsedSessionId, actorUserId);
         if (!chatAccess.CanSendChat)
         {
             // Smooth UX: notify only the caller instead of throwing HubException.
@@ -59,7 +66,9 @@ public class StreamingHub : Hub
             return;
         }
 
-        var safeSender = string.IsNullOrWhiteSpace(sender) ? "Guest" : sender.Trim();
+        var safeSender = string.IsNullOrWhiteSpace(sender)
+            ? guestContext?.HolderName?.Trim() ?? "Guest"
+            : sender.Trim();
         var safeRole = string.IsNullOrWhiteSpace(chatAccess.Role) ? "Viewer" : chatAccess.Role.Trim();
         var safeMessage = message.Trim();
 
@@ -68,7 +77,7 @@ public class StreamingHub : Hub
             Id = Guid.NewGuid().ToString(),
             EventId = eventId,
             SessionId = sessionId,
-            UserId = userId,
+            UserId = actorUserId,
             Sender = safeSender,
             Role = safeRole,
             Message = safeMessage,
@@ -110,6 +119,28 @@ public class StreamingHub : Hub
             MessageId = messageId,
             DeletedByUserId = userId
         });
+    }
+
+    private GuestLiveSession? ResolveGuestContext(Guid eventId)
+    {
+        var httpContext = Context.GetHttpContext();
+        var guestSessionId = httpContext?.Request.Query["guestSessionId"].ToString();
+        var guestIdentity = httpContext?.Request.Query["guestIdentity"].ToString();
+
+        if (!Guid.TryParse(guestSessionId, out var parsedGuestSessionId))
+            return null;
+
+        if (!_guestStreamAccessService.TryGetSession(parsedGuestSessionId, out var session) || session == null)
+            return null;
+
+        if (session.EventId != eventId)
+            return null;
+
+        if (!string.IsNullOrWhiteSpace(guestIdentity)
+            && !string.Equals(session.Identity, guestIdentity, StringComparison.Ordinal))
+            return null;
+
+        return session;
     }
 
     public static string BuildEventGroup(string eventId) => $"event:{eventId}";

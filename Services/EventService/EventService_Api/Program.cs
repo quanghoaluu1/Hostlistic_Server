@@ -175,6 +175,13 @@ builder.Services.AddHttpClient("NotificationService", client =>
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 
+var streamingServiceUrl = builder.Configuration["Services:StreamingService"] ?? "http://localhost:5191";
+builder.Services.AddHttpClient("StreamingService", client =>
+{
+    client.BaseAddress = new Uri(streamingServiceUrl.TrimEnd('/'));
+    client.Timeout = TimeSpan.FromSeconds(15);
+});
+
 builder.Services.AddHealthChecks();
 var app = builder.Build();
 

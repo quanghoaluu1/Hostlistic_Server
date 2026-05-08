@@ -28,6 +28,7 @@ public interface IGuestStreamAccessService
     GuestLiveAttemptStatus RegisterFailedAttempt(Guid eventId, string clientKey);
     void ResetAttempts(Guid eventId, string clientKey);
     bool TryGetActiveSession(Guid ticketId, out GuestLiveSession? session);
+    bool TryGetSession(Guid sessionId, out GuestLiveSession? session);
     GuestLiveSession CreateOrReplaceSession(Guid eventId, Guid roomId, GuestLiveTicketValidationDto ticket, string? holderName);
     bool TouchSession(Guid sessionId, out GuestLiveSession? session);
     void ReleaseSession(Guid sessionId);

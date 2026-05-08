@@ -76,6 +76,23 @@ public class GuestStreamAccessService : IGuestStreamAccessService
         return true;
     }
 
+    public bool TryGetSession(Guid sessionId, out GuestLiveSession? session)
+    {
+        session = null;
+
+        if (!_sessionsById.TryGetValue(sessionId, out var storedSession))
+            return false;
+
+        if (IsExpired(storedSession))
+        {
+            ReleaseSession(sessionId);
+            return false;
+        }
+
+        session = storedSession;
+        return true;
+    }
+
     public GuestLiveSession CreateOrReplaceSession(Guid eventId, Guid roomId, GuestLiveTicketValidationDto ticket, string? holderName)
     {
         CleanupExpiredSession(ticket.TicketId);
