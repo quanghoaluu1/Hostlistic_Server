@@ -39,7 +39,6 @@ public class AttendeeTicketDto
     public string TicketCode { get; set; } = string.Empty;
     public string TicketTypeName { get; set; } = string.Empty;
     public bool IsUsed { get; set; }
-    public bool IsExpired { get; set; }
     public string? HolderName { get; set; }
     public string? HolderEmail { get; set; }
     public string? HolderPhone { get; set; }

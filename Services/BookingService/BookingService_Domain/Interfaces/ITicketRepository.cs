@@ -17,6 +17,5 @@ public interface ITicketRepository
     Task<bool> TicketCodeExistsAsync(string ticketCode);
     Task<IEnumerable<Ticket>> GetAllWithOrderAsync();
     Task<List<Ticket>> GetTicketsByEventAndPostponementStatusAsync(Guid eventId, BookingService_Domain.Enum.PostponementStatus status);
-    Task ExpireUnusedTicketsForEventAsync(Guid eventId);
     Task SaveChangesAsync();
 }

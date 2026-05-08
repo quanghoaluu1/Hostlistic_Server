@@ -26,6 +26,5 @@ public class RegisteredEventTicketDto
     public string TicketTypeName { get; set; } = string.Empty;
     public string QrCodeUrl { get; set; } = string.Empty;
     public bool IsUsed { get; set; }
-    public bool IsExpired { get; set; }
     public string? HolderName { get; set; }
 }

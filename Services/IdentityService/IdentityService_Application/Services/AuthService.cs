@@ -14,14 +14,10 @@ using Mapster;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using NotificationService_Application.Interfaces;
-using StackExchange.Redis;
-using MassTransit;
-using Common.Messages;
-using Role = IdentityService_Domain.Enums.Role;
 
 namespace IdentityService_Application.Services;
 
-public class AuthService(IUserRepository userRepository, IRefreshTokenRepository refreshTokenRepository, IConfiguration configuration, IOtpService otpService, INotificationServiceClient notificationServiceClient, IBookingServiceClient bookingServiceClient, IUserPlanRepository userPlanRepository, IPublishEndpoint publishEndpoint, IConnectionMultiplexer redis)
+public class AuthService(IUserRepository userRepository, IRefreshTokenRepository refreshTokenRepository, IConfiguration configuration, IOtpService otpService, INotificationServiceClient notificationServiceClient, IBookingServiceClient bookingServiceClient, IUserPlanRepository userPlanRepository)
     : IAuthService
 {
     private static readonly Guid FreePlanId = new Guid("4efa28eb-3376-47f8-967e-56b50bf545f7");
@@ -61,12 +57,7 @@ public class AuthService(IUserRepository userRepository, IRefreshTokenRepository
         if (!user.IsActive)
             return ApiResponse<AuthResponse>.Fail(401, "Account is deactivated");
 
-        var sessionId = Guid.NewGuid().ToString();
-        var db = redis.GetDatabase();
-        await db.StringSetAsync($"ActiveSession:{user.Id}", sessionId, TimeSpan.FromDays(7));
-        await publishEndpoint.Publish(new UserSessionOverriddenEvent { UserId = user.Id, NewSessionId = sessionId });
-
-        var accessToken = GenerateJwtToken(user, sessionId);
+        var accessToken = GenerateJwtToken(user);
         var refreshToken = GenerateRefreshToken(user.Id);
         
         await refreshTokenRepository.AddTokenAsync(refreshToken.Entity);
@@ -167,13 +158,7 @@ public class AuthService(IUserRepository userRepository, IRefreshTokenRepository
             await userPlanRepository.SaveChangesAsync();
         }
         if (!user.IsActive) return ApiResponse<AuthResponse>.Fail(400, "User is deactivated");
-        
-        var sessionId = Guid.NewGuid().ToString();
-        var db = redis.GetDatabase();
-        await db.StringSetAsync($"ActiveSession:{user.Id}", sessionId, TimeSpan.FromDays(7));
-        await publishEndpoint.Publish(new UserSessionOverriddenEvent { UserId = user.Id, NewSessionId = sessionId });
-
-        var accessToken = GenerateJwtToken(user, sessionId);
+        var accessToken = GenerateJwtToken(user);
         var refreshToken = GenerateRefreshToken(user.Id);
 
         await refreshTokenRepository.AddTokenAsync(refreshToken.Entity);
@@ -205,15 +190,7 @@ public class AuthService(IUserRepository userRepository, IRefreshTokenRepository
             if (!user.IsActive)
                 return ApiResponse<AuthResponse>.Fail(401, "Account is deactivated");
 
-            var db = redis.GetDatabase();
-            var sessionId = await db.StringGetAsync($"ActiveSession:{user.Id}");
-            if (sessionId.IsNullOrEmpty)
-            {
-                sessionId = Guid.NewGuid().ToString();
-                await db.StringSetAsync($"ActiveSession:{user.Id}", sessionId, TimeSpan.FromDays(7));
-            }
-
-            var newAccessToken = GenerateJwtToken(user, sessionId);
+            var newAccessToken = GenerateJwtToken(user);
             var newRefreshToken = GenerateRefreshToken(user.Id);
 
             await refreshTokenRepository.RevokeRefreshTokenAsync(existingToken);
@@ -240,15 +217,14 @@ public class AuthService(IUserRepository userRepository, IRefreshTokenRepository
         return ApiResponse<bool>.Success(200, "Logged out successfully", true);
     }
 
-    private string GenerateJwtToken(User user, string sessionId)
+    private string GenerateJwtToken(User user)
     {
         var claims = new List<Claim>
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new Claim(JwtRegisteredClaimNames.Email, user.Email),
             new Claim(JwtRegisteredClaimNames.Name, user.FullName),
-            new Claim("Role", user.Role.ToString()),
-            new Claim("SessionId", sessionId)
+            new Claim("Role", user.Role.ToString())
         };
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["Jwt:Key"] ?? throw new InvalidOperationException("Jwt Key not found")));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);

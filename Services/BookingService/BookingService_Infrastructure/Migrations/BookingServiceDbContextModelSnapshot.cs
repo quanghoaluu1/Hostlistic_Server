@@ -379,9 +379,6 @@ namespace BookingService_Infrastructure.Migrations
                     b.Property<bool>("IsCancelled")
                         .HasColumnType("boolean");
 
-                    b.Property<bool>("IsExpired")
-                        .HasColumnType("boolean");
-
                     b.Property<bool>("IsUsed")
                         .HasColumnType("boolean");
 

@@ -7,7 +7,6 @@ using IdentityService_Api.Extensions;
 using IdentityService_Application.Services;
 using IdentityService_Infrastructure.Data;
 using Mapster;
-using MassTransit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -139,25 +138,6 @@ builder.Services.AddHttpClient("BookingService", client =>
     client.BaseAddress = new Uri(builder.Configuration["Services:BookingService"] ?? "http://bookingservice:8080");
 });
 builder.Services.AddHttpContextAccessor();
-
-builder.Services.AddMassTransit(x =>
-{
-    x.UsingRabbitMq((context, cfg) =>
-    {
-        var uri = builder.Configuration.GetConnectionString("rabbitmq");
-        if (!string.IsNullOrEmpty(uri))
-            cfg.Host(new Uri(uri));
-        else
-            cfg.Host(builder.Configuration["RabbitMq:Host"] ?? "rabbitmq", "/", h =>
-            {
-                h.Username(builder.Configuration["RabbitMq:Username"] ?? "guest");
-                h.Password(builder.Configuration["RabbitMq:Password"] ?? "guest");
-            });
-
-        cfg.ConfigureEndpoints(context);
-    });
-});
-
 builder.Services.AddApplicationServices();
 builder.Services.AddHealthChecks();
 

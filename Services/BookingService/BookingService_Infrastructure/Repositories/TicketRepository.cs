@@ -127,13 +127,6 @@ public class TicketRepository : ITicketRepository
         await _context.SaveChangesAsync();
     }
 
-    public async Task ExpireUnusedTicketsForEventAsync(Guid eventId)
-    {
-        await _context.Tickets
-            .Where(t => t.Order.EventId == eventId && !t.IsUsed && !t.IsExpired)
-            .ExecuteUpdateAsync(s => s.SetProperty(t => t.IsExpired, true));
-    }
-
     private string GenerateTicketCode()
     {
         return $"TKT-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString()[..8].ToUpper()}";
