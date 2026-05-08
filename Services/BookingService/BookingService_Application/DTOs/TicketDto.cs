@@ -11,6 +11,7 @@ public class TicketDto
     public string QrCodeUrl { get; set; } = string.Empty;
     public DateTime IssuedDate { get; set; }
     public bool IsUsed { get; set; }
+    public bool IsExpired { get; set; }
     public string? HolderName { get; set; }
     public string? HolderEmail { get; set; }
     public string? HolderPhone { get; set; }
