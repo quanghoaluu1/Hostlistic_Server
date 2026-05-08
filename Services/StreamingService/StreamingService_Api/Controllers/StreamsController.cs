@@ -220,12 +220,27 @@ public class StreamsController : ControllerBase
             .AsNoTracking()
             .Where(r =>
                 r.EventId == eventId &&
-                (!request.TrackId.HasValue || r.TrackId == request.TrackId.Value) &&
-                r.Status != StreamRoomStatus.Ended)
-            .OrderByDescending(r => r.CreatedAt)
+                (!request.TrackId.HasValue || r.TrackId == request.TrackId.Value))
+            .Select(r => new
+            {
+                Room = r,
+                HasConnectedHost = _dbContext.StreamParticipants.Any(p =>
+                    p.StreamRoomId == r.Id &&
+                    p.IsCurrentlyConnected &&
+                    (p.Role == ParticipantRole.Organizer || p.Role == ParticipantRole.CoOrganizer)),
+                HasHostHistory = _dbContext.StreamParticipants.Any(p =>
+                    p.StreamRoomId == r.Id &&
+                    (p.Role == ParticipantRole.Organizer || p.Role == ParticipantRole.CoOrganizer) &&
+                    (p.JoinedAt != null || !string.IsNullOrWhiteSpace(p.LiveKitIdentity)))
+            })
+            .Where(x =>
+                x.Room.Status == StreamRoomStatus.Live ||
+                (x.Room.Status != StreamRoomStatus.Ended && (x.HasConnectedHost || x.HasHostHistory)))
+            .OrderByDescending(x => x.Room.CreatedAt)
+            .Select(x => x.Room)
             .FirstOrDefaultAsync(HttpContext.RequestAborted);
 
-        if (room == null || room.Status != StreamRoomStatus.Live)
+        if (room == null)
         {
             return BadRequest(new
             {

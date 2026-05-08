@@ -9,6 +9,8 @@ using StreamingService_Api.Controllers;
 using StreamingService_Api.Hubs;
 using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
+using StreamingService_Domain.Entities;
+using StreamingService_Domain.Enums;
 
 namespace StreamingService_Test.Controllers;
 
@@ -82,6 +84,46 @@ public class StreamsControllerTests
         
         _bookingServiceClient.ValidateGuestLiveTicketAsync(eventId, Arg.Any<string>())
             .Returns(new GuestLiveTicketValidationDto { TicketId = Guid.NewGuid(), TicketCode = "TC123", TicketTypeId = Guid.NewGuid() });
+        _eventServiceClient.GetTicketTypeStreamingAccessAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(new TicketTypeStreamingAccessDto());
+
+        _guestStreamAccessService.CreateOrReplaceSession(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<GuestLiveTicketValidationDto>(), Arg.Any<string>())
+            .Returns(new GuestLiveSession { SessionId = Guid.NewGuid(), Identity = "guest-123" });
+
+        // Act
+        var result = await _sut.CreateGuestAccess(eventId, request);
+
+        // Assert
+        result.Should().BeOfType<OkObjectResult>();
+    }
+
+    [Fact]
+    public async Task CreateGuestAccess_WhenRoomHasConnectedHostHistory_ReturnsOk()
+    {
+        // Arrange
+        var eventId = Guid.NewGuid();
+        var request = new GuestStreamAccessRequest { TicketCode = "TC-HOST", HolderName = "Guest User" };
+        var room = StreamRoomBuilder.CreateRoom(eventId: eventId, status: StreamRoomStatus.Scheduled);
+
+        _dbContext.StreamRooms.Add(room);
+        _dbContext.StreamParticipants.Add(new StreamParticipant
+        {
+            Id = Guid.NewGuid(),
+            StreamRoomId = room.Id,
+            UserId = Guid.NewGuid(),
+            Role = ParticipantRole.Organizer,
+            LiveKitIdentity = "host-1",
+            JoinedAt = DateTime.UtcNow,
+            IsCurrentlyConnected = true,
+            IsBanned = false
+        });
+        await _dbContext.SaveChangesAsync(CancellationToken.None);
+
+        _guestStreamAccessService.GetAttemptStatus(eventId, Arg.Any<string>())
+            .Returns(new GuestLiveAttemptStatus { IsBlocked = false });
+
+        _bookingServiceClient.ValidateGuestLiveTicketAsync(eventId, Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new GuestLiveTicketValidationDto { TicketId = Guid.NewGuid(), TicketCode = "TC-HOST", TicketTypeId = Guid.NewGuid() });
         _eventServiceClient.GetTicketTypeStreamingAccessAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
             .Returns(new TicketTypeStreamingAccessDto());
 
