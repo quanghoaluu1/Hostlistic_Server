@@ -13,7 +13,7 @@ public record EventSettlementDto(
     decimal NetRevenue,
     int TotalTicketsSold,
     int TotalOrders,
-    SettlementStatus Status,
+    string Status,
     string? AdminNotes,
     string? RejectionReason,
     Guid? SettledByAdminId,

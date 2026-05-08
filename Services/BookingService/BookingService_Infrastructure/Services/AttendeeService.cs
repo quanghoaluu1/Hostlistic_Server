@@ -77,6 +77,7 @@ public class AttendeeService(BookingServiceDbContext dbContext) : IAttendeeServi
                     TicketCode = t.TicketCode,
                     TicketTypeName = t.TicketTypeName,
                     IsUsed = t.IsUsed,
+                    IsExpired = t.IsExpired,
                     HolderName = t.HolderName,
                     HolderEmail = t.HolderEmail,
                     HolderPhone = t.HolderPhone,
