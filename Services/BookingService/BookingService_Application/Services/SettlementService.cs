@@ -59,10 +59,15 @@ public class SettlementService(
         return ApiResponse<List<UnsettledEventDto>>.Success(200, "Pending settlements retrieved successfully", unsettleEvents);
     }
 
-    public async Task<ApiResponse<List<EventSettlementDto>>> GetAllSettlementsAsync(CancellationToken ct = default)
+    public async Task<ApiResponse<PagedResult<EventSettlementDto>>> GetAllSettlementsAsync(BaseQueryParams queryParams, CancellationToken ct = default)
     {
-        var settlements = await settlementRepository.GetAllAsync();
-        return ApiResponse<List<EventSettlementDto>>.Success(200, "Settlements retrieved successfully", settlements.Adapt<List<EventSettlementDto>>());
+        var query = settlementRepository.GetAllQueryable();
+        
+        var pagedResult = await query.ToPagedResultAsync(queryParams.Page, queryParams.PageSize);
+        var mappedItems = pagedResult.Items.Adapt<List<EventSettlementDto>>();
+        
+        var result = new PagedResult<EventSettlementDto>(mappedItems, pagedResult.TotalItems, pagedResult.CurrentPage, pagedResult.PageSize);
+        return ApiResponse<PagedResult<EventSettlementDto>>.Success(200, "Settlements retrieved successfully", result);
     }
 
     public async Task<ApiResponse<SettlementPreviewDto>> PreviewSettlementAsync(Guid eventId, Guid organizerId,

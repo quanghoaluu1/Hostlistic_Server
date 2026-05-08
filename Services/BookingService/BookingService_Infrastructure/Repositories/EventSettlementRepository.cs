@@ -24,6 +24,11 @@ public class EventSettlementRepository : IEventSettlementRepository
         return await _context.EventSettlements.AsNoTracking().OrderByDescending(s => s.CreatedAt).ToListAsync();
     }
 
+    public IQueryable<EventSettlement> GetAllQueryable()
+    {
+        return _context.EventSettlements.AsNoTracking().OrderByDescending(s => s.CreatedAt);
+    }
+
     public async Task<IEnumerable<Guid>> GetEventIds()
     {
         return await _context.EventSettlements.AsNoTracking().Select(e => e.EventId).ToListAsync();

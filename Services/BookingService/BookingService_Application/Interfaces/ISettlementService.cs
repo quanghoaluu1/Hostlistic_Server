@@ -1,4 +1,4 @@
-﻿using BookingService_Application.DTOs;
+using BookingService_Application.DTOs;
 using Common;
 
 namespace BookingService_Application.Interfaces;
@@ -9,7 +9,7 @@ public interface ISettlementService
         string? notes = null, CancellationToken ct = default);   
     Task<ApiResponse<List<UnsettledEventDto>>>
         GetPendingSettlementsAsync(CancellationToken ct);
-    Task<ApiResponse<List<EventSettlementDto>>> GetAllSettlementsAsync(CancellationToken ct = default);
+    Task<ApiResponse<PagedResult<EventSettlementDto>>> GetAllSettlementsAsync(BaseQueryParams queryParams, CancellationToken ct = default);
 
     Task<ApiResponse<SettlementPreviewDto>> PreviewSettlementAsync(Guid eventId, Guid organizerId,
         CancellationToken ct = default);
