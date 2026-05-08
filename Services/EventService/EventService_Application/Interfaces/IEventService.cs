@@ -1,5 +1,6 @@
 using Common;
 using EventService_Application.DTOs;
+using EventService_Domain.Models;
 
 namespace EventService_Application.Interfaces;
 
@@ -10,7 +11,7 @@ public interface IEventService
         Guid organizerId,
         string? organizerFullName = null,
         string? organizerEmail = null);
-    Task<ApiResponse<PagedResult<EventResponseDto>>> GetAllEventsAsync(BaseQueryParams request);
+    Task<ApiResponse<PagedResult<EventResponseDto>>> GetAllEventsAsync(AdminEventQueryParams request);
     Task<ApiResponse<EventResponseDto>> GetEventByIdAsync(Guid eventId);
     Task<ApiResponse<EventResponseDto>> UpdateEventAsync(Guid eventId, EventRequestDto request, string? publicId);
     Task<ApiResponse<PagedResult<MyEventDto>>> GetMyEventAsync(Guid userId, MyEventQueryParams queryParams);

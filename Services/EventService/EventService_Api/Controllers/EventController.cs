@@ -6,6 +6,7 @@ using EventService_Domain.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using EventService_Domain.Models;
 
 namespace EventService_Api.Controllers;
 
@@ -33,7 +34,7 @@ public class EventController(
 
     [HttpGet]
     [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> GetAllEventsAsync([FromQuery] BaseQueryParams request)
+    public async Task<IActionResult> GetAllEventsAsync([FromQuery] AdminEventQueryParams request)
     {
         var result = await eventService.GetAllEventsAsync(request);
         return Ok(result);

@@ -5,6 +5,7 @@ using EventService_Domain.Constants;
 using EventService_Domain.Entities;
 using EventService_Domain.Enums;
 using EventService_Domain.Interfaces;
+using EventService_Domain.Models;
 using Mapster;
 using Microsoft.Extensions.Logging;
 
@@ -148,7 +149,7 @@ public class EventService(
         var responseDto = eventEntity.Adapt<EventResponseDto>();
         return ApiResponse<EventResponseDto>.Success(201, "Event created successfully", responseDto);
     }
-    public async Task<ApiResponse<PagedResult<EventResponseDto>>> GetAllEventsAsync(BaseQueryParams request)
+    public async Task<ApiResponse<PagedResult<EventResponseDto>>> GetAllEventsAsync(AdminEventQueryParams request)
     {
         var events = await eventRepository.GetAllEventsAsync(request);
         var responseDtos = events.Items.Adapt<List<EventResponseDto>>();
