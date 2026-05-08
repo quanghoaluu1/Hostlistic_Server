@@ -77,6 +77,7 @@ public class RegisteredEventService(IOrderRepository orderRepository,
                         TicketTypeName = t.TicketTypeName,
                         QrCodeUrl = t.QrCodeUrl,
                         IsUsed = t.IsUsed,
+                        IsExpired = t.IsExpired,
                         HolderName = t.HolderName
                     }).ToList()
                 };
