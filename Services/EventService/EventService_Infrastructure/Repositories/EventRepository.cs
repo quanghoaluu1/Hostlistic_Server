@@ -144,7 +144,7 @@ public class EventRepository(EventServiceDbContext dbContext) : IEventRepository
     {
         if (@event.EventStatus == EventStatus.Unpublished)
             @event.EventStatus = EventStatus.Published;
-        else if (@event.EventStatus == EventStatus.Published)
+        else if (@event.EventStatus is EventStatus.Published or EventStatus.OnGoing)
             @event.EventStatus = EventStatus.Unpublished;
         @event.UpdatedAt = DateTime.UtcNow;
         dbContext.Events.Update(@event);
