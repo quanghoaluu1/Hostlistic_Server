@@ -19,7 +19,7 @@ public class TokenGenerator : ITokenGenerator
         _settings = options.Value;
     }
 
-    public string GenerateLiveKitToken(string roomName, string identity, ParticipantRole role)
+    public string GenerateLiveKitToken(string roomName, string identity, ParticipantRole role, string? displayName = null)
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_settings.ApiSecret));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
@@ -40,7 +40,7 @@ public class TokenGenerator : ITokenGenerator
         var claims = new[]
         {
             new Claim(JwtRegisteredClaimNames.Sub, identity),
-            new Claim("name", identity),
+            new Claim("name", string.IsNullOrWhiteSpace(displayName) ? identity : displayName.Trim()),
             new Claim("video", JsonSerializer.Serialize(grants), JsonClaimValueTypes.Json)
         };
 
