@@ -19,7 +19,9 @@ public class MappingConfig : IRegister
             .Map(dest => dest.EventTypeName, src => src.EventType.Name)
             .Map(dest => dest.LocationAddress, src => src.LocationAddress)
             .Map(dest => dest.Latitude, src => src.Latitude)
-            .Map(dest => dest.Longitude, src => src.Longitude);
+            .Map(dest => dest.Longitude, src => src.Longitude)
+            .Map(dest => dest.OrganizerName, src => src.EventTeamMembers.FirstOrDefault(m => m.Role == EventService_Domain.Enums.EventRole.Organizer) != null ? src.EventTeamMembers.FirstOrDefault(m => m.Role == EventService_Domain.Enums.EventRole.Organizer).UserFullName : null)
+            .Map(dest => dest.OrganizerEmail, src => src.EventTeamMembers.FirstOrDefault(m => m.Role == EventService_Domain.Enums.EventRole.Organizer) != null ? src.EventTeamMembers.FirstOrDefault(m => m.Role == EventService_Domain.Enums.EventRole.Organizer).UserEmail : null);
 
         TypeAdapterConfig<Session, SessionResponseDto>
             .NewConfig()
