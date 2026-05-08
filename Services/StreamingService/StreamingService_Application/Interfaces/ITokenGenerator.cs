@@ -4,5 +4,5 @@ namespace StreamingService_Application.Interfaces;
 
 public interface ITokenGenerator
 {
-    string GenerateLiveKitToken(string roomName, string identity, ParticipantRole role);
+    string GenerateLiveKitToken(string roomName, string identity, ParticipantRole role, string? displayName = null);
 }

@@ -296,7 +296,7 @@ public class StreamsController : ControllerBase
         _guestStreamAccessService.ResetAttempts(eventId, clientKey);
 
         var guestSession = _guestStreamAccessService.CreateOrReplaceSession(eventId, room.Id, ticket, request.HolderName);
-        var token = GenerateGuestToken(room.LiveKitRoomName, guestSession.Identity);
+        var token = GenerateGuestToken(room.LiveKitRoomName, guestSession.Identity, guestSession.HolderName);
 
         return Ok(new
         {
@@ -463,9 +463,9 @@ public class StreamsController : ControllerBase
         return compact.Trim().ToUpperInvariant();
     }
 
-    private string GenerateGuestToken(string roomName, string identity)
+    private string GenerateGuestToken(string roomName, string identity, string? holderName)
     {
-        return _tokenGenerator.GenerateLiveKitToken(roomName, identity, ParticipantRole.Attendee);
+        return _tokenGenerator.GenerateLiveKitToken(roomName, identity, ParticipantRole.Attendee, holderName);
     }
 }
 
