@@ -2,6 +2,7 @@ using Common;
 using EventService_Domain.Entities;
 using EventService_Domain.Enums;
 using EventService_Domain.Interfaces;
+using EventService_Domain.Models;
 using EventService_Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,7 +10,7 @@ namespace EventService_Infrastructure.Repositories;
 
 public class EventRepository(EventServiceDbContext dbContext) : IEventRepository
 {
-    public async Task<PagedResult<Event>> GetAllEventsAsync(BaseQueryParams request)
+    public async Task<PagedResult<Event>> GetAllEventsAsync(AdminEventQueryParams request)
     {
         var query = dbContext.Events.Include(e => e.Tracks)
             .ThenInclude(t => t.Sessions)
@@ -17,6 +18,28 @@ public class EventRepository(EventServiceDbContext dbContext) : IEventRepository
             .ThenInclude(l => l.Talent)
             .Include(e => e.EventType)
             .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(request.Search))
+        {
+            var search = request.Search.Trim().ToLower();
+            query = query.Where(e => e.Title != null && e.Title.ToLower().Contains(search));
+        }
+
+        if (request.EventModes != null && request.EventModes.Count > 0)
+        {
+            query = query.Where(e => e.EventMode.HasValue && request.EventModes.Contains(e.EventMode.Value));
+        }
+
+        if (request.EventTypeIds != null && request.EventTypeIds.Count > 0)
+        {
+            query = query.Where(e => e.EventTypeId.HasValue && request.EventTypeIds.Contains(e.EventTypeId.Value));
+        }
+
+        if (request.Statuses != null && request.Statuses.Count > 0)
+        {
+            query = query.Where(e => request.Statuses.Contains(e.EventStatus));
+        }
+
         query = query.ApplySorting(request.SortBy);
         return await query.ToPagedResultAsync(request.Page, request.PageSize);
     }
@@ -121,7 +144,7 @@ public class EventRepository(EventServiceDbContext dbContext) : IEventRepository
     {
         if (@event.EventStatus == EventStatus.Unpublished)
             @event.EventStatus = EventStatus.Published;
-        else if (@event.EventStatus == EventStatus.Published)
+        else if (@event.EventStatus is EventStatus.Published or EventStatus.OnGoing)
             @event.EventStatus = EventStatus.Unpublished;
         @event.UpdatedAt = DateTime.UtcNow;
         dbContext.Events.Update(@event);

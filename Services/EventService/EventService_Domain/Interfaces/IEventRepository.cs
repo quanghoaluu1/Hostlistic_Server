@@ -1,11 +1,12 @@
 using Common;
 using EventService_Domain.Entities;
+using EventService_Domain.Models;
 
 namespace EventService_Domain.Interfaces;
 
 public interface IEventRepository
 {
-    Task<PagedResult<Event>> GetAllEventsAsync(BaseQueryParams request);
+    Task<PagedResult<Event>> GetAllEventsAsync(AdminEventQueryParams request);
     Task<Event?> GetEventByIdAsync(Guid eventId);
     Event AddEventAsync(Event @event);
     Event UpdateEventAsync(Event @event);

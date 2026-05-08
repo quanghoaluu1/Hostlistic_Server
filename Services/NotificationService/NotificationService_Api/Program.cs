@@ -151,6 +151,7 @@ builder.Services.AddMassTransit(x =>
     x.AddConsumer<TeamMemberInvitedConsumer>();
     x.AddConsumer<EventPostponedConsumer>();
     x.AddConsumer<EventCancelledConsumer>();
+    x.AddConsumer<UserSessionOverriddenEventConsumer>();
  
     x.UsingRabbitMq((context, cfg) =>
     {
@@ -221,6 +222,7 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHealthChecks("/health");
 app.MapHub<NotificationHub>("/hubs/notifications");
+app.MapHub<AppNotificationHub>("/hubs/app-notifications");
 
     app.UseHangfireDashboard("/hangfire", new DashboardOptions()
     {
