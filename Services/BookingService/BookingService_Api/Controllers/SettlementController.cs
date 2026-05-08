@@ -1,6 +1,7 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using BookingService_Application.DTOs;
 using BookingService_Application.Interfaces;
+using Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -19,9 +20,9 @@ public class SettlementController(ISettlementService settlementService) : Contro
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAllSettlements(CancellationToken ct)
+    public async Task<IActionResult> GetAllSettlements([FromQuery] BaseQueryParams queryParams, CancellationToken ct)
     {
-        var result = await settlementService.GetAllSettlementsAsync(ct);
+        var result = await settlementService.GetAllSettlementsAsync(queryParams, ct);
         return StatusCode(result.StatusCode, result);
     }
 

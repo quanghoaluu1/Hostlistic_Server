@@ -8,6 +8,7 @@ public interface IEventSettlementRepository
     Task<EventSettlement?> GetByIdAsync(Guid id);
     Task<EventSettlement?> GetByEventIdAsync(Guid eventId);
     Task<IEnumerable<EventSettlement>> GetAllAsync();
+    IQueryable<EventSettlement> GetAllQueryable();
     Task<IEnumerable<Guid>> GetEventIds();
     Task<IEnumerable<EventSettlement>> GetByOrganizerIdAsync(Guid organizerId);
     Task<EventSettlement?> GetByEventIdAndStatusAsync(Guid eventId, SettlementStatus status);
