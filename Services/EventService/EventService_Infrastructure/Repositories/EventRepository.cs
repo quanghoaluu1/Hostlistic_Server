@@ -17,6 +17,7 @@ public class EventRepository(EventServiceDbContext dbContext) : IEventRepository
             .ThenInclude(s => s.Lineups)
             .ThenInclude(l => l.Talent)
             .Include(e => e.EventType)
+            .Include(e => e.EventTeamMembers)
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(request.Search))
@@ -52,6 +53,7 @@ public class EventRepository(EventServiceDbContext dbContext) : IEventRepository
             .ThenInclude(s => s.Lineups)
             .ThenInclude(l => l.Talent)
             .Include(e => e.EventType)
+            .Include(e => e.EventTeamMembers)
             .FirstOrDefaultAsync(e => e.Id == eventId);
     }
 

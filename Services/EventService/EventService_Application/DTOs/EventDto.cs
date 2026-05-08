@@ -40,7 +40,9 @@ public record EventResponseDto(
     bool IsPublic,
     VenueResponseDto? Venue, 
     List<TrackResponseDto> Tracks,
-    EventStatus EventStatus
+    EventStatus EventStatus,
+    string? OrganizerName = null,
+    string? OrganizerEmail = null
 );
 public record VenueResponseDto(Guid Id, string Name, string Address, string Capacity);
 
